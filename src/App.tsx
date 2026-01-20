@@ -17,6 +17,8 @@ import IntegrationsPage from "./pages/IntegrationsPage";
 import SettingsPage from "./pages/SettingsPage";
 import ClientConnectPage from "./pages/ClientConnectPage";
 import PublicWebsitePage from "./pages/PublicWebsitePage";
+import AuthPage from "./pages/AuthPage";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
@@ -27,20 +29,24 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/agents" element={<AgentsPage />} />
-          <Route path="/agents/:id" element={<AgentDetailsPage />} />
-          <Route path="/websites" element={<WebsitesPage />} />
-          <Route path="/websites/:id/edit" element={<WebsiteEditorPage />} />
-          <Route path="/demo" element={<DemoPage />} />
-          <Route path="/credits" element={<CreditsPage />} />
-          <Route path="/integrations" element={<IntegrationsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/styleguide" element={<StyleguidePage />} />
           {/* Public routes */}
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<AuthPage />} />
+          <Route path="/demo" element={<DemoPage />} />
+          <Route path="/styleguide" element={<StyleguidePage />} />
           <Route path="/connect/:token" element={<ClientConnectPage />} />
           <Route path="/site/:siteId" element={<PublicWebsitePage />} />
+          
+          {/* Protected routes */}
+          <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+          <Route path="/agents" element={<ProtectedRoute><AgentsPage /></ProtectedRoute>} />
+          <Route path="/agents/:id" element={<ProtectedRoute><AgentDetailsPage /></ProtectedRoute>} />
+          <Route path="/websites" element={<ProtectedRoute><WebsitesPage /></ProtectedRoute>} />
+          <Route path="/websites/:id/edit" element={<ProtectedRoute><WebsiteEditorPage /></ProtectedRoute>} />
+          <Route path="/credits" element={<ProtectedRoute><CreditsPage /></ProtectedRoute>} />
+          <Route path="/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
