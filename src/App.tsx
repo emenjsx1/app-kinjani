@@ -10,6 +10,7 @@ import DashboardPage from "./pages/DashboardPage";
 import AgentsPage from "./pages/AgentsPage";
 import AgentDetailsPage from "./pages/AgentDetailsPage";
 import WebsitesPage from "./pages/WebsitesPage";
+import WebsiteEditorPage from "./pages/WebsiteEditorPage";
 import DemoPage from "./pages/DemoPage";
 import CreditsPage from "./pages/CreditsPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/agents" element={<AgentsPage />} />
           <Route path="/agents/:id" element={<AgentDetailsPage />} />
           <Route path="/websites" element={<WebsitesPage />} />
+          <Route path="/websites/:id/edit" element={<WebsiteEditorPage />} />
           <Route path="/demo" element={<DemoPage />} />
           <Route path="/credits" element={<CreditsPage />} />
           <Route path="/integrations" element={<IntegrationsPage />} />
