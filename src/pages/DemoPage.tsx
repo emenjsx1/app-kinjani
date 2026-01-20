@@ -6,7 +6,7 @@ import { useState } from "react";
 const initialMessages: Message[] = [
   {
     id: "1",
-    content: "Hello! I'm KINJA AI, your intelligent assistant. How can I help you today?",
+    content: "Olá! Sou o KINJA AI, o seu assistente inteligente. Como posso ajudá-lo hoje?",
     isUser: false,
     timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
   },
@@ -27,11 +27,11 @@ export default function DemoPage() {
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
-    // Simulate AI response
+    // Simular resposta da IA
     setTimeout(() => {
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `Thanks for your message! This is a demo response. In a real scenario, this would be powered by your configured AI agent. You said: "${content}"`,
+        content: `Obrigado pela sua mensagem! Esta é uma resposta de demonstração. Num cenário real, esta resposta seria alimentada pelo seu agente IA configurado. Você disse: "${content}"`,
         isUser: false,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
@@ -45,9 +45,9 @@ export default function DemoPage() {
       <div className="max-w-4xl mx-auto">
         <Card className="h-[calc(100vh-12rem)]">
           <CardHeader className="border-b">
-            <CardTitle>Chat Demo</CardTitle>
+            <CardTitle>Demo do Chat</CardTitle>
             <CardDescription>
-              Test your AI agent in real-time. This is a preview of how your users will interact with your agent.
+              Teste o seu agente IA em tempo real. Esta é uma pré-visualização de como os seus utilizadores vão interagir com o seu agente.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0 h-[calc(100%-5rem)]">
@@ -55,7 +55,7 @@ export default function DemoPage() {
               messages={messages}
               onSendMessage={handleSendMessage}
               isLoading={isLoading}
-              placeholder="Type a message to test the agent..."
+              placeholder="Escreva uma mensagem para testar o agente..."
             />
           </CardContent>
         </Card>

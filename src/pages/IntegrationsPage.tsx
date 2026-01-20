@@ -7,28 +7,28 @@ const integrations = [
   {
     id: "whatsapp",
     title: "WhatsApp (Evolution API)",
-    description: "Connect your WhatsApp Business account",
+    description: "Ligue a sua conta WhatsApp Business",
     icon: MessageSquare,
     status: "connected" as const,
   },
   {
     id: "sheets",
     title: "Google Sheets",
-    description: "Export leads and data to spreadsheets",
+    description: "Exporte leads e dados para folhas de cálculo",
     icon: FileSpreadsheet,
     status: "disconnected" as const,
   },
   {
     id: "ezpn",
     title: "EZPN",
-    description: "Payment processing integration",
+    description: "Integração de processamento de pagamentos",
     icon: Table2,
     status: "disconnected" as const,
   },
   {
     id: "api",
-    title: "API Keys",
-    description: "Manage your API access tokens",
+    title: "Chaves API",
+    description: "Gerir os seus tokens de acesso à API",
     icon: Key,
     status: "disconnected" as const,
   },
@@ -36,13 +36,13 @@ const integrations = [
 
 export default function IntegrationsPage() {
   return (
-    <AppLayout pageTitle="Integrations" credits={1250}>
+    <AppLayout pageTitle="Integrações" credits={1250}>
       <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Available Integrations</CardTitle>
+            <CardTitle>Integrações Disponíveis</CardTitle>
             <CardDescription>
-              Connect KINJA AI with your favorite tools and services
+              Ligue o KINJA AI às suas ferramentas e serviços favoritos
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -54,9 +54,9 @@ export default function IntegrationsPage() {
                   description={integration.description}
                   icon={integration.icon}
                   status={integration.status}
-                  onConnect={() => console.log(`Connect ${integration.id}`)}
-                  onDisconnect={() => console.log(`Disconnect ${integration.id}`)}
-                  onConfigure={() => console.log(`Configure ${integration.id}`)}
+                  onConnect={() => console.log(`Ligar ${integration.id}`)}
+                  onDisconnect={() => console.log(`Desligar ${integration.id}`)}
+                  onConfigure={() => console.log(`Configurar ${integration.id}`)}
                 />
               ))}
             </div>

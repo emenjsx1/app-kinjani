@@ -6,78 +6,78 @@ import { Button } from "@/components/ui/button";
 import { UsageBar, UsageTable } from "@/components/ui/usage-bar";
 
 const usageHistory = [
-  { id: "1", date: "Jan 20, 2024", action: "Agent Chat - Sales Bot", credits: -15 },
-  { id: "2", date: "Jan 20, 2024", action: "Website Generation", credits: -50 },
-  { id: "3", date: "Jan 19, 2024", action: "Credit Purchase", credits: 500 },
-  { id: "4", date: "Jan 19, 2024", action: "Agent Chat - FAQ Bot", credits: -8 },
-  { id: "5", date: "Jan 18, 2024", action: "New Agent Creation", credits: -25 },
-  { id: "6", date: "Jan 18, 2024", action: "Agent Chat - Support", credits: -12 },
+  { id: "1", date: "20 Jan, 2024", action: "Chat Agente - Bot Vendas", credits: -15 },
+  { id: "2", date: "20 Jan, 2024", action: "Geração de Site", credits: -50 },
+  { id: "3", date: "19 Jan, 2024", action: "Compra de Créditos", credits: 500 },
+  { id: "4", date: "19 Jan, 2024", action: "Chat Agente - Bot FAQ", credits: -8 },
+  { id: "5", date: "18 Jan, 2024", action: "Criação de Novo Agente", credits: -25 },
+  { id: "6", date: "18 Jan, 2024", action: "Chat Agente - Suporte", credits: -12 },
 ];
 
 export default function CreditsPage() {
   return (
-    <AppLayout pageTitle="Credits" credits={1250}>
+    <AppLayout pageTitle="Créditos" credits={1250}>
       <div className="space-y-6">
-        {/* Credits Overview */}
+        {/* Visão Geral dos Créditos */}
         <div className="grid gap-4 md:grid-cols-3">
           <StatCard
-            title="Current Balance"
-            value="1,250"
+            title="Saldo Atual"
+            value="1.250"
             icon={Coins}
             variant="primary"
-            description="credits available"
+            description="créditos disponíveis"
           />
           <StatCard
-            title="Used This Month"
+            title="Usados Este Mês"
             value="750"
             icon={TrendingDown}
-            description="of 2,000 monthly"
+            description="de 2.000 mensais"
           />
           <StatCard
-            title="Next Billing"
-            value="Feb 1"
+            title="Próxima Faturação"
+            value="1 Fev"
             icon={CreditCard}
-            description="Monthly renewal"
+            description="Renovação mensal"
           />
         </div>
 
-        {/* Usage Progress */}
+        {/* Progresso de Uso */}
         <Card>
           <CardHeader>
-            <CardTitle>Monthly Usage</CardTitle>
+            <CardTitle>Uso Mensal</CardTitle>
             <CardDescription>
-              Your credit consumption for this billing period
+              O seu consumo de créditos neste período de faturação
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <UsageBar
               used={750}
               total={2000}
-              label="Credits Used"
+              label="Créditos Usados"
             />
             <div className="grid gap-4 md:grid-cols-3">
               <div className="text-center p-4 rounded-lg bg-muted/50">
                 <p className="text-2xl font-bold text-primary">450</p>
-                <p className="text-sm text-muted-foreground">Agent Chats</p>
+                <p className="text-sm text-muted-foreground">Chats de Agentes</p>
               </div>
               <div className="text-center p-4 rounded-lg bg-muted/50">
                 <p className="text-2xl font-bold text-primary">200</p>
-                <p className="text-sm text-muted-foreground">Website Gen</p>
+                <p className="text-sm text-muted-foreground">Geração de Sites</p>
               </div>
               <div className="text-center p-4 rounded-lg bg-muted/50">
                 <p className="text-2xl font-bold text-primary">100</p>
-                <p className="text-sm text-muted-foreground">API Calls</p>
+                <p className="text-sm text-muted-foreground">Chamadas API</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Buy Credits */}
+        {/* Comprar Créditos */}
         <Card>
           <CardHeader>
-            <CardTitle>Buy More Credits</CardTitle>
+            <CardTitle>Comprar Mais Créditos</CardTitle>
             <CardDescription>
-              Choose a credit package that fits your needs
+              Escolha um pacote de créditos que se adeque às suas necessidades
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -85,10 +85,10 @@ export default function CreditsPage() {
               <Card className="border-2 hover:border-primary/50 cursor-pointer transition-colors">
                 <CardContent className="pt-6 text-center">
                   <p className="text-3xl font-bold">500</p>
-                  <p className="text-muted-foreground mb-4">credits</p>
-                  <p className="text-xl font-semibold text-primary">$9.99</p>
+                  <p className="text-muted-foreground mb-4">créditos</p>
+                  <p className="text-xl font-semibold text-primary">9,99€</p>
                   <Button className="w-full mt-4" variant="outline">
-                    Purchase
+                    Comprar
                   </Button>
                 </CardContent>
               </Card>
@@ -97,21 +97,21 @@ export default function CreditsPage() {
                   Popular
                 </div>
                 <CardContent className="pt-6 text-center">
-                  <p className="text-3xl font-bold">1,500</p>
-                  <p className="text-muted-foreground mb-4">credits</p>
-                  <p className="text-xl font-semibold text-primary">$24.99</p>
+                  <p className="text-3xl font-bold">1.500</p>
+                  <p className="text-muted-foreground mb-4">créditos</p>
+                  <p className="text-xl font-semibold text-primary">24,99€</p>
                   <Button className="w-full mt-4">
-                    Purchase
+                    Comprar
                   </Button>
                 </CardContent>
               </Card>
               <Card className="border-2 hover:border-primary/50 cursor-pointer transition-colors">
                 <CardContent className="pt-6 text-center">
-                  <p className="text-3xl font-bold">5,000</p>
-                  <p className="text-muted-foreground mb-4">credits</p>
-                  <p className="text-xl font-semibold text-primary">$69.99</p>
+                  <p className="text-3xl font-bold">5.000</p>
+                  <p className="text-muted-foreground mb-4">créditos</p>
+                  <p className="text-xl font-semibold text-primary">69,99€</p>
                   <Button className="w-full mt-4" variant="outline">
-                    Purchase
+                    Comprar
                   </Button>
                 </CardContent>
               </Card>
@@ -119,12 +119,12 @@ export default function CreditsPage() {
           </CardContent>
         </Card>
 
-        {/* Usage History */}
+        {/* Histórico de Uso */}
         <Card>
           <CardHeader>
-            <CardTitle>Usage History</CardTitle>
+            <CardTitle>Histórico de Uso</CardTitle>
             <CardDescription>
-              Recent credit transactions and usage
+              Transações e uso de créditos recentes
             </CardDescription>
           </CardHeader>
           <CardContent>

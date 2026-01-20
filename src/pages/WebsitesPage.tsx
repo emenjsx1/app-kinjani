@@ -27,23 +27,23 @@ interface Website {
 const mockWebsites: Website[] = [
   {
     id: "1",
-    name: "Product Landing Page",
+    name: "Página de Produto",
     type: "landing",
     status: "active",
-    url: "https://product.kinja.ai",
+    url: "https://produto.kinja.ai",
     createdAt: "2024-01-15",
   },
   {
     id: "2",
-    name: "Company Website",
+    name: "Site Institucional",
     type: "institutional",
     status: "active",
-    url: "https://company.kinja.ai",
+    url: "https://empresa.kinja.ai",
     createdAt: "2024-01-20",
   },
   {
     id: "3",
-    name: "New Campaign",
+    name: "Nova Campanha",
     type: "landing",
     status: "draft",
     url: "",
@@ -62,20 +62,20 @@ export default function WebsitesPage() {
   const getTypeBadge = (type: Website["type"]) => {
     return (
       <Badge variant="outline" className={type === "landing" ? "bg-blue-500/10 text-blue-600" : "bg-purple-500/10 text-purple-600"}>
-        {type === "landing" ? "Landing Page" : "Institutional"}
+        {type === "landing" ? "Landing Page" : "Institucional"}
       </Badge>
     );
   };
 
   return (
-    <AppLayout pageTitle="Websites" credits={1250}>
+    <AppLayout pageTitle="Sites" credits={1250}>
       <div className="space-y-6">
-        {/* Header Actions */}
+        {/* Ações do Cabeçalho */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search websites..."
+              placeholder="Pesquisar sites..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10"
@@ -83,21 +83,21 @@ export default function WebsitesPage() {
           </div>
           <Button>
             <Plus className="mr-2 h-4 w-4" />
-            Create Website
+            Criar Site
           </Button>
         </div>
 
-        {/* Websites Grid */}
+        {/* Grid de Sites */}
         {filteredWebsites.length === 0 ? (
           <Card>
             <CardContent className="py-8">
               <EmptyState
                 icon={Globe}
-                title="No websites found"
-                description="Generate your first AI-powered website"
+                title="Nenhum site encontrado"
+                description="Gere o seu primeiro site com IA"
                 action={{
-                  label: "Create Website",
-                  onClick: () => console.log("Create website"),
+                  label: "Criar Site",
+                  onClick: () => console.log("Criar site"),
                 }}
               />
             </CardContent>
@@ -115,7 +115,7 @@ export default function WebsitesPage() {
                       <div>
                         <CardTitle className="text-base">{site.name}</CardTitle>
                         <CardDescription className="text-xs">
-                          Created {site.createdAt}
+                          Criado em {site.createdAt}
                         </CardDescription>
                       </div>
                     </div>
@@ -126,12 +126,12 @@ export default function WebsitesPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem>Duplicate</DropdownMenuItem>
-                        <DropdownMenuItem>View Live</DropdownMenuItem>
+                        <DropdownMenuItem>Editar</DropdownMenuItem>
+                        <DropdownMenuItem>Duplicar</DropdownMenuItem>
+                        <DropdownMenuItem>Ver Online</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive">
-                          Delete
+                          Eliminar
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
