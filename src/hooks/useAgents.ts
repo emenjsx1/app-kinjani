@@ -11,6 +11,7 @@ export interface Agent {
   status: 'active' | 'inactive' | 'pending' | 'error';
   channel: 'whatsapp' | 'embed' | 'both';
   messages_handled: number;
+  instance_id: string | null;
   created_at: string;
   updated_at: string;
 }

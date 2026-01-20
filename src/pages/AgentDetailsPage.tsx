@@ -40,6 +40,8 @@ export default function AgentDetailsPage() {
   const defaultTab = searchParams.get("tab") || "settings";
 
   useEffect(() => {
+    let isMounted = true;
+    
     const loadAgent = async () => {
       if (!id) {
         navigate("/agents");
@@ -47,18 +49,27 @@ export default function AgentDetailsPage() {
       }
 
       setIsLoading(true);
-      const foundAgent = await getAgent(id);
-      
-      if (foundAgent) {
-        setAgent(foundAgent);
-        setIsActive(foundAgent.status === "active");
-        setPrompt(foundAgent.prompt || "");
+      try {
+        const foundAgent = await getAgent(id);
+        
+        if (isMounted && foundAgent) {
+          setAgent(foundAgent);
+          setIsActive(foundAgent.status === "active");
+          setPrompt(foundAgent.prompt || "");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
-      setIsLoading(false);
     };
 
     loadAgent();
-  }, [id, navigate, getAgent]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [id, navigate]);
 
   const handleStatusChange = async (checked: boolean) => {
     if (!agent) return;

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { MessageSquare, Plus, QrCode, Trash2, Copy, Link2, RefreshCw, Loader2, Key, Sparkles, Eye, EyeOff, Check, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { MessageSquare, Plus, QrCode, Trash2, Copy, Link2, RefreshCw, Loader2, Key, Sparkles, Eye, EyeOff, Check, X, CheckCircle2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,7 +44,9 @@ export default function IntegrationsPage() {
     getQRCode, 
     getStatus, 
     deleteInstance,
-    getClientConnectUrl 
+    getClientConnectUrl,
+    startPolling,
+    refetch
   } = useWhatsAppInstances();
 
   const { keys, isLoading: isLoadingKeys, isSaving, saveKey, deleteKey, hasKey } = useUserApiKeys();
@@ -60,7 +62,11 @@ export default function IntegrationsPage() {
   
   const [currentQRCode, setCurrentQRCode] = useState<string | null>(null);
   const [currentInstanceName, setCurrentInstanceName] = useState("");
+  const [currentInstanceKey, setCurrentInstanceKey] = useState<string | null>(null);
   const [isLoadingQR, setIsLoadingQR] = useState(false);
+  const [isPolling, setIsPolling] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const stopPollingRef = useRef<(() => void) | null>(null);
 
   // API Keys state
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
@@ -69,6 +75,16 @@ export default function IntegrationsPage() {
   const [showApiKey, setShowApiKey] = useState(false);
   const [deleteKeyDialogOpen, setDeleteKeyDialogOpen] = useState(false);
   const [providerToDelete, setProviderToDelete] = useState<string | null>(null);
+
+  // Stop polling when dialog closes
+  useEffect(() => {
+    if (!qrDialogOpen && stopPollingRef.current) {
+      stopPollingRef.current();
+      stopPollingRef.current = null;
+      setIsPolling(false);
+      setIsConnected(false);
+    }
+  }, [qrDialogOpen]);
 
   const handleCreateInstance = async () => {
     if (!newInstanceName.trim()) {
@@ -80,10 +96,24 @@ export default function IntegrationsPage() {
     try {
       const result = await createInstance(newInstanceName, undefined, isForClient);
       
-      if (result?.qrcode) {
-        setCurrentQRCode(result.qrcode);
-        setCurrentInstanceName(newInstanceName);
-        setQrDialogOpen(true);
+      if (result?.instance?.instance_key) {
+        setCurrentInstanceKey(result.instance.instance_key);
+        
+        if (result.qrcode) {
+          setCurrentQRCode(result.qrcode);
+          setCurrentInstanceName(newInstanceName);
+          setIsConnected(false);
+          setQrDialogOpen(true);
+          
+          // Start polling for connection status
+          setIsPolling(true);
+          stopPollingRef.current = startPolling(result.instance.instance_key, () => {
+            setIsConnected(true);
+            setIsPolling(false);
+            toast.success("WhatsApp conectado com sucesso!");
+            refetch();
+          });
+        }
       }
       
       toast.success("Instância criada com sucesso!");
@@ -100,12 +130,25 @@ export default function IntegrationsPage() {
   const handleShowQRCode = async (instanceKey: string, instanceName: string) => {
     setIsLoadingQR(true);
     setCurrentInstanceName(instanceName);
+    setCurrentInstanceKey(instanceKey);
+    setIsConnected(false);
     setQrDialogOpen(true);
 
     try {
       const result = await getQRCode(instanceKey);
       if (result?.qrcode) {
         setCurrentQRCode(result.qrcode);
+        
+        // Start polling for connection status
+        setIsPolling(true);
+        stopPollingRef.current = startPolling(instanceKey, () => {
+          setIsConnected(true);
+          setIsPolling(false);
+          toast.success("WhatsApp conectado com sucesso!");
+          refetch();
+        });
+      } else if (result?.status === 'open' || result?.status === 'connected') {
+        setIsConnected(true);
       } else {
         toast.error("Não foi possível obter o QR code");
       }
@@ -433,14 +476,34 @@ export default function IntegrationsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center py-6">
-            {isLoadingQR ? (
+            {isConnected ? (
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-64 h-64 bg-green-50 dark:bg-green-950/20 rounded-lg flex flex-col items-center justify-center">
+                  <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
+                  <p className="text-lg font-medium text-green-700 dark:text-green-400">
+                    WhatsApp Conectado!
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    A instância está pronta para uso
+                  </p>
+                </div>
+              </div>
+            ) : isLoadingQR ? (
               <Loader2 className="h-12 w-12 animate-spin text-muted-foreground" />
             ) : currentQRCode ? (
-              <img 
-                src={`data:image/png;base64,${currentQRCode}`} 
-                alt="QR Code WhatsApp"
-                className="w-64 h-64 rounded-lg"
-              />
+              <div className="flex flex-col items-center">
+                <img 
+                  src={`data:image/png;base64,${currentQRCode}`} 
+                  alt="QR Code WhatsApp"
+                  className="w-64 h-64 rounded-lg"
+                />
+                {isPolling && (
+                  <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Aguardando conexão...</span>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="w-64 h-64 bg-muted rounded-lg flex items-center justify-center">
                 <p className="text-muted-foreground text-center">

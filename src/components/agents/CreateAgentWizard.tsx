@@ -31,6 +31,7 @@ interface Agent {
   channel: "whatsapp" | "embed" | "both";
   messagesHandled: number;
   createdAt: string;
+  instanceId?: string | null;
 }
 
 interface CreateAgentWizardProps {
@@ -244,6 +245,7 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
       channel: channel as "embed" | "whatsapp" | "both",
       messagesHandled: 0,
       createdAt: new Date().toISOString().split("T")[0],
+      instanceId: channel === "whatsapp" ? selectedInstanceId : null,
     };
     onAgentCreated(newAgent);
     handleNext(); // Go to success step
