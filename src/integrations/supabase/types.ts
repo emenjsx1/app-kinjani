@@ -17,6 +17,7 @@ export type Database = {
       agents: {
         Row: {
           channel: string
+          client_id: string | null
           created_at: string
           id: string
           instance_id: string | null
@@ -31,6 +32,7 @@ export type Database = {
         }
         Insert: {
           channel?: string
+          client_id?: string | null
           created_at?: string
           id?: string
           instance_id?: string | null
@@ -45,6 +47,7 @@ export type Database = {
         }
         Update: {
           channel?: string
+          client_id?: string | null
           created_at?: string
           id?: string
           instance_id?: string | null
@@ -59,6 +62,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "agents_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "agents_instance_id_fkey"
             columns: ["instance_id"]
             isOneToOne: false
@@ -66,6 +76,60 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      clients: {
+        Row: {
+          accent_color: string | null
+          company: string | null
+          created_at: string
+          email: string | null
+          id: string
+          logo_url: string | null
+          monthly_value: number | null
+          name: string
+          phone: string | null
+          plan: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accent_color?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          monthly_value?: number | null
+          name: string
+          phone?: string | null
+          plan?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accent_color?: string | null
+          company?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          logo_url?: string | null
+          monthly_value?: number | null
+          name?: string
+          phone?: string | null
+          plan?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       credit_transactions: {
         Row: {
@@ -180,6 +244,7 @@ export type Database = {
       }
       websites: {
         Row: {
+          client_id: string | null
           config: Json | null
           created_at: string
           id: string
@@ -191,6 +256,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          client_id?: string | null
           config?: Json | null
           created_at?: string
           id?: string
@@ -202,6 +268,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          client_id?: string | null
           config?: Json | null
           created_at?: string
           id?: string
@@ -212,7 +279,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "websites_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       whatsapp_instances: {
         Row: {
