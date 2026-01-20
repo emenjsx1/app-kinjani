@@ -1,8 +1,8 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { 
   Palette, Type, Layers, Image, Eye, Save, ChevronLeft, 
   Plus, GripVertical, Sparkles, Upload, Trash2, ImagePlus,
-  Coins, CheckCircle2, AlertCircle, Loader2
+  Coins, CheckCircle2, AlertCircle, Loader2, MessageCircle, Copy, Code
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,16 +32,28 @@ import { Badge } from "@/components/ui/badge";
 import { WebsiteTemplate, WebsiteSection } from "@/lib/website-templates";
 import { WebsitePreview } from "./WebsitePreview";
 import { useSectionAI } from "@/hooks/useSectionAI";
+import { useStorageUpload } from "@/hooks/useStorageUpload";
+import { useAgents } from "@/hooks/useAgents";
+import { generateEmbedCode } from "@/components/chat/EmbedWidget";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+export interface EmbedConfig {
+  enabled: boolean;
+  agentId?: string;
+  position?: "right" | "left";
+  primaryColor?: string;
+  welcomeMessage?: string;
+}
 
 interface WebsiteEditorProps {
   template: WebsiteTemplate;
   websiteName: string;
   prompt: string;
   onBack: () => void;
-  onSave: (website: WebsiteTemplate) => void;
+  onSave: (website: WebsiteTemplate, embedConfig?: EmbedConfig) => void;
   niche?: string;
+  initialEmbedConfig?: EmbedConfig;
 }
 
 const FONT_OPTIONS = [
@@ -102,7 +114,7 @@ const createDefaultSection = (type: WebsiteSection["type"], order: number): Webs
   };
 };
 
-export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, niche = "" }: WebsiteEditorProps) {
+export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, niche = "", initialEmbedConfig }: WebsiteEditorProps) {
   const [editableTemplate, setEditableTemplate] = useState<WebsiteTemplate>({ ...template });
   const [activeTab, setActiveTab] = useState("sections");
   const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -113,7 +125,20 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
   const [aiInstruction, setAiInstruction] = useState("");
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
   
+  // Embed config state
+  const [embedConfig, setEmbedConfig] = useState<EmbedConfig>(
+    initialEmbedConfig || {
+      enabled: false,
+      position: "right",
+      primaryColor: "#00DF81",
+      welcomeMessage: "Olá! Como posso ajudá-lo?",
+    }
+  );
+  
   const { editSectionWithAI, isEditing: isAIEditing } = useSectionAI();
+  const { uploadFile, isUploading } = useStorageUpload();
+  const { agents } = useAgents();
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingFor, setUploadingFor] = useState<{ sectionId: string; field: string } | null>(null);
 
@@ -205,23 +230,32 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
     setDraggedSection(null);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Create a URL for the uploaded file
-    const fileUrl = URL.createObjectURL(file);
+    // Upload to Supabase Storage
+    const publicUrl = await uploadFile(file, "website-assets", websiteName.toLowerCase().replace(/\s+/g, "-"));
+    
+    if (!publicUrl) {
+      toast.error("Erro ao fazer upload da imagem");
+      setUploadingFor(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
     
     // Check if this is a logo upload
     if (uploadingFor?.sectionId === 'logo' && uploadingFor?.field === 'logoUrl') {
       setEditableTemplate(prev => ({
         ...prev,
-        logoUrl: fileUrl,
+        logoUrl: publicUrl,
       }));
       setHasChanges(true);
       toast.success("Logo carregado com sucesso");
     } else if (uploadingFor) {
-      updateSectionContent(uploadingFor.sectionId, uploadingFor.field, fileUrl);
+      updateSectionContent(uploadingFor.sectionId, uploadingFor.field, publicUrl);
       toast.success("Imagem adicionada");
     }
     
@@ -257,9 +291,24 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
   };
 
   const handleSave = () => {
-    onSave(editableTemplate);
+    onSave(editableTemplate, embedConfig);
     setHasChanges(false);
     toast.success("Alterações guardadas");
+  };
+
+  const handleCopyEmbedCode = () => {
+    if (!embedConfig.agentId) {
+      toast.error("Selecione um agente primeiro");
+      return;
+    }
+    const code = generateEmbedCode({
+      agentId: embedConfig.agentId,
+      primaryColor: embedConfig.primaryColor,
+      position: embedConfig.position,
+      welcomeMessage: embedConfig.welcomeMessage,
+    });
+    navigator.clipboard.writeText(code);
+    toast.success("Código copiado!");
   };
 
   const getSectionLabel = (type: string) => {
@@ -315,7 +364,7 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-          <TabsList className="grid grid-cols-4 mx-4 mt-4">
+          <TabsList className="grid grid-cols-5 mx-4 mt-4">
             <TabsTrigger value="sections">
               <Layers className="h-4 w-4" />
             </TabsTrigger>
@@ -327,6 +376,9 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
             </TabsTrigger>
             <TabsTrigger value="images">
               <Image className="h-4 w-4" />
+            </TabsTrigger>
+            <TabsTrigger value="embed">
+              <MessageCircle className="h-4 w-4" />
             </TabsTrigger>
           </TabsList>
 
@@ -648,6 +700,162 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
                   </p>
                 </div>
               </div>
+            </TabsContent>
+
+            {/* Embed Tab */}
+            <TabsContent value="embed" className="m-0 space-y-4">
+              <div>
+                <h3 className="text-sm font-medium mb-3">Widget de Chat IA</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Adicione um assistente IA ao seu site para atender visitantes automaticamente.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border">
+                <div>
+                  <p className="font-medium text-sm">Ativar Chat IA</p>
+                  <p className="text-xs text-muted-foreground">
+                    Mostrar widget de chat no seu site
+                  </p>
+                </div>
+                <Switch
+                  checked={embedConfig.enabled}
+                  onCheckedChange={(checked) => {
+                    setEmbedConfig((prev) => ({ ...prev, enabled: checked }));
+                    setHasChanges(true);
+                  }}
+                />
+              </div>
+
+              {embedConfig.enabled && (
+                <div className="space-y-4">
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <Label>Selecionar Agente</Label>
+                    <Select
+                      value={embedConfig.agentId || ""}
+                      onValueChange={(value) => {
+                        setEmbedConfig((prev) => ({ ...prev, agentId: value }));
+                        setHasChanges(true);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Escolher agente..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {agents.length > 0 ? (
+                          agents.map((agent) => (
+                            <SelectItem key={agent.id} value={agent.id}>
+                              {agent.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="" disabled>
+                            Nenhum agente disponível
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {agents.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Crie primeiro um agente na secção de Agentes.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Posição</Label>
+                    <Select
+                      value={embedConfig.position || "right"}
+                      onValueChange={(value: "right" | "left") => {
+                        setEmbedConfig((prev) => ({ ...prev, position: value }));
+                        setHasChanges(true);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="right">Canto inferior direito</SelectItem>
+                        <SelectItem value="left">Canto inferior esquerdo</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Cor do Widget</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        type="color"
+                        value={embedConfig.primaryColor || "#00DF81"}
+                        onChange={(e) => {
+                          setEmbedConfig((prev) => ({ ...prev, primaryColor: e.target.value }));
+                          setHasChanges(true);
+                        }}
+                        className="w-12 h-8 p-1 cursor-pointer"
+                      />
+                      <Input
+                        value={embedConfig.primaryColor || "#00DF81"}
+                        onChange={(e) => {
+                          setEmbedConfig((prev) => ({ ...prev, primaryColor: e.target.value }));
+                          setHasChanges(true);
+                        }}
+                        className="flex-1 h-8"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Mensagem de Boas-vindas</Label>
+                    <Textarea
+                      value={embedConfig.welcomeMessage || ""}
+                      onChange={(e) => {
+                        setEmbedConfig((prev) => ({ ...prev, welcomeMessage: e.target.value }));
+                        setHasChanges(true);
+                      }}
+                      placeholder="Olá! Como posso ajudá-lo?"
+                      className="min-h-[60px]"
+                    />
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Code className="h-4 w-4" />
+                      Código para Incorporar
+                    </Label>
+                    <div className="relative">
+                      <pre className="p-3 rounded-lg bg-muted text-xs overflow-x-auto max-h-[120px]">
+                        <code>
+                          {embedConfig.agentId
+                            ? generateEmbedCode({
+                                agentId: embedConfig.agentId,
+                                primaryColor: embedConfig.primaryColor,
+                                position: embedConfig.position,
+                                welcomeMessage: embedConfig.welcomeMessage,
+                              })
+                            : "// Selecione um agente primeiro"}
+                        </code>
+                      </pre>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="absolute top-2 right-2"
+                        onClick={handleCopyEmbedCode}
+                        disabled={!embedConfig.agentId}
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copiar
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Cole este código antes do &lt;/body&gt; do seu site externo.
+                    </p>
+                  </div>
+                </div>
+              )}
             </TabsContent>
           </ScrollArea>
         </Tabs>
