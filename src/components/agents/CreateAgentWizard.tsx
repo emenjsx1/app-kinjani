@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, MessageSquare, Users, Sparkles, Globe, CheckCircle2 } from "lucide-react";
+import { Bot, MessageSquare, Users, Sparkles, Calendar, ArrowRight, CheckCircle2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,7 @@ interface Agent {
   id: string;
   name: string;
   type: string;
+  typeId: string;
   prompt: string;
   status: "active" | "inactive" | "pending" | "error";
   channel: "whatsapp" | "embed" | "both";
@@ -30,32 +31,38 @@ interface CreateAgentWizardProps {
   onAgentCreated: (agent: Agent) => void;
 }
 
-const STEPS = ["Type", "Prompt", "Name", "Channel", "Complete"];
+const STEPS = ["Tipo", "Prompt", "Nome", "Canal", "Concluído"];
 
 const AGENT_TYPES = [
   {
-    id: "customer-support",
-    title: "Customer Support",
-    description: "Answer customer questions and resolve issues",
+    id: "atendimento-faq",
+    title: "Atendimento / FAQ",
+    description: "Responde dúvidas frequentes e atende clientes",
     icon: <MessageSquare className="h-5 w-5" />,
   },
   {
-    id: "lead-generation",
-    title: "Lead Generation",
-    description: "Qualify leads and capture contact information",
+    id: "captura-leads",
+    title: "Captura de Leads",
+    description: "Captura informações de contacto e qualifica leads",
     icon: <Users className="h-5 w-5" />,
   },
   {
-    id: "knowledge-base",
-    title: "Knowledge Base",
-    description: "Provide information from your documentation",
-    icon: <Bot className="h-5 w-5" />,
+    id: "qualificacao",
+    title: "Qualificação",
+    description: "Qualifica leads como Hot, Warm ou Cold",
+    icon: <Sparkles className="h-5 w-5" />,
   },
   {
-    id: "sales-assistant",
-    title: "Sales Assistant",
-    description: "Help customers with product recommendations",
-    icon: <Sparkles className="h-5 w-5" />,
+    id: "follow-up",
+    title: "Follow-up",
+    description: "Acompanha e faz seguimento de contactos",
+    icon: <ArrowRight className="h-5 w-5" />,
+  },
+  {
+    id: "agendamento",
+    title: "Agendamento Simples",
+    description: "Agenda reuniões e compromissos",
+    icon: <Calendar className="h-5 w-5" />,
   },
 ];
 
@@ -63,13 +70,13 @@ const CHANNEL_OPTIONS = [
   {
     id: "embed",
     title: "Website Embed",
-    description: "Embed the chat widget on your website",
-    icon: <Globe className="h-5 w-5" />,
+    description: "Incorpora o widget de chat no seu site",
+    icon: <Bot className="h-5 w-5" />,
   },
   {
     id: "whatsapp",
     title: "WhatsApp",
-    description: "Connect to WhatsApp Business (Coming Soon)",
+    description: "Ligar ao WhatsApp Business (Em breve)",
     icon: <MessageSquare className="h-5 w-5" />,
   },
 ];
@@ -111,7 +118,8 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
     const newAgent: Agent = {
       id: Date.now().toString(),
       name: agentName,
-      type: selectedType?.title || "Custom",
+      type: selectedType?.title || "Personalizado",
+      typeId: agentType || "custom",
       prompt: prompt,
       status: "active",
       channel: channel as "embed" | "whatsapp" | "both",
@@ -143,9 +151,9 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">Select Agent Type</h3>
+              <h3 className="text-lg font-semibold">Selecionar Tipo de Agente</h3>
               <p className="text-sm text-muted-foreground">
-                Choose the type of AI agent you want to create
+                Escolha o tipo de agente IA que deseja criar
               </p>
             </div>
             <CardSelect
@@ -161,22 +169,22 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">Define Agent Behavior</h3>
+              <h3 className="text-lg font-semibold">Definir Comportamento do Agente</h3>
               <p className="text-sm text-muted-foreground">
-                Write a prompt that describes how your agent should behave
+                Escreva um prompt que descreva como o seu agente deve comportar-se
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="prompt">Agent Prompt</Label>
+              <Label htmlFor="prompt">Prompt do Agente</Label>
               <Textarea
                 id="prompt"
-                placeholder="You are a helpful customer support agent for [Company Name]. You help users with..."
+                placeholder="Você é um assistente de apoio ao cliente da [Nome da Empresa]. Ajuda os utilizadores com..."
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 className="min-h-[200px]"
               />
               <p className="text-xs text-muted-foreground">
-                Minimum 10 characters. Be specific about your agent's personality and knowledge.
+                Mínimo 10 caracteres. Seja específico sobre a personalidade e conhecimento do agente.
               </p>
             </div>
           </div>
@@ -186,16 +194,16 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">Name Your Agent</h3>
+              <h3 className="text-lg font-semibold">Nome do Agente</h3>
               <p className="text-sm text-muted-foreground">
-                Give your agent a memorable name
+                Dê um nome memorável ao seu agente
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="name">Agent Name</Label>
+              <Label htmlFor="name">Nome do Agente</Label>
               <Input
                 id="name"
-                placeholder="e.g., Sales Assistant, FAQ Bot, Support Agent"
+                placeholder="ex: Assistente de Vendas, Bot FAQ, Agente de Suporte"
                 value={agentName}
                 onChange={(e) => setAgentName(e.target.value)}
               />
@@ -207,9 +215,9 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">Select Channel</h3>
+              <h3 className="text-lg font-semibold">Selecionar Canal</h3>
               <p className="text-sm text-muted-foreground">
-                Where will your agent be available?
+                Onde o seu agente estará disponível?
               </p>
             </div>
             <CardSelect
@@ -228,9 +236,9 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
               <CheckCircle2 className="h-8 w-8 text-primary" />
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-xl font-semibold">Agent Created!</h3>
+              <h3 className="text-xl font-semibold">Agente Criado!</h3>
               <p className="text-muted-foreground">
-                Your agent <span className="font-medium text-foreground">{agentName}</span> is ready to use.
+                O seu agente <span className="font-medium text-foreground">{agentName}</span> está pronto a usar.
               </p>
             </div>
           </div>
@@ -245,9 +253,9 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Create New Agent</DialogTitle>
+          <DialogTitle>Criar Novo Agente</DialogTitle>
           <DialogDescription>
-            Set up your AI agent in just a few steps
+            Configure o seu agente IA em apenas alguns passos
           </DialogDescription>
         </DialogHeader>
 
@@ -260,15 +268,15 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
           {currentStep < 4 ? (
             <>
               <Button variant="outline" onClick={handleBack} disabled={currentStep === 0}>
-                Back
+                Voltar
               </Button>
               {currentStep === 3 ? (
                 <Button onClick={handleCreate} disabled={!canProceed()}>
-                  Create Agent
+                  Criar Agente
                 </Button>
               ) : (
                 <Button onClick={handleNext} disabled={!canProceed()}>
-                  Continue
+                  Continuar
                 </Button>
               )}
             </>
@@ -276,7 +284,7 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
             <>
               <div />
               <Button onClick={handleClose}>
-                View Agent
+                Ver Agente
               </Button>
             </>
           )}

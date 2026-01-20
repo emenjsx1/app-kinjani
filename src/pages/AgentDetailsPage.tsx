@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { CodeBlock } from "@/components/ui/code-block";
 import { ChatContainer } from "@/components/chat";
+import { AgentFlowVisual } from "@/components/agents/AgentFlowVisual";
 import { toast } from "sonner";
 
 interface Agent {
@@ -31,13 +32,13 @@ interface Message {
   timestamp: string;
 }
 
-// Mock responses for testing
+// Respostas mock para testes
 const MOCK_RESPONSES = [
-  "Hello! How can I help you today?",
-  "That's a great question! Let me help you with that.",
-  "I understand your concern. Here's what I can do for you...",
-  "Thanks for reaching out! I'm here to assist you.",
-  "Let me look into that for you. One moment please...",
+  "Olá! Como posso ajudá-lo hoje?",
+  "Essa é uma ótima pergunta! Deixe-me ajudá-lo com isso.",
+  "Entendo a sua preocupação. Eis o que posso fazer por si...",
+  "Obrigado por entrar em contacto! Estou aqui para ajudar.",
+  "Deixe-me verificar isso para si. Um momento, por favor...",
 ];
 
 export default function AgentDetailsPage() {
@@ -51,7 +52,7 @@ export default function AgentDetailsPage() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
-      content: "Hello! I'm your AI assistant. How can I help you today?",
+      content: "Olá! Sou o seu assistente IA. Como posso ajudá-lo hoje?",
       isUser: false,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
@@ -59,7 +60,7 @@ export default function AgentDetailsPage() {
   const [isTyping, setIsTyping] = useState(false);
 
   useEffect(() => {
-    // Load agent from localStorage
+    // Carregar agente do localStorage
     const storedAgents = localStorage.getItem("kinja-agents");
     if (storedAgents) {
       const agents: Agent[] = JSON.parse(storedAgents);
@@ -77,7 +78,7 @@ export default function AgentDetailsPage() {
     if (agent) {
       const newStatus = checked ? "active" : "inactive";
       updateAgent({ ...agent, status: newStatus });
-      toast.success(`Agent ${checked ? "activated" : "deactivated"}`);
+      toast.success(`Agente ${checked ? "ativado" : "desativado"}`);
     }
   };
 
@@ -87,7 +88,7 @@ export default function AgentDetailsPage() {
       setTimeout(() => {
         updateAgent({ ...agent, prompt });
         setIsSaving(false);
-        toast.success("Prompt saved successfully");
+        toast.success("Prompt guardado com sucesso");
       }, 500);
     }
   };
@@ -116,12 +117,12 @@ export default function AgentDetailsPage() {
   const handleCopyCode = () => {
     navigator.clipboard.writeText(embedCode);
     setCopied(true);
-    toast.success("Embed code copied to clipboard");
+    toast.success("Código embed copiado para a área de transferência");
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleSendMessage = (content: string) => {
-    // Add user message
+    // Adicionar mensagem do utilizador
     const userMessage: Message = {
       id: Date.now().toString(),
       content,
@@ -130,10 +131,10 @@ export default function AgentDetailsPage() {
     };
     setMessages((prev) => [...prev, userMessage]);
 
-    // Simulate typing
+    // Simular digitação
     setIsTyping(true);
     setTimeout(() => {
-      // Add mock response
+      // Adicionar resposta mock
       const responseMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)],
@@ -147,10 +148,10 @@ export default function AgentDetailsPage() {
 
   if (!agent) {
     return (
-      <AppLayout pageTitle="Agent Not Found" credits={1250}>
+      <AppLayout pageTitle="Agente Não Encontrado" credits={1250}>
         <div className="flex flex-col items-center justify-center py-12">
-          <p className="text-muted-foreground mb-4">Agent not found</p>
-          <Button onClick={() => navigate("/agents")}>Back to Agents</Button>
+          <p className="text-muted-foreground mb-4">Agente não encontrado</p>
+          <Button onClick={() => navigate("/agents")}>Voltar aos Agentes</Button>
         </div>
       </AppLayout>
     );
@@ -159,7 +160,7 @@ export default function AgentDetailsPage() {
   return (
     <AppLayout pageTitle={agent.name} credits={1250}>
       <div className="space-y-6">
-        {/* Header */}
+        {/* Cabeçalho */}
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/agents")}>
             <ArrowLeft className="h-4 w-4" />
@@ -176,7 +177,7 @@ export default function AgentDetailsPage() {
           <div className="ml-auto flex items-center gap-4">
             <StatusBadge status={isActive ? "active" : "inactive"} />
             <div className="flex items-center gap-2">
-              <Label htmlFor="status" className="text-sm">Active</Label>
+              <Label htmlFor="status" className="text-sm">Ativo</Label>
               <Switch
                 id="status"
                 checked={isActive}
@@ -186,32 +187,47 @@ export default function AgentDetailsPage() {
           </div>
         </div>
 
-        {/* Content Tabs */}
+        {/* Tabs de Conteúdo */}
         <Tabs defaultValue="settings" className="space-y-4">
           <TabsList>
-            <TabsTrigger value="settings">Settings</TabsTrigger>
-            <TabsTrigger value="embed">Embed Code</TabsTrigger>
-            <TabsTrigger value="test">Test Chat</TabsTrigger>
+            <TabsTrigger value="settings">Definições</TabsTrigger>
+            <TabsTrigger value="flow">Fluxo</TabsTrigger>
+            <TabsTrigger value="embed">Código Embed</TabsTrigger>
+            <TabsTrigger value="test">Testar Agente</TabsTrigger>
           </TabsList>
 
           <TabsContent value="settings" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Agent Prompt</CardTitle>
+                <CardTitle>Prompt do Agente</CardTitle>
                 <CardDescription>
-                  Define how your agent should behave and respond
+                  Defina como o seu agente deve comportar-se e responder
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="You are a helpful assistant..."
+                  placeholder="Você é um assistente útil..."
                   className="min-h-[200px]"
                 />
                 <Button onClick={handleSavePrompt} disabled={isSaving}>
-                  {isSaving ? "Saving..." : "Save Changes"}
+                  {isSaving ? "A guardar..." : "Guardar Alterações"}
                 </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="flow" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Fluxo do Agente</CardTitle>
+                <CardDescription>
+                  Visualização do fluxo de processamento do agente
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <AgentFlowVisual className="py-4" />
               </CardContent>
             </Card>
           </TabsContent>
@@ -219,9 +235,9 @@ export default function AgentDetailsPage() {
           <TabsContent value="embed" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Embed Code</CardTitle>
+                <CardTitle>Código Embed</CardTitle>
                 <CardDescription>
-                  Add this code to your website to enable the chat widget
+                  Adicione este código ao seu site para ativar o widget de chat
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -230,12 +246,12 @@ export default function AgentDetailsPage() {
                   {copied ? (
                     <>
                       <Check className="mr-2 h-4 w-4" />
-                      Copied!
+                      Copiado!
                     </>
                   ) : (
                     <>
                       <Copy className="mr-2 h-4 w-4" />
-                      Copy Code
+                      Copiar Código
                     </>
                   )}
                 </Button>
@@ -246,9 +262,9 @@ export default function AgentDetailsPage() {
           <TabsContent value="test" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Test Your Agent</CardTitle>
+                <CardTitle>Testar o Seu Agente</CardTitle>
                 <CardDescription>
-                  Send test messages to see how your agent responds
+                  Envie mensagens de teste para ver como o seu agente responde
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -257,7 +273,7 @@ export default function AgentDetailsPage() {
                     messages={messages}
                     onSendMessage={handleSendMessage}
                     isLoading={isTyping}
-                    placeholder="Type a test message..."
+                    placeholder="Escreva uma mensagem de teste..."
                   />
                 </div>
               </CardContent>

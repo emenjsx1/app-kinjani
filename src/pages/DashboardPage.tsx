@@ -1,4 +1,5 @@
 import { Bot, Globe, Coins, TrendingUp } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,77 +22,79 @@ import {
 
 const lineData = [
   { name: "Jan", agents: 4 },
-  { name: "Feb", agents: 6 },
+  { name: "Fev", agents: 6 },
   { name: "Mar", agents: 8 },
-  { name: "Apr", agents: 12 },
-  { name: "May", agents: 15 },
+  { name: "Abr", agents: 12 },
+  { name: "Mai", agents: 15 },
   { name: "Jun", agents: 18 },
 ];
 
 const barData = [
-  { name: "Mon", messages: 120 },
-  { name: "Tue", messages: 180 },
-  { name: "Wed", messages: 150 },
-  { name: "Thu", messages: 220 },
-  { name: "Fri", messages: 280 },
-  { name: "Sat", messages: 90 },
-  { name: "Sun", messages: 60 },
+  { name: "Seg", messages: 120 },
+  { name: "Ter", messages: 180 },
+  { name: "Qua", messages: 150 },
+  { name: "Qui", messages: 220 },
+  { name: "Sex", messages: 280 },
+  { name: "Sáb", messages: 90 },
+  { name: "Dom", messages: 60 },
 ];
 
 const pieData = [
-  { name: "Agent Chat", value: 400 },
-  { name: "Website Gen", value: 300 },
+  { name: "Chat Agente", value: 400 },
+  { name: "Geração Sites", value: 300 },
   { name: "Embeddings", value: 200 },
-  { name: "API Calls", value: 100 },
+  { name: "Chamadas API", value: 100 },
 ];
 
 const COLORS = ["hsl(152, 100%, 44%)", "hsl(162, 63%, 47%)", "hsl(160, 71%, 31%)", "hsl(166, 94%, 20%)"];
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+
   return (
-    <AppLayout pageTitle="Dashboard" credits={1250}>
+    <AppLayout pageTitle="Painel" credits={1250}>
       <div className="space-y-6">
-        {/* Stats Grid */}
+        {/* Grid de Estatísticas */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
-            title="Total Agents"
+            title="Total de Agentes"
             value={18}
             icon={Bot}
             variant="primary"
             trend={{ value: 12, isPositive: true }}
-            description="from last month"
+            description="desde o mês passado"
           />
           <StatCard
-            title="Active Agents"
+            title="Agentes Ativos"
             value={12}
             icon={Bot}
             variant="success"
             trend={{ value: 8, isPositive: true }}
-            description="currently running"
+            description="a funcionar agora"
           />
           <StatCard
-            title="Total Sites"
+            title="Total de Sites"
             value={7}
             icon={Globe}
             trend={{ value: 3, isPositive: true }}
-            description="websites generated"
+            description="sites gerados"
           />
           <StatCard
-            title="Credits Left"
-            value="1,250"
+            title="Créditos Restantes"
+            value="1.250"
             icon={Coins}
             variant="warning"
-            description="of 2,000 monthly"
+            description="de 2.000 mensais"
           />
         </div>
 
-        {/* Charts Row */}
+        {/* Linha de Gráficos */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {/* Agents Created Chart */}
+          {/* Gráfico de Agentes Criados */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Agents Created</CardTitle>
-              <CardDescription>Monthly agent creation trend</CardDescription>
+              <CardTitle className="text-base">Agentes Criados</CardTitle>
+              <CardDescription>Tendência mensal de criação de agentes</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
@@ -118,11 +121,11 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Messages Handled Chart */}
+          {/* Gráfico de Mensagens Processadas */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Messages Handled</CardTitle>
-              <CardDescription>This week's message volume</CardDescription>
+              <CardTitle className="text-base">Mensagens Processadas</CardTitle>
+              <CardDescription>Volume de mensagens esta semana</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
@@ -143,11 +146,11 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Credit Usage Chart */}
+          {/* Gráfico de Uso de Créditos */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Credit Usage</CardTitle>
-              <CardDescription>Usage by feature</CardDescription>
+              <CardTitle className="text-base">Uso de Créditos</CardTitle>
+              <CardDescription>Uso por funcionalidade</CardDescription>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
@@ -179,18 +182,18 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Quick Actions */}
+        {/* Ações Rápidas */}
         <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Get started with common tasks</CardDescription>
+            <CardTitle>Ações Rápidas</CardTitle>
+            <CardDescription>Comece com tarefas comuns</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-3">
-              <Button>Create New Agent</Button>
-              <Button variant="outline">Generate Website</Button>
-              <Button variant="outline">View Demo</Button>
-              <Button variant="secondary">Buy Credits</Button>
+              <Button onClick={() => navigate("/agents")}>Criar Novo Agente</Button>
+              <Button variant="outline" onClick={() => navigate("/websites")}>Gerar Site</Button>
+              <Button variant="outline" onClick={() => navigate("/demo")}>Ver Demo</Button>
+              <Button variant="secondary" onClick={() => navigate("/credits")}>Comprar Créditos</Button>
             </div>
           </CardContent>
         </Card>

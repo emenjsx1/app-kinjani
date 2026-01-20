@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, MoreHorizontal, Bot, MessageSquare, Globe } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Bot } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,9 +41,9 @@ interface Agent {
 const defaultAgents: Agent[] = [
   {
     id: "1",
-    name: "Sales Assistant",
-    type: "Customer Support",
-    prompt: "You are a helpful sales assistant...",
+    name: "Assistente de Vendas",
+    type: "Atendimento / FAQ",
+    prompt: "Você é um assistente de vendas útil...",
     status: "active",
     channel: "whatsapp",
     messagesHandled: 1250,
@@ -51,9 +51,9 @@ const defaultAgents: Agent[] = [
   },
   {
     id: "2",
-    name: "FAQ Bot",
-    type: "Knowledge Base",
-    prompt: "You are a knowledge base assistant...",
+    name: "Bot FAQ",
+    type: "Atendimento / FAQ",
+    prompt: "Você é um assistente de base de conhecimento...",
     status: "active",
     channel: "embed",
     messagesHandled: 890,
@@ -61,9 +61,9 @@ const defaultAgents: Agent[] = [
   },
   {
     id: "3",
-    name: "Lead Qualifier",
-    type: "Lead Generation",
-    prompt: "You are a lead qualification agent...",
+    name: "Qualificador de Leads",
+    type: "Captura de Leads",
+    prompt: "Você é um agente de qualificação de leads...",
     status: "inactive",
     channel: "both",
     messagesHandled: 450,
@@ -79,13 +79,13 @@ export default function AgentsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
 
-  // Load agents from localStorage on mount
+  // Carregar agentes do localStorage ao montar
   useEffect(() => {
     const storedAgents = localStorage.getItem("kinja-agents");
     if (storedAgents) {
       setAgents(JSON.parse(storedAgents));
     } else {
-      // Initialize with default agents
+      // Inicializar com agentes padrão
       localStorage.setItem("kinja-agents", JSON.stringify(defaultAgents));
       setAgents(defaultAgents);
     }
@@ -104,7 +104,7 @@ export default function AgentsPage() {
     const config = {
       whatsapp: { label: "WhatsApp", className: "bg-green-500/10 text-green-600" },
       embed: { label: "Embed", className: "bg-blue-500/10 text-blue-600" },
-      both: { label: "Both", className: "bg-purple-500/10 text-purple-600" },
+      both: { label: "Ambos", className: "bg-purple-500/10 text-purple-600" },
     };
     const { label, className } = config[channel];
     return <Badge variant="outline" className={className}>{label}</Badge>;
@@ -113,7 +113,7 @@ export default function AgentsPage() {
   const handleAgentCreated = (newAgent: Agent) => {
     const updatedAgents = [...agents, newAgent];
     saveAgents(updatedAgents);
-    toast.success(`Agent "${newAgent.name}" created successfully!`);
+    toast.success(`Agente "${newAgent.name}" criado com sucesso!`);
   };
 
   const handleDeleteAgent = (agent: Agent) => {
@@ -125,7 +125,7 @@ export default function AgentsPage() {
     if (agentToDelete) {
       const updatedAgents = agents.filter((a) => a.id !== agentToDelete.id);
       saveAgents(updatedAgents);
-      toast.success(`Agent "${agentToDelete.name}" deleted`);
+      toast.success(`Agente "${agentToDelete.name}" eliminado`);
       setAgentToDelete(null);
     }
     setDeleteDialogOpen(false);
@@ -136,14 +136,14 @@ export default function AgentsPage() {
   };
 
   return (
-    <AppLayout pageTitle="Agents" credits={1250}>
+    <AppLayout pageTitle="Agentes" credits={1250}>
       <div className="space-y-6">
-        {/* Header Actions */}
+        {/* Ações do Cabeçalho */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search agents..."
+              placeholder="Pesquisar agentes..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10"
@@ -151,26 +151,26 @@ export default function AgentsPage() {
           </div>
           <Button onClick={() => setWizardOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
-            Create Agent
+            Criar Novo Agente
           </Button>
         </div>
 
-        {/* Agents Table */}
+        {/* Tabela de Agentes */}
         <Card>
           <CardHeader>
-            <CardTitle>Your Agents</CardTitle>
+            <CardTitle>Os Seus Agentes</CardTitle>
             <CardDescription>
-              Manage and monitor all your AI agents
+              Gerir e monitorizar todos os seus agentes IA
             </CardDescription>
           </CardHeader>
           <CardContent>
             {filteredAgents.length === 0 ? (
               <EmptyState
                 icon={Bot}
-                title="No agents found"
-                description="Create your first AI agent to get started"
+                title="Nenhum agente encontrado"
+                description="Crie o seu primeiro agente IA para começar"
                 action={{
-                  label: "Create Agent",
+                  label: "Criar Agente",
                   onClick: () => setWizardOpen(true),
                 }}
               />
@@ -178,11 +178,11 @@ export default function AgentsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Channel</TableHead>
-                    <TableHead className="text-right">Messages</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Canal</TableHead>
+                    <TableHead className="text-right">Mensagens</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -223,19 +223,19 @@ export default function AgentsPage() {
                               e.stopPropagation();
                               navigate(`/agents/${agent.id}`);
                             }}>
-                              Edit
+                              Editar
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               navigate(`/agents/${agent.id}?tab=test`);
                             }}>
-                              Test Agent
+                              Testar Agente
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={(e) => {
                               e.stopPropagation();
                               navigate(`/agents/${agent.id}?tab=embed`);
                             }}>
-                              Copy Embed Code
+                              Copiar Código Embed
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
@@ -245,7 +245,7 @@ export default function AgentsPage() {
                                 handleDeleteAgent(agent);
                               }}
                             >
-                              Delete
+                              Eliminar
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -259,20 +259,20 @@ export default function AgentsPage() {
         </Card>
       </div>
 
-      {/* Create Agent Wizard */}
+      {/* Wizard de Criar Agente */}
       <CreateAgentWizard
         open={wizardOpen}
         onOpenChange={setWizardOpen}
         onAgentCreated={handleAgentCreated}
       />
 
-      {/* Delete Confirmation Dialog */}
+      {/* Diálogo de Confirmação de Eliminação */}
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        title="Delete Agent"
-        description={`Are you sure you want to delete "${agentToDelete?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
+        title="Eliminar Agente"
+        description={`Tem a certeza que deseja eliminar "${agentToDelete?.name}"? Esta ação não pode ser desfeita.`}
+        confirmLabel="Eliminar"
         onConfirm={confirmDelete}
         variant="destructive"
       />

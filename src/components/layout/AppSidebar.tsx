@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -31,16 +30,16 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 const mainNavItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Agents", url: "/agents", icon: Bot },
-  { title: "Websites", url: "/websites", icon: Globe },
+  { title: "Painel", url: "/dashboard", icon: LayoutDashboard },
+  { title: "Agentes", url: "/agents", icon: Bot },
+  { title: "Sites", url: "/websites", icon: Globe },
   { title: "Demo", url: "/demo", icon: MessageSquare },
 ];
 
 const secondaryNavItems = [
-  { title: "Credits", url: "/credits", icon: Coins },
-  { title: "Integrations", url: "/integrations", icon: Plug },
-  { title: "Settings", url: "/settings", icon: Settings },
+  { title: "Créditos", url: "/credits", icon: Coins },
+  { title: "Integrações", url: "/integrations", icon: Plug },
+  { title: "Definições", url: "/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -69,7 +68,7 @@ export function AppSidebar() {
                 KINJA AI
               </span>
               <span className="text-xs text-sidebar-foreground/60">
-                AI Platform
+                Plataforma IA
               </span>
             </div>
           )}
@@ -81,7 +80,7 @@ export function AppSidebar() {
       <SidebarContent className="px-2 py-4">
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs uppercase tracking-wider mb-2">
-            {!collapsed && "Main Menu"}
+            {!collapsed && "Menu Principal"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -113,7 +112,7 @@ export function AppSidebar() {
 
         <SidebarGroup className="mt-6">
           <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs uppercase tracking-wider mb-2">
-            {!collapsed && "Settings"}
+            {!collapsed && "Configurações"}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
@@ -156,7 +155,7 @@ export function AppSidebar() {
             )}
           >
             <LogOut className="h-4 w-4" />
-            {!collapsed && <span className="ml-2">Logout</span>}
+            {!collapsed && <span className="ml-2">Sair</span>}
           </Button>
           <Button
             variant="ghost"
