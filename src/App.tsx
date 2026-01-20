@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import StyleguidePage from "./pages/styleguide/StyleguidePage";
@@ -23,36 +24,38 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          {/* Public routes */}
-          <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<AuthPage />} />
-          <Route path="/demo" element={<DemoPage />} />
-          <Route path="/styleguide" element={<StyleguidePage />} />
-          <Route path="/connect/:token" element={<ClientConnectPage />} />
-          <Route path="/site/:siteId" element={<PublicWebsitePage />} />
-          
-          {/* Protected routes */}
-          <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-          <Route path="/agents" element={<ProtectedRoute><AgentsPage /></ProtectedRoute>} />
-          <Route path="/agents/:id" element={<ProtectedRoute><AgentDetailsPage /></ProtectedRoute>} />
-          <Route path="/websites" element={<ProtectedRoute><WebsitesPage /></ProtectedRoute>} />
-          <Route path="/websites/:id/edit" element={<ProtectedRoute><WebsiteEditorPage /></ProtectedRoute>} />
-          <Route path="/credits" element={<ProtectedRoute><CreditsPage /></ProtectedRoute>} />
-          <Route path="/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-          
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/demo" element={<DemoPage />} />
+            <Route path="/styleguide" element={<StyleguidePage />} />
+            <Route path="/connect/:token" element={<ClientConnectPage />} />
+            <Route path="/site/:siteId" element={<PublicWebsitePage />} />
+            
+            {/* Protected routes */}
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+            <Route path="/agents" element={<ProtectedRoute><AgentsPage /></ProtectedRoute>} />
+            <Route path="/agents/:id" element={<ProtectedRoute><AgentDetailsPage /></ProtectedRoute>} />
+            <Route path="/websites" element={<ProtectedRoute><WebsitesPage /></ProtectedRoute>} />
+            <Route path="/websites/:id/edit" element={<ProtectedRoute><WebsiteEditorPage /></ProtectedRoute>} />
+            <Route path="/credits" element={<ProtectedRoute><CreditsPage /></ProtectedRoute>} />
+            <Route path="/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ThemeProvider>
 );
 
 export default App;
