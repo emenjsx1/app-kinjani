@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, Check, Bot } from "lucide-react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Copy, Check, Bot, RotateCcw } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,12 +12,14 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { CodeBlock } from "@/components/ui/code-block";
 import { ChatContainer } from "@/components/chat";
 import { AgentFlowVisual } from "@/components/agents/AgentFlowVisual";
+import { useAgentChat } from "@/hooks/useAgentChat";
 import { toast } from "sonner";
 
 interface Agent {
   id: string;
   name: string;
   type: string;
+  typeId?: string;
   prompt: string;
   status: "active" | "inactive" | "pending" | "error";
   channel: "whatsapp" | "embed" | "both";
@@ -25,39 +27,24 @@ interface Agent {
   createdAt: string;
 }
 
-interface Message {
-  id: string;
-  content: string;
-  isUser: boolean;
-  timestamp: string;
-}
-
-// Respostas mock para testes
-const MOCK_RESPONSES = [
-  "Olá! Como posso ajudá-lo hoje?",
-  "Essa é uma ótima pergunta! Deixe-me ajudá-lo com isso.",
-  "Entendo a sua preocupação. Eis o que posso fazer por si...",
-  "Obrigado por entrar em contacto! Estou aqui para ajudar.",
-  "Deixe-me verificar isso para si. Um momento, por favor...",
-];
-
 export default function AgentDetailsPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [agent, setAgent] = useState<Agent | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [prompt, setPrompt] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content: "Olá! Sou o seu assistente IA. Como posso ajudá-lo hoje?",
-      isUser: false,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    },
-  ]);
-  const [isTyping, setIsTyping] = useState(false);
+
+  // Hook de chat com IA real
+  const { messages, isLoading, sendMessage, clearMessages } = useAgentChat({
+    agentType: agent?.typeId || "atendimento-faq",
+    agentPrompt: prompt,
+  });
+
+  // Determinar tab inicial baseado na URL
+  const defaultTab = searchParams.get("tab") || "settings";
 
   useEffect(() => {
     // Carregar agente do localStorage
@@ -122,28 +109,12 @@ export default function AgentDetailsPage() {
   };
 
   const handleSendMessage = (content: string) => {
-    // Adicionar mensagem do utilizador
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      isUser: true,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    setMessages((prev) => [...prev, userMessage]);
+    sendMessage(content);
+  };
 
-    // Simular digitação
-    setIsTyping(true);
-    setTimeout(() => {
-      // Adicionar resposta mock
-      const responseMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)],
-        isUser: false,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      };
-      setMessages((prev) => [...prev, responseMessage]);
-      setIsTyping(false);
-    }, 1000 + Math.random() * 1000);
+  const handleClearChat = () => {
+    clearMessages();
+    toast.success("Conversa reiniciada");
   };
 
   if (!agent) {
@@ -188,7 +159,7 @@ export default function AgentDetailsPage() {
         </div>
 
         {/* Tabs de Conteúdo */}
-        <Tabs defaultValue="settings" className="space-y-4">
+        <Tabs defaultValue={defaultTab} className="space-y-4">
           <TabsList>
             <TabsTrigger value="settings">Definições</TabsTrigger>
             <TabsTrigger value="flow">Fluxo</TabsTrigger>
@@ -223,11 +194,11 @@ export default function AgentDetailsPage() {
               <CardHeader>
                 <CardTitle>Fluxo do Agente</CardTitle>
                 <CardDescription>
-                  Visualização do fluxo de processamento do agente
+                  Visualização do fluxo de processamento do agente ({agent.type})
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <AgentFlowVisual className="py-4" />
+                <AgentFlowVisual className="py-4" agentType={agent.typeId} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -262,17 +233,25 @@ export default function AgentDetailsPage() {
           <TabsContent value="test" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Testar o Seu Agente</CardTitle>
-                <CardDescription>
-                  Envie mensagens de teste para ver como o seu agente responde
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Testar o Seu Agente</CardTitle>
+                    <CardDescription>
+                      Envie mensagens de teste para ver como o seu agente responde com IA real
+                    </CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleClearChat}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    Reiniciar
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="border rounded-lg h-[400px]">
                   <ChatContainer
                     messages={messages}
                     onSendMessage={handleSendMessage}
-                    isLoading={isTyping}
+                    isLoading={isLoading}
                     placeholder="Escreva uma mensagem de teste..."
                   />
                 </div>
