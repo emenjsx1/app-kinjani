@@ -113,10 +113,6 @@ export default function Index() {
         
         <div className="relative max-w-7xl mx-auto px-6 py-24 md:py-32 lg:py-40">
           <div className="max-w-3xl">
-            <Badge className="mb-6 bg-caribbean-green/20 text-caribbean-green border-caribbean-green/30 hover:bg-caribbean-green/30">
-              <Sparkles className="h-3 w-3 mr-1" />
-              Plataforma de IA para Negócios
-            </Badge>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-anti-flash-white mb-6 leading-tight">
               Automatize o seu negócio com{" "}

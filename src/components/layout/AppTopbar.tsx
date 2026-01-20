@@ -88,7 +88,7 @@ export function AppTopbar({ pageTitle = "Dashboard", credits = 1250 }: AppTopbar
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/settings")}>Perfil</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/profile")}>Perfil</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/settings")}>Definições</DropdownMenuItem>
             <DropdownMenuItem onClick={() => navigate("/credits")}>Créditos</DropdownMenuItem>
             <DropdownMenuSeparator />
