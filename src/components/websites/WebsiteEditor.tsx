@@ -207,13 +207,29 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !uploadingFor) return;
+    if (!file) return;
 
-    // Create a fake URL for demo (in production, upload to storage)
-    const fakeUrl = URL.createObjectURL(file);
-    updateSectionContent(uploadingFor.sectionId, uploadingFor.field, fakeUrl);
+    // Create a URL for the uploaded file
+    const fileUrl = URL.createObjectURL(file);
+    
+    // Check if this is a logo upload
+    if (uploadingFor?.sectionId === 'logo' && uploadingFor?.field === 'logoUrl') {
+      setEditableTemplate(prev => ({
+        ...prev,
+        logoUrl: fileUrl,
+      }));
+      setHasChanges(true);
+      toast.success("Logo carregado com sucesso");
+    } else if (uploadingFor) {
+      updateSectionContent(uploadingFor.sectionId, uploadingFor.field, fileUrl);
+      toast.success("Imagem adicionada");
+    }
+    
     setUploadingFor(null);
-    toast.success("Imagem adicionada");
+    // Reset the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleAIEdit = async () => {
@@ -454,22 +470,41 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
                 <div className="p-4 border rounded-lg bg-muted/50 space-y-3">
                   <div className="flex items-center gap-3">
                     <div 
-                      className="w-16 h-16 rounded-lg border-2 border-dashed flex items-center justify-center bg-background cursor-pointer hover:border-primary transition-colors"
+                      className="w-16 h-16 rounded-lg border-2 border-dashed flex items-center justify-center bg-background cursor-pointer hover:border-primary transition-colors overflow-hidden"
                       onClick={() => {
                         setUploadingFor({ sectionId: 'logo', field: 'logoUrl' });
                         fileInputRef.current?.click();
                       }}
                     >
-                      {editableTemplate.colors.background ? (
-                        <ImagePlus className="h-6 w-6 text-muted-foreground" />
+                      {editableTemplate.logoUrl ? (
+                        <img 
+                          src={editableTemplate.logoUrl} 
+                          alt="Logo" 
+                          className="w-full h-full object-contain"
+                        />
                       ) : (
                         <ImagePlus className="h-6 w-6 text-muted-foreground" />
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium">Carregar Logo</p>
+                      <p className="text-sm font-medium">
+                        {editableTemplate.logoUrl ? "Alterar Logo" : "Carregar Logo"}
+                      </p>
                       <p className="text-xs text-muted-foreground">PNG, SVG ou JPG</p>
                     </div>
+                    {editableTemplate.logoUrl && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditableTemplate(prev => ({ ...prev, logoUrl: undefined }));
+                          setHasChanges(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>

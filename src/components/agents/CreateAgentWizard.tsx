@@ -74,8 +74,32 @@ const AGENT_TYPES = [
   {
     id: "controlo-gastos",
     title: "Controlo de Gastos",
-    description: "Regista gastos, guarda em Google Sheets e envia relatórios",
+    description: "Regista gastos, guarda em Sheets e envia relatórios",
     icon: <Coins className="h-5 w-5" />,
+  },
+  {
+    id: "scrapper-leads",
+    title: "Scrapper de Leads",
+    description: "Pesquisa empresas no Google Maps e guarda contactos",
+    icon: <Users className="h-5 w-5" />,
+  },
+  {
+    id: "disparo-whatsapp",
+    title: "Disparo WhatsApp",
+    description: "Envia mensagens em massa com controlo de limites",
+    icon: <MessageSquare className="h-5 w-5" />,
+  },
+  {
+    id: "disparo-email",
+    title: "Disparo de Email",
+    description: "Envia emails em massa via Resend API",
+    icon: <FileText className="h-5 w-5" />,
+  },
+  {
+    id: "gmail-contacts",
+    title: "Gmail → Contactos",
+    description: "Extrai remetentes de emails para contactos",
+    icon: <Users className="h-5 w-5" />,
   },
 ];
 

@@ -1,5 +1,13 @@
 import { Heart, Scale, HardHat, GraduationCap, Briefcase, Building2, Globe } from "lucide-react";
 
+export interface WebsitePage {
+  id: string;
+  name: string;
+  slug: string;
+  sections: WebsiteSection[];
+  isHomepage?: boolean;
+}
+
 export interface WebsiteTemplate {
   id: string;
   name: string;
@@ -9,6 +17,9 @@ export interface WebsiteTemplate {
   type: "landing" | "institutional";
   thumbnail: string;
   sections: WebsiteSection[];
+  pages?: WebsitePage[];
+  logoUrl?: string;
+  navItems?: { label: string; href: string }[];
   colors: {
     primary: string;
     secondary: string;
