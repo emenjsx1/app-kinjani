@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { z } from "zod";
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import logoDark from "@/assets/logo-dark.png";
 
 // Validation schemas
 const emailSchema = z.string().email("Email inválido");
@@ -110,14 +112,16 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-rich-black via-dark-green to-bangladesh-green p-4">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--caribbean-green)/0.2),transparent_50%)]" />
       
+      {/* Header with logo and theme toggle */}
+      <div className="absolute top-0 left-0 right-0 p-4 flex items-center justify-between">
+        <Link to="/">
+          <img src={logoDark} alt="KINJA AI" className="h-10 w-auto" />
+        </Link>
+        <ThemeToggle />
+      </div>
+      
       <Card className="relative w-full max-w-md bg-card/95 backdrop-blur-sm border-border/50 shadow-2xl">
         <CardHeader className="text-center space-y-2 pb-2">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-caribbean-green to-mountain-meadow flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-rich-black" />
-            </div>
-            <span className="text-2xl font-bold text-foreground">KINJA AI</span>
-          </div>
           <CardTitle className="text-xl">
             {activeTab === "login" ? "Bem-vindo de volta" : "Criar conta"}
           </CardTitle>

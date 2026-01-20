@@ -1,4 +1,4 @@
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Bot,
@@ -28,6 +28,9 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { SidebarLogo } from "@/components/ui/theme-logo";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const mainNavItems = [
   { title: "Painel", url: "/dashboard", icon: LayoutDashboard },
@@ -46,8 +49,19 @@ export function AppSidebar() {
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const navigate = useNavigate();
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("Erro ao sair");
+    } else {
+      toast.success("Sessão terminada");
+      navigate("/");
+    }
+  };
 
   return (
     <Sidebar
@@ -58,21 +72,15 @@ export function AppSidebar() {
       collapsible="icon"
     >
       <SidebarHeader className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-            <Bot className="h-6 w-6 text-primary-foreground" />
-          </div>
-          {!collapsed && (
-            <div className="flex flex-col">
-              <span className="text-lg font-bold text-sidebar-foreground">
-                KINJA AI
-              </span>
-              <span className="text-xs text-sidebar-foreground/60">
-                Plataforma IA
-              </span>
+        <NavLink to="/dashboard" className="flex items-center gap-3">
+          {collapsed ? (
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
+              <Bot className="h-6 w-6 text-primary-foreground" />
             </div>
+          ) : (
+            <SidebarLogo className="h-10 w-auto" />
           )}
-        </div>
+        </NavLink>
       </SidebarHeader>
 
       <Separator className="bg-sidebar-border" />
@@ -149,6 +157,7 @@ export function AppSidebar() {
           <Button
             variant="ghost"
             size="sm"
+            onClick={handleLogout}
             className={cn(
               "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent",
               collapsed && "w-full justify-center"
