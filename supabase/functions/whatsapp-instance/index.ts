@@ -148,7 +148,58 @@ serve(async (req) => {
         console.log('Webhook configured:', webhookUrl);
       }
 
-      // 3. Save instance to Supabase
+      // 3. Get QR code from connect endpoint (separate call)
+      let qrCodeBase64 = null;
+      try {
+        const qrResponse = await fetch(`${evolutionApiUrl}/instance/connect/${instanceKey}`, {
+          headers: {
+            'apikey': evolutionApiKey,
+          },
+        });
+        if (qrResponse.ok) {
+          const qrData = await qrResponse.json();
+          qrCodeBase64 = qrData.base64 || qrData.qrcode?.base64 || null;
+          console.log('QR code obtained:', qrCodeBase64 ? 'yes' : 'no');
+        }
+      } catch (e) {
+        console.error('Error getting QR code:', e);
+      }
+
+      // 4. If client mode, deduct credits
+      if (isForClient) {
+        const CREDIT_COST = 5; // 5 credits per client instance
+        
+        // Get current balance
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('credits_balance')
+          .eq('user_id', user.id)
+          .single();
+
+        if (profile) {
+          const newBalance = Math.max(0, profile.credits_balance - CREDIT_COST);
+          
+          // Update balance
+          await supabase
+            .from('profiles')
+            .update({ credits_balance: newBalance })
+            .eq('user_id', user.id);
+
+          // Record transaction
+          await supabase
+            .from('credit_transactions')
+            .insert({
+              user_id: user.id,
+              amount: -CREDIT_COST,
+              action: 'whatsapp_client_instance',
+              description: `Instância WhatsApp cliente: ${instanceName}`,
+            });
+
+          console.log(`Deducted ${CREDIT_COST} credits for client instance`);
+        }
+      }
+
+      // 5. Save instance to Supabase
       const { data: instance, error: dbError } = await supabase
         .from('whatsapp_instances')
         .insert({
@@ -178,7 +229,8 @@ serve(async (req) => {
       return new Response(JSON.stringify({ 
         success: true,
         instance,
-        qrcode: createData.qrcode?.base64 || null,
+        qrcode: qrCodeBase64,
+        creditsUsed: isForClient ? 5 : 0,
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bot, MessageSquare, Users, Sparkles, Calendar, ArrowRight, CheckCircle2, FileText, Wand2, Coins, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -15,8 +15,10 @@ import { Stepper, CardSelect } from "@/components/ui/stepper";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PROMPT_TEMPLATES, getTemplatesForAgentType, PromptTemplate } from "@/lib/agent-templates";
 import { useAgentAI } from "@/hooks/useAgentAI";
+import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 import { toast } from "sonner";
 
 interface Agent {
@@ -142,6 +144,7 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
   const [prompt, setPrompt] = useState("");
   const [agentName, setAgentName] = useState("");
   const [channel, setChannel] = useState<string | null>("embed");
+  const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
   
   // AI creation state
   const [aiDescription, setAiDescription] = useState("");
@@ -156,6 +159,7 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
   } | null>(null);
 
   const { createAgentWithAI, isCreating: isAICreating } = useAgentAI();
+  const { instances } = useWhatsAppInstances();
 
   // Templates disponíveis para o tipo selecionado
   const availableTemplates = agentType ? getTemplatesForAgentType(agentType) : [];
@@ -168,6 +172,7 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
     setPrompt("");
     setAgentName("");
     setChannel("embed");
+    setSelectedInstanceId(null);
     setAiDescription("");
     setBusinessName("");
     setNiche("");
@@ -262,7 +267,7 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
         case 3:
           return agentName.trim().length > 2;
         case 4:
-          return channel !== null;
+          return channel !== null && (channel !== "whatsapp" || selectedInstanceId !== null);
         default:
           return true;
       }
@@ -279,7 +284,7 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
         case 4:
           return agentName.trim().length > 2;
         case 5:
-          return channel !== null;
+          return channel !== null && (channel !== "whatsapp" || selectedInstanceId !== null);
         default:
           return true;
       }
@@ -472,9 +477,38 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
               <CardSelect
                 options={CHANNEL_OPTIONS}
                 value={channel}
-                onChange={setChannel}
+                onChange={(val) => {
+                  setChannel(val);
+                  if (val !== "whatsapp") {
+                    setSelectedInstanceId(null);
+                  }
+                }}
                 className="grid-cols-2"
               />
+              
+              {channel === "whatsapp" && (
+                <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+                  <Label>Instância WhatsApp</Label>
+                  {instances.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhuma instância disponível. Crie uma em Integrações.
+                    </p>
+                  ) : (
+                    <Select value={selectedInstanceId || ""} onValueChange={setSelectedInstanceId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma instância" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {instances.map((inst) => (
+                          <SelectItem key={inst.id} value={inst.id}>
+                            {inst.instance_name} {inst.status === "connected" ? "✓" : "(desconectado)"}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              )}
             </div>
           );
 
@@ -639,9 +673,38 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
             <CardSelect
               options={CHANNEL_OPTIONS}
               value={channel}
-              onChange={setChannel}
+              onChange={(val) => {
+                setChannel(val);
+                if (val !== "whatsapp") {
+                  setSelectedInstanceId(null);
+                }
+              }}
               className="grid-cols-2"
             />
+            
+            {channel === "whatsapp" && (
+              <div className="space-y-2 p-4 bg-muted/50 rounded-lg">
+                <Label>Instância WhatsApp</Label>
+                {instances.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma instância disponível. Crie uma em Integrações.
+                  </p>
+                ) : (
+                  <Select value={selectedInstanceId || ""} onValueChange={setSelectedInstanceId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma instância" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {instances.map((inst) => (
+                        <SelectItem key={inst.id} value={inst.id}>
+                          {inst.instance_name} {inst.status === "connected" ? "✓" : "(desconectado)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              </div>
+            )}
           </div>
         );
 
