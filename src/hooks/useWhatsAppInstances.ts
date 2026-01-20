@@ -58,19 +58,31 @@ export function useWhatsAppInstances() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await supabase.functions.invoke('whatsapp-instance', {
-        body: { instanceName, agentId, isForClient },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      const supabaseUrl = 'https://mpxsivfiltwvnvqtixuo.supabase.co';
+      
+      const res = await fetch(
+        `${supabaseUrl}/functions/v1/whatsapp-instance?action=create`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ instanceName, agentId, isForClient }),
+        }
+      );
 
-      if (response.error) throw new Error(response.error.message);
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to create instance');
+      }
+
+      const data = await res.json();
 
       // Refresh instances list
       await fetchInstances();
 
-      return response.data;
+      return data;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create instance');
       throw err;
