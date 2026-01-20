@@ -1,0 +1,218 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+interface WebsiteGenerationRequest {
+  websiteType: "landing" | "institutional";
+  niche: string;
+  templateName: string;
+  prompt: string;
+  websiteName: string;
+  sections: string[];
+}
+
+const SYSTEM_PROMPT = `Tu és um especialista em copywriting e criação de conteúdo para websites em Português de Portugal.
+
+A tua tarefa é gerar conteúdo persuasivo e profissional para um website baseado nas informações fornecidas.
+
+REGRAS IMPORTANTES:
+1. Todo o conteúdo DEVE estar em Português de Portugal
+2. Usa um tom profissional mas acessível
+3. Cria textos concisos e impactantes
+4. Adapta o tom ao nicho do negócio
+5. Inclui CTAs claros e persuasivos
+6. Os textos devem ser realistas e credíveis
+
+FORMATO DE RESPOSTA:
+Responde APENAS com JSON válido, sem markdown ou texto adicional.
+O JSON deve conter as secções solicitadas com os campos apropriados.`;
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { websiteType, niche, templateName, prompt, websiteName, sections } = 
+      await req.json() as WebsiteGenerationRequest;
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    const userPrompt = `
+Gera conteúdo para um website com as seguintes características:
+
+TIPO: ${websiteType === "landing" ? "Landing Page" : "Site Institucional"}
+NICHO: ${niche}
+TEMPLATE: ${templateName}
+NOME DO NEGÓCIO: ${websiteName}
+
+DESCRIÇÃO DO CLIENTE:
+${prompt}
+
+SECÇÕES A GERAR:
+${sections.join(", ")}
+
+Para cada secção, gera conteúdo apropriado. Usa o seguinte formato JSON:
+
+{
+  "hero": {
+    "headline": "Título principal impactante",
+    "subheadline": "Subtítulo explicativo",
+    "ctaText": "Texto do botão principal",
+    "ctaSecondaryText": "Texto do botão secundário"
+  },
+  "about": {
+    "title": "Título da secção",
+    "description": "Descrição do negócio (2-3 frases)",
+    "mission": "Missão da empresa (1 frase)"
+  },
+  "services": {
+    "title": "Título da secção",
+    "subtitle": "Subtítulo",
+    "service1Title": "Nome do serviço 1",
+    "service1Description": "Descrição breve",
+    "service2Title": "Nome do serviço 2",
+    "service2Description": "Descrição breve",
+    "service3Title": "Nome do serviço 3",
+    "service3Description": "Descrição breve"
+  },
+  "features": {
+    "title": "Título da secção",
+    "feature1Title": "Característica 1",
+    "feature1Description": "Descrição breve",
+    "feature2Title": "Característica 2",
+    "feature2Description": "Descrição breve",
+    "feature3Title": "Característica 3",
+    "feature3Description": "Descrição breve"
+  },
+  "testimonials": {
+    "title": "Título da secção",
+    "testimonial1Text": "Testemunho do cliente 1",
+    "testimonial1Author": "Nome do cliente",
+    "testimonial1Role": "Cargo/Papel",
+    "testimonial2Text": "Testemunho do cliente 2",
+    "testimonial2Author": "Nome do cliente",
+    "testimonial2Role": "Cargo/Papel"
+  },
+  "cta": {
+    "title": "Título do CTA",
+    "description": "Descrição persuasiva",
+    "buttonText": "Texto do botão"
+  },
+  "contact": {
+    "title": "Título da secção",
+    "subtitle": "Subtítulo",
+    "email": "email@exemplo.pt",
+    "phone": "+351 XXX XXX XXX",
+    "address": "Localização"
+  },
+  "team": {
+    "title": "Título da secção",
+    "subtitle": "Subtítulo",
+    "member1Name": "Nome do membro 1",
+    "member1Role": "Cargo",
+    "member2Name": "Nome do membro 2",
+    "member2Role": "Cargo"
+  },
+  "faq": {
+    "title": "Título da secção",
+    "faq1Question": "Pergunta 1",
+    "faq1Answer": "Resposta 1",
+    "faq2Question": "Pergunta 2",
+    "faq2Answer": "Resposta 2"
+  }
+}
+
+Gera APENAS as secções solicitadas: ${sections.join(", ")}
+`;
+
+    console.log("Generating website content for:", websiteName);
+    console.log("Sections to generate:", sections);
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente mais tarde." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "Créditos insuficientes. Adicione créditos à sua conta." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const errorText = await response.text();
+      console.error("AI Gateway error:", response.status, errorText);
+      throw new Error(`AI Gateway error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    if (!content) {
+      throw new Error("No content received from AI");
+    }
+
+    console.log("Raw AI response:", content);
+
+    // Parse the JSON response
+    let parsedContent;
+    try {
+      // Try to extract JSON from the response (in case there's extra text)
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsedContent = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error("No JSON found in response");
+      }
+    } catch (parseError) {
+      console.error("Failed to parse AI response:", parseError);
+      throw new Error("Failed to parse AI response as JSON");
+    }
+
+    console.log("Successfully generated content for:", websiteName);
+
+    return new Response(
+      JSON.stringify({ 
+        success: true, 
+        content: parsedContent,
+        websiteName 
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+
+  } catch (error) {
+    console.error("Website content generation error:", error);
+    return new Response(
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : "Unknown error",
+        success: false 
+      }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});

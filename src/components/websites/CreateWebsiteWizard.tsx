@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Globe, Building2, CheckCircle2, Heart, Scale, HardHat, GraduationCap, Briefcase } from "lucide-react";
+import { Globe, Building2, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,9 +14,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Stepper, CardSelect } from "@/components/ui/stepper";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TEMPLATE_CATEGORIES, WebsiteTemplate, getCategoryIcon } from "@/lib/website-templates";
+import { useWebsiteAI } from "@/hooks/useWebsiteAI";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 interface Website {
@@ -30,6 +31,7 @@ interface Website {
   status: "active" | "draft" | "inactive";
   url: string;
   createdAt: string;
+  customTemplate?: WebsiteTemplate;
 }
 
 interface CreateWebsiteWizardProps {
@@ -38,7 +40,7 @@ interface CreateWebsiteWizardProps {
   onWebsiteCreated: (website: Website) => void;
 }
 
-const STEPS = ["Tipo", "Categoria", "Template", "Prompt", "Nome", "Concluído"];
+const STEPS = ["Tipo", "Categoria", "Template", "Prompt", "Nome", "A Gerar...", "Concluído"];
 
 const WEBSITE_TYPES = [
   {
@@ -57,6 +59,7 @@ const WEBSITE_TYPES = [
 
 export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: CreateWebsiteWizardProps) {
   const navigate = useNavigate();
+  const { generateContent, applySectionsContent, isGenerating } = useWebsiteAI();
   const [currentStep, setCurrentStep] = useState(0);
   const [websiteType, setWebsiteType] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -92,23 +95,76 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
     }
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
+    if (!selectedTemplate || !selectedCategory || !websiteType) return;
+
     const category = TEMPLATE_CATEGORIES.find((c) => c.id === selectedCategory);
-    const newWebsite: Website = {
-      id: Date.now().toString(),
-      name: websiteName,
-      type: websiteType as "landing" | "institutional",
-      niche: category?.name || "Outro",
-      nicheId: selectedCategory || "outro",
-      templateId: selectedTemplate?.id || "",
-      prompt: prompt,
-      status: "draft",
-      url: "",
-      createdAt: new Date().toISOString().split("T")[0],
-    };
-    setCreatedWebsiteId(newWebsite.id);
-    onWebsiteCreated(newWebsite);
-    handleNext();
+    
+    // Move to generating step
+    setCurrentStep(5);
+
+    // Get section types from template
+    const sectionTypes = selectedTemplate.sections.map((s) => s.type);
+
+    try {
+      // Generate AI content
+      const generatedContent = await generateContent({
+        websiteType: websiteType as "landing" | "institutional",
+        niche: category?.name || "Outro",
+        templateName: selectedTemplate.name,
+        prompt,
+        websiteName,
+        sections: sectionTypes,
+      });
+
+      let customTemplate = { ...selectedTemplate };
+
+      if (generatedContent) {
+        // Apply generated content to template sections
+        customTemplate = {
+          ...selectedTemplate,
+          sections: applySectionsContent(selectedTemplate.sections, generatedContent),
+        };
+        toast({
+          title: "Conteúdo gerado com IA!",
+          description: "O conteúdo do seu site foi personalizado com sucesso.",
+        });
+      } else {
+        toast({
+          title: "Site criado",
+          description: "Não foi possível gerar conteúdo com IA. A usar conteúdo padrão.",
+          variant: "default",
+        });
+      }
+
+      const newWebsite: Website = {
+        id: Date.now().toString(),
+        name: websiteName,
+        type: websiteType as "landing" | "institutional",
+        niche: category?.name || "Outro",
+        nicheId: selectedCategory || "outro",
+        templateId: selectedTemplate.id,
+        prompt: prompt,
+        status: "draft",
+        url: "",
+        createdAt: new Date().toISOString().split("T")[0],
+        customTemplate,
+      };
+
+      setCreatedWebsiteId(newWebsite.id);
+      onWebsiteCreated(newWebsite);
+      
+      // Move to success step
+      setCurrentStep(6);
+    } catch (error) {
+      console.error("Error creating website:", error);
+      toast({
+        title: "Erro",
+        description: "Ocorreu um erro ao criar o site. Tente novamente.",
+        variant: "destructive",
+      });
+      setCurrentStep(4); // Go back to name step
+    }
   };
 
   const handleOpenEditor = () => {
@@ -213,18 +269,29 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold">Descreva o Seu Site</h3>
-              <p className="text-sm text-muted-foreground">A IA irá personalizar o conteúdo com base na sua descrição</p>
+              <p className="text-sm text-muted-foreground">
+                <Sparkles className="inline-block h-4 w-4 mr-1 text-primary" />
+                A IA irá gerar conteúdo personalizado com base na sua descrição
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="prompt">Descrição</Label>
+              <Label htmlFor="prompt">Descrição do Negócio</Label>
               <Textarea
                 id="prompt"
-                placeholder={`Descreva o seu negócio, serviços, tom de comunicação desejado...`}
+                placeholder={`Exemplo: Clínica de fisioterapia especializada em reabilitação desportiva. 
+                
+Oferecemos tratamentos personalizados com técnicas avançadas. 
+                
+Tom profissional mas acolhedor. 
+                
+Queremos transmitir confiança e expertise.`}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="min-h-[150px]"
+                className="min-h-[180px]"
               />
-              <p className="text-xs text-muted-foreground">Mínimo 10 caracteres.</p>
+              <p className="text-xs text-muted-foreground">
+                Quanto mais detalhes fornecer, melhor será o conteúdo gerado.
+              </p>
             </div>
           </div>
         );
@@ -234,7 +301,7 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold">Nome do Site</h3>
-              <p className="text-sm text-muted-foreground">Dê um nome ao seu site</p>
+              <p className="text-sm text-muted-foreground">Este será o nome visível no seu site</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="name">Nome</Label>
@@ -245,13 +312,36 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
 
       case 5:
         return (
+          <div className="flex flex-col items-center justify-center py-12 space-y-6">
+            <div className="relative">
+              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
+                <Loader2 className="h-10 w-10 text-primary animate-spin" />
+              </div>
+              <Sparkles className="absolute -top-1 -right-1 h-6 w-6 text-primary animate-pulse" />
+            </div>
+            <div className="text-center space-y-2">
+              <h3 className="text-xl font-semibold">A Gerar Conteúdo com IA...</h3>
+              <p className="text-muted-foreground max-w-sm">
+                Estamos a criar textos personalizados para o seu site. Isto pode demorar alguns segundos.
+              </p>
+            </div>
+          </div>
+        );
+
+      case 6:
+        return (
           <div className="flex flex-col items-center justify-center py-8 space-y-4">
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
               <CheckCircle2 className="h-8 w-8 text-primary" />
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-xl font-semibold">Site Criado!</h3>
-              <p className="text-muted-foreground">O seu site <span className="font-medium text-foreground">{websiteName}</span> está pronto para edição.</p>
+              <h3 className="text-xl font-semibold">Site Criado com Sucesso!</h3>
+              <p className="text-muted-foreground">
+                O seu site <span className="font-medium text-foreground">{websiteName}</span> está pronto.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                O conteúdo foi gerado com IA. Pode editá-lo no editor visual.
+              </p>
             </div>
           </div>
         );
@@ -266,7 +356,10 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Criar Novo Site</DialogTitle>
-          <DialogDescription>Gere o seu site com IA em alguns passos</DialogDescription>
+          <DialogDescription>
+            <Sparkles className="inline-block h-4 w-4 mr-1" />
+            Gere o seu site com IA em alguns passos
+          </DialogDescription>
         </DialogHeader>
 
         <div className="py-4 flex-1 overflow-hidden flex flex-col">
@@ -279,11 +372,18 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
             <>
               <Button variant="outline" onClick={handleBack} disabled={currentStep === 0}>Voltar</Button>
               {currentStep === 4 ? (
-                <Button onClick={handleCreate} disabled={!canProceed()}>Criar Site</Button>
+                <Button onClick={handleCreate} disabled={!canProceed() || isGenerating}>
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Gerar Site com IA
+                </Button>
               ) : (
                 <Button onClick={handleNext} disabled={!canProceed()}>Continuar</Button>
               )}
             </>
+          ) : currentStep === 5 ? (
+            <div className="w-full text-center text-sm text-muted-foreground">
+              Por favor aguarde...
+            </div>
           ) : (
             <>
               <Button variant="outline" onClick={handleClose}>Ver Sites</Button>

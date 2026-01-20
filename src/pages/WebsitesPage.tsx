@@ -23,10 +23,12 @@ interface Website {
   type: "landing" | "institutional";
   niche?: string;
   nicheId?: string;
+  templateId?: string;
   prompt?: string;
   status: "active" | "draft" | "inactive";
   url: string;
   createdAt: string;
+  customTemplate?: unknown;
 }
 
 const STORAGE_KEY = "kinja-websites";
