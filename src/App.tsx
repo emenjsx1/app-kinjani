@@ -19,6 +19,7 @@ import SettingsPage from "./pages/SettingsPage";
 import ProfilePage from "./pages/ProfilePage";
 import ClientConnectPage from "./pages/ClientConnectPage";
 import PublicWebsitePage from "./pages/PublicWebsitePage";
+import ClientsPage from "./pages/ClientsPage";
 import AuthPage from "./pages/AuthPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/agents/:id" element={<ProtectedRoute><AgentDetailsPage /></ProtectedRoute>} />
             <Route path="/websites" element={<ProtectedRoute><WebsitesPage /></ProtectedRoute>} />
             <Route path="/websites/:id/edit" element={<ProtectedRoute><WebsiteEditorPage /></ProtectedRoute>} />
+            <Route path="/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
             <Route path="/credits" element={<ProtectedRoute><CreditsPage /></ProtectedRoute>} />
             <Route path="/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
