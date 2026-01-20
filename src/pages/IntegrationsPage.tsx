@@ -493,9 +493,13 @@ export default function IntegrationsPage() {
             ) : currentQRCode ? (
               <div className="flex flex-col items-center">
                 <img 
-                  src={`data:image/png;base64,${currentQRCode}`} 
+                  src={currentQRCode.startsWith('data:') ? currentQRCode : `data:image/png;base64,${currentQRCode}`} 
                   alt="QR Code WhatsApp"
                   className="w-64 h-64 rounded-lg"
+                  onError={(e) => {
+                    console.error('QR Code image failed to load');
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
                 />
                 {isPolling && (
                   <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground">
