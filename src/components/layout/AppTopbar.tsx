@@ -1,7 +1,6 @@
-import { Bell, Search, Menu } from "lucide-react";
+import { Bell, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +12,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { CreditsBadge } from "@/components/ui/credits-badge";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface AppTopbarProps {
   pageTitle?: string;
@@ -20,6 +23,18 @@ interface AppTopbarProps {
 }
 
 export function AppTopbar({ pageTitle = "Dashboard", credits = 1250 }: AppTopbarProps) {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("Erro ao sair");
+    } else {
+      toast.success("Sessão terminada");
+      navigate("/");
+    }
+  };
+
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 lg:px-6">
       <div className="flex items-center gap-4">
@@ -32,13 +47,16 @@ export function AppTopbar({ pageTitle = "Dashboard", credits = 1250 }: AppTopbar
         <div className="hidden md:flex relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search..."
+            placeholder="Pesquisar..."
             className="w-64 pl-10 bg-muted/50 border-0 focus-visible:ring-1"
           />
         </div>
 
         {/* Credits Badge */}
         <CreditsBadge credits={credits} />
+
+        {/* Theme Toggle */}
+        <ThemeToggle />
 
         {/* Notifications */}
         <Button variant="ghost" size="icon" className="relative">
@@ -63,19 +81,19 @@ export function AppTopbar({ pageTitle = "Dashboard", credits = 1250 }: AppTopbar
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">John Doe</p>
+                <p className="text-sm font-medium leading-none">Utilizador</p>
                 <p className="text-xs leading-none text-muted-foreground">
-                  john@example.com
+                  utilizador@email.com
                 </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>Profile</DropdownMenuItem>
-            <DropdownMenuItem>Settings</DropdownMenuItem>
-            <DropdownMenuItem>Billing</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/settings")}>Perfil</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/settings")}>Definições</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate("/credits")}>Créditos</DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-destructive">
-              Log out
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+              Terminar sessão
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
