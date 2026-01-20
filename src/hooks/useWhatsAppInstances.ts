@@ -91,12 +91,6 @@ export function useWhatsAppInstances() {
 
   const getQRCode = async (instanceKey: string) => {
     try {
-      const response = await supabase.functions.invoke('whatsapp-instance', {
-        body: {},
-        headers: {},
-      });
-
-      // Use fetch directly for query params
       const { data: { session } } = await supabase.auth.getSession();
       const supabaseUrl = 'https://mpxsivfiltwvnvqtixuo.supabase.co';
       
