@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Search, MoreHorizontal, Globe, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,46 +15,52 @@ import {
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { CreateWebsiteWizard } from "@/components/websites/CreateWebsiteWizard";
 
 interface Website {
   id: string;
   name: string;
   type: "landing" | "institutional";
+  niche?: string;
+  nicheId?: string;
+  prompt?: string;
   status: "active" | "draft" | "inactive";
   url: string;
   createdAt: string;
 }
 
-const mockWebsites: Website[] = [
-  {
-    id: "1",
-    name: "Página de Produto",
-    type: "landing",
-    status: "active",
-    url: "https://produto.kinja.ai",
-    createdAt: "2024-01-15",
-  },
-  {
-    id: "2",
-    name: "Site Institucional",
-    type: "institutional",
-    status: "active",
-    url: "https://empresa.kinja.ai",
-    createdAt: "2024-01-20",
-  },
-  {
-    id: "3",
-    name: "Nova Campanha",
-    type: "landing",
-    status: "draft",
-    url: "",
-    createdAt: "2024-02-01",
-  },
-];
+const STORAGE_KEY = "kinja-websites";
+
+const getStoredWebsites = (): Website[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveWebsites = (websites: Website[]) => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(websites));
+};
 
 export default function WebsitesPage() {
-  const [websites] = useState<Website[]>(mockWebsites);
+  const navigate = useNavigate();
+  const [websites, setWebsites] = useState<Website[]>(getStoredWebsites);
   const [search, setSearch] = useState("");
+  const [isWizardOpen, setIsWizardOpen] = useState(false);
+
+  useEffect(() => {
+    saveWebsites(websites);
+  }, [websites]);
+
+  const handleWebsiteCreated = (newWebsite: Website) => {
+    setWebsites((prev) => [...prev, newWebsite]);
+  };
+
+  const handleDeleteWebsite = (id: string) => {
+    setWebsites((prev) => prev.filter((site) => site.id !== id));
+  };
 
   const filteredWebsites = websites.filter((site) =>
     site.name.toLowerCase().includes(search.toLowerCase())
@@ -63,6 +70,15 @@ export default function WebsitesPage() {
     return (
       <Badge variant="outline" className={type === "landing" ? "bg-blue-500/10 text-blue-600" : "bg-purple-500/10 text-purple-600"}>
         {type === "landing" ? "Landing Page" : "Institucional"}
+      </Badge>
+    );
+  };
+
+  const getNicheBadge = (niche?: string) => {
+    if (!niche) return null;
+    return (
+      <Badge variant="secondary" className="text-xs">
+        {niche}
       </Badge>
     );
   };
@@ -81,7 +97,7 @@ export default function WebsitesPage() {
               className="pl-10"
             />
           </div>
-          <Button>
+          <Button onClick={() => setIsWizardOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Criar Site
           </Button>
@@ -97,7 +113,7 @@ export default function WebsitesPage() {
                 description="Gere o seu primeiro site com IA"
                 action={{
                   label: "Criar Site",
-                  onClick: () => console.log("Criar site"),
+                  onClick: () => setIsWizardOpen(true),
                 }}
               />
             </CardContent>
@@ -105,7 +121,7 @@ export default function WebsitesPage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredWebsites.map((site) => (
-              <Card key={site.id} className="hover:shadow-md transition-shadow">
+              <Card key={site.id} className="hover:shadow-md transition-shadow cursor-pointer">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
@@ -128,9 +144,16 @@ export default function WebsitesPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem>Editar</DropdownMenuItem>
                         <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                        <DropdownMenuItem>Ver Online</DropdownMenuItem>
+                        {site.url && (
+                          <DropdownMenuItem onClick={() => window.open(site.url, "_blank")}>
+                            Ver Online
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
+                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onClick={() => handleDeleteWebsite(site.id)}
+                        >
                           Eliminar
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -138,8 +161,9 @@ export default function WebsitesPage() {
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
                     {getTypeBadge(site.type)}
+                    {getNicheBadge(site.niche)}
                     <StatusBadge status={site.status} />
                   </div>
                   {site.url && (
@@ -148,6 +172,7 @@ export default function WebsitesPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-1 text-sm text-primary hover:underline"
+                      onClick={(e) => e.stopPropagation()}
                     >
                       <ExternalLink className="h-3 w-3" />
                       {site.url.replace("https://", "")}
@@ -159,6 +184,12 @@ export default function WebsitesPage() {
           </div>
         )}
       </div>
+
+      <CreateWebsiteWizard
+        open={isWizardOpen}
+        onOpenChange={setIsWizardOpen}
+        onWebsiteCreated={handleWebsiteCreated}
+      />
     </AppLayout>
   );
 }
