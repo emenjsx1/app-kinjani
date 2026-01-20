@@ -3,62 +3,84 @@ import { useParams } from "react-router-dom";
 import { WebsitePreview } from "@/components/websites/WebsitePreview";
 import { WebsiteTemplate, getTemplateById } from "@/lib/website-templates";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { EmbedConfig } from "@/components/websites/WebsiteEditor";
+import { supabase } from "@/integrations/supabase/client";
+import { Json } from "@/integrations/supabase/types";
 
-interface StoredWebsite {
-  id: string;
-  name: string;
-  type: "landing" | "institutional";
-  niche: string;
-  template: string;
+interface WebsiteConfig {
+  type?: "landing" | "institutional";
+  niche?: string;
+  nicheId?: string;
+  templateId?: string;
+  prompt?: string;
   customTemplate?: WebsiteTemplate;
-  status: "draft" | "active";
-  url?: string;
-  createdAt: string;
-  generationPrompt?: string;
-  embedConfig?: {
-    enabled: boolean;
-    agentId?: string;
-    position?: "right" | "left";
-    primaryColor?: string;
-    welcomeMessage?: string;
-  };
+  embedConfig?: EmbedConfig;
 }
 
-const STORAGE_KEY = "kinja-websites";
-
-const getStoredWebsites = (): StoredWebsite[] => {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored ? JSON.parse(stored) : [];
+// Helper to parse config from JSON
+const parseConfig = (config: Json | null): WebsiteConfig | null => {
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return null;
+  }
+  return config as WebsiteConfig;
 };
 
 export default function PublicWebsitePage() {
   const { siteId } = useParams();
-  const [website, setWebsite] = useState<StoredWebsite | null>(null);
+  const [websiteName, setWebsiteName] = useState<string>("");
   const [template, setTemplate] = useState<WebsiteTemplate | null>(null);
+  const [embedConfig, setEmbedConfig] = useState<EmbedConfig | undefined>();
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    if (siteId) {
-      const websites = getStoredWebsites();
-      const site = websites.find((w) => w.id === siteId);
+    const loadWebsite = async () => {
+      if (!siteId) {
+        setNotFound(true);
+        setIsLoading(false);
+        return;
+      }
 
-      if (site) {
-        setWebsite(site);
+      try {
+        const { data, error } = await supabase
+          .from("websites")
+          .select("*")
+          .eq("id", siteId)
+          .maybeSingle();
+
+        if (error || !data) {
+          setNotFound(true);
+          setIsLoading(false);
+          return;
+        }
+
+        setWebsiteName(data.name);
         
-        if (site.customTemplate) {
-          setTemplate(site.customTemplate);
-        } else {
-          const baseTemplate = getTemplateById(site.template);
+        const config = parseConfig(data.config);
+        
+        // Use customTemplate if it exists, otherwise fall back to catalog template
+        if (config?.customTemplate) {
+          setTemplate(config.customTemplate);
+        } else if (config?.templateId) {
+          const baseTemplate = getTemplateById(config.templateId);
           if (baseTemplate) {
             setTemplate(baseTemplate);
           }
         }
-      } else {
+
+        // Set embed config if available
+        if (config?.embedConfig) {
+          setEmbedConfig(config.embedConfig);
+        }
+      } catch (err) {
+        console.error("Error loading website:", err);
         setNotFound(true);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    }
+    };
+
+    loadWebsite();
   }, [siteId]);
 
   if (isLoading) {
@@ -84,9 +106,9 @@ export default function PublicWebsitePage() {
     <div className="min-h-screen">
       <WebsitePreview 
         template={template} 
-        websiteName={website?.name}
+        websiteName={websiteName}
         fullscreen={true}
-        embedConfig={website?.embedConfig}
+        embedConfig={embedConfig}
       />
     </div>
   );
