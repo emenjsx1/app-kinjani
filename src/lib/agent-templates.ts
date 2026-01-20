@@ -25,48 +25,110 @@ export interface FlowNodeConfig {
   type: "input" | "process" | "action" | "output";
 }
 
+// Integrations available
+export interface IntegrationConfig {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  requiresCredentials: boolean;
+  credentials?: string[];
+}
+
+export const AVAILABLE_INTEGRATIONS: IntegrationConfig[] = [
+  { id: "google-sheets", name: "Google Sheets", icon: "📊", description: "Guardar dados em tabelas", requiresCredentials: true, credentials: ["GOOGLE_SHEETS_URL"] },
+  { id: "whatsapp", name: "WhatsApp", icon: "💬", description: "Enviar/receber mensagens", requiresCredentials: true, credentials: ["WHATSAPP_API_KEY", "WHATSAPP_INSTANCE"] },
+  { id: "email", name: "Email (Resend)", icon: "📧", description: "Enviar emails", requiresCredentials: true, credentials: ["RESEND_API_KEY"] },
+  { id: "gmail", name: "Gmail", icon: "📨", description: "Ler e processar emails", requiresCredentials: true, credentials: ["GMAIL_OAUTH"] },
+  { id: "google-maps", name: "Google Maps/Serper", icon: "🗺️", description: "Pesquisar locais", requiresCredentials: true, credentials: ["SERPER_API_KEY"] },
+  { id: "memory", name: "Memória", icon: "🧠", description: "Contexto de conversas", requiresCredentials: false },
+  { id: "calendar", name: "Google Calendar", icon: "📅", description: "Agendar eventos", requiresCredentials: true, credentials: ["GOOGLE_CALENDAR_OAUTH"] },
+];
+
 // Configuração de fluxos por tipo de agente
 export const AGENT_FLOW_CONFIGS: Record<string, FlowNodeConfig[]> = {
   "atendimento-faq": [
     { id: "input", label: "Mensagem", description: "Utilizador envia pergunta", type: "input" },
-    { id: "process", label: "Análise", description: "IA analisa a pergunta", type: "process" },
+    { id: "memory", label: "Memória", description: "Busca contexto anterior", type: "process" },
+    { id: "process", label: "IA Agent", description: "Processa com LLM", type: "process" },
     { id: "output", label: "Resposta", description: "Resposta gerada", type: "output" },
   ],
   "captura-leads": [
     { id: "input", label: "Visitante", description: "Novo visitante no site", type: "input" },
-    { id: "process", label: "Conversa", description: "IA inicia diálogo", type: "process" },
-    { id: "action", label: "Captura", description: "Coleta dados de contacto", type: "action" },
-    { id: "output", label: "Lead Salvo", description: "Dados guardados", type: "output" },
+    { id: "process", label: "IA Agent", description: "Inicia conversa", type: "process" },
+    { id: "action", label: "Captura", description: "Coleta nome, email, telefone", type: "action" },
+    { id: "sheets", label: "Google Sheets", description: "Guarda lead na tabela", type: "action" },
+    { id: "output", label: "Confirmação", description: "Lead registado", type: "output" },
   ],
   "qualificacao": [
     { id: "input", label: "Lead", description: "Lead a qualificar", type: "input" },
-    { id: "process", label: "Perguntas", description: "IA faz perguntas BANT", type: "process" },
-    { id: "action", label: "Classificação", description: "Hot / Warm / Cold", type: "action" },
-    { id: "output", label: "Score", description: "Lead classificado", type: "output" },
+    { id: "memory", label: "Memória", description: "Histórico do contacto", type: "process" },
+    { id: "process", label: "IA Agent", description: "Perguntas BANT", type: "process" },
+    { id: "action", label: "Score", description: "Hot / Warm / Cold", type: "action" },
+    { id: "sheets", label: "Google Sheets", description: "Atualiza status", type: "action" },
+    { id: "output", label: "Notificação", description: "Alerta equipa vendas", type: "output" },
   ],
   "follow-up": [
-    { id: "input", label: "Trigger", description: "Tempo sem resposta", type: "input" },
-    { id: "process", label: "Análise", description: "Verifica histórico", type: "process" },
-    { id: "action", label: "Mensagem", description: "Envia follow-up", type: "action" },
-    { id: "output", label: "Status", description: "Resposta ou próximo step", type: "output" },
+    { id: "trigger", label: "Schedule", description: "Trigger por tempo", type: "input" },
+    { id: "sheets", label: "Google Sheets", description: "Busca pendentes", type: "action" },
+    { id: "process", label: "IA Agent", description: "Gera mensagem", type: "process" },
+    { id: "whatsapp", label: "WhatsApp", description: "Envia follow-up", type: "action" },
+    { id: "update", label: "Atualizar", description: "Marca como enviado", type: "action" },
   ],
   "agendamento": [
     { id: "input", label: "Pedido", description: "Cliente quer agendar", type: "input" },
-    { id: "process", label: "Disponibilidade", description: "Verifica horários", type: "process" },
-    { id: "action", label: "Reserva", description: "Cria evento", type: "action" },
-    { id: "output", label: "Confirmação", description: "Envia confirmação", type: "output" },
+    { id: "calendar", label: "Calendar", description: "Verifica disponibilidade", type: "action" },
+    { id: "process", label: "IA Agent", description: "Propõe horários", type: "process" },
+    { id: "reserve", label: "Reservar", description: "Cria evento", type: "action" },
+    { id: "notify", label: "Notificar", description: "Envia confirmação", type: "output" },
   ],
   "controlo-gastos": [
-    { id: "input", label: "WhatsApp", description: "Utilizador regista gasto", type: "input" },
-    { id: "process", label: "Extração", description: "IA extrai valor e categoria", type: "process" },
-    { id: "action", label: "Google Sheets", description: "Guarda na tabela", type: "action" },
-    { id: "output", label: "Relatório", description: "Envia resumo diário", type: "output" },
+    { id: "whatsapp", label: "WhatsApp", description: "Recebe gasto", type: "input" },
+    { id: "memory", label: "Memória", description: "Contexto do utilizador", type: "process" },
+    { id: "extract", label: "IA Agent", description: "Extrai valor e categoria", type: "process" },
+    { id: "sheets", label: "Google Sheets", description: "Guarda na tabela", type: "action" },
+    { id: "confirm", label: "Confirmação", description: "Confirma registo", type: "output" },
+    { id: "report", label: "Relatório", description: "Resumo diário às 20h", type: "output" },
+  ],
+  "scrapper-leads": [
+    { id: "trigger", label: "Schedule", description: "Executa periodicamente", type: "input" },
+    { id: "search", label: "Google Maps", description: "Pesquisa empresas", type: "action" },
+    { id: "format", label: "Formatar", description: "Extrai nome, telefone, site", type: "process" },
+    { id: "filter", label: "Filtro", description: "Valida dados existem", type: "process" },
+    { id: "sheets", label: "Google Sheets", description: "Guarda resultados", type: "action" },
+    { id: "count", label: "Relatório", description: "Qtd novos leads", type: "output" },
+  ],
+  "disparo-whatsapp": [
+    { id: "trigger", label: "Schedule", description: "Trigger horário", type: "input" },
+    { id: "config", label: "Configurar", description: "Limite, delay, horários", type: "process" },
+    { id: "sheets", label: "Google Sheets", description: "Busca pendentes", type: "action" },
+    { id: "format", label: "Formatar", description: "Valida telefone", type: "process" },
+    { id: "check", label: "Verificar", description: "Número existe?", type: "process" },
+    { id: "send", label: "WhatsApp", description: "Envia mensagem", type: "action" },
+    { id: "update", label: "Atualizar", description: "Marca como enviado", type: "action" },
+  ],
+  "disparo-email": [
+    { id: "trigger", label: "Schedule", description: "A cada 15 min", type: "input" },
+    { id: "config", label: "Configurar", description: "Limite 50/batch", type: "process" },
+    { id: "sheets", label: "Google Sheets", description: "Busca pendentes", type: "action" },
+    { id: "template", label: "Template", description: "HTML do email", type: "process" },
+    { id: "send", label: "Resend API", description: "Envia email", type: "action" },
+    { id: "log", label: "Log", description: "Regista envio", type: "action" },
+  ],
+  "gmail-contacts": [
+    { id: "trigger", label: "Schedule", description: "A cada 6 horas", type: "input" },
+    { id: "gmail", label: "Gmail", description: "Busca emails recentes", type: "action" },
+    { id: "process", label: "Processar", description: "Extrai remetentes", type: "process" },
+    { id: "filter", label: "Filtro", description: "Email válido?", type: "process" },
+    { id: "contacts", label: "Contacts", description: "Adiciona contacto", type: "action" },
   ],
   "automacao-dados": [
-    { id: "input", label: "Mensagem", description: "Dados recebidos", type: "input" },
-    { id: "process", label: "Processamento", description: "IA processa informação", type: "process" },
-    { id: "action", label: "Integração", description: "Envia para sistema externo", type: "action" },
-    { id: "output", label: "Confirmação", description: "Dados sincronizados", type: "output" },
+    { id: "input", label: "Webhook", description: "Dados recebidos", type: "input" },
+    { id: "validate", label: "Validar", description: "Schema correto?", type: "process" },
+    { id: "transform", label: "Transformar", description: "Formata dados", type: "process" },
+    { id: "action", label: "API Externa", description: "Envia para sistema", type: "action" },
+    { id: "log", label: "Log", description: "Regista operação", type: "action" },
+    { id: "output", label: "Resposta", description: "Status da operação", type: "output" },
   ],
 };
 
@@ -356,6 +418,143 @@ Perguntas importantes:
 Dê sempre dicas práticas de poupança.`,
     agentTypes: ["controlo-gastos", "follow-up"],
   },
+  
+  // Automação / Scrapping
+  {
+    id: "scrapper-clinicas",
+    name: "Scrapper de Clínicas/Empresas",
+    niche: "automacao",
+    nicheLabel: "Automação / Scrapping",
+    description: "Pesquisa empresas no Google Maps e guarda contactos no Google Sheets",
+    prompt: `Você é um agente de prospecção automatizada.
+
+Suas funções:
+- Pesquisar empresas por categoria e localização no Google Maps
+- Extrair nome, telefone, website e endereço de cada empresa
+- Validar se os dados estão completos (especialmente telefone)
+- Guardar os dados válidos no Google Sheets
+- Evitar duplicados verificando se a empresa já existe
+
+Configuração:
+- Categoria de pesquisa: [Ex: psicologia, dentistas, restaurantes]
+- Localização: [Ex: Lisboa, Portugal]
+- Limite por execução: 20 empresas
+
+Fluxo de execução:
+1. Pesquisa no Google Maps/Serper API
+2. Formata os resultados extraindo campos relevantes
+3. Filtra apenas empresas com telefone válido
+4. Verifica duplicados na tabela existente
+5. Adiciona novos registos ao Google Sheets
+6. Reporta quantos novos leads foram encontrados`,
+    agentTypes: ["scrapper-leads", "automacao-dados"],
+  },
+  {
+    id: "disparo-whatsapp",
+    name: "Disparo de Mensagens WhatsApp",
+    niche: "automacao",
+    nicheLabel: "Automação / Marketing",
+    description: "Envia mensagens em massa via WhatsApp com controlo de horários e limites",
+    prompt: `Você é um agente de disparo de mensagens WhatsApp.
+
+Suas funções:
+- Buscar contactos pendentes de envio no Google Sheets
+- Validar números de telefone (formato correto)
+- Verificar se o número existe no WhatsApp
+- Enviar mensagens respeitando limites e delays
+- Atualizar status de envio na tabela
+
+Configurações de segurança:
+- Limite de disparos por execução: 20
+- Horário de envio: 8h às 22h
+- Delay mínimo entre mensagens: 5 segundos
+- Delay máximo entre mensagens: 30 segundos
+
+Fluxo de execução:
+1. Verifica se está dentro do horário permitido
+2. Busca contactos com status "Pendente"
+3. Limita ao número máximo configurado
+4. Para cada contacto:
+   a. Formata o número de telefone
+   b. Verifica se existe no WhatsApp
+   c. Envia a mensagem
+   d. Atualiza status para "Enviado" ou "Inválido"
+   e. Aguarda delay aleatório
+
+Importante: Nunca enviar fora do horário configurado!`,
+    agentTypes: ["disparo-whatsapp", "follow-up"],
+  },
+  {
+    id: "disparo-email",
+    name: "Disparo de Email em Massa",
+    niche: "automacao",
+    nicheLabel: "Automação / Marketing",
+    description: "Envia emails em massa via Resend API com templates HTML",
+    prompt: `Você é um agente de email marketing automatizado.
+
+Suas funções:
+- Buscar destinatários pendentes no Google Sheets
+- Personalizar template de email com dados do destinatário
+- Enviar emails via Resend API
+- Registar logs de envio (sucesso/erro)
+- Atualizar status na tabela
+
+Configurações:
+- Limite de envios por batch: 50
+- Intervalo entre execuções: 15 minutos
+- Horário de envio: 1h às 23h
+- Delay entre emails: 5-30 segundos
+
+Campos do template:
+- {{nome}} - Nome do destinatário
+- {{empresa}} - Nome da empresa
+- {{link}} - Link personalizado
+
+Fluxo de execução:
+1. Verifica horário permitido
+2. Busca emails com status "Pendente"
+3. Para cada destinatário:
+   a. Substitui variáveis no template
+   b. Envia via Resend API
+   c. Registra resultado no log
+   d. Atualiza status
+
+Métricas a registar: emails enviados, erros, taxa de abertura.`,
+    agentTypes: ["disparo-email", "automacao-dados"],
+  },
+  {
+    id: "gmail-contacts",
+    name: "Gmail para Contactos Automático",
+    niche: "automacao",
+    nicheLabel: "Automação / Produtividade",
+    description: "Extrai remetentes de emails e adiciona automaticamente aos contactos",
+    prompt: `Você é um agente de organização de contactos.
+
+Suas funções:
+- Verificar caixa de entrada do Gmail periodicamente
+- Extrair endereços de email dos remetentes
+- Processar e validar emails únicos
+- Adicionar novos contactos ao Google Contacts
+- Evitar duplicados
+
+Configuração:
+- Frequência de verificação: A cada 6 horas
+- Período de emails: Últimos 7 dias
+- Ignorar: spam, promoções, newsletters óbvias
+
+Fluxo de execução:
+1. Busca emails recebidos nos últimos 7 dias
+2. Extrai email e nome do remetente
+3. Filtra apenas emails válidos (não-spam)
+4. Verifica se já existe nos contactos
+5. Adiciona novos contactos com tags apropriadas
+
+Tags automáticas baseadas no domínio:
+- gmail.com, outlook.com → Pessoal
+- .gov, .edu → Institucional
+- Outros → Profissional`,
+    agentTypes: ["gmail-contacts", "automacao-dados"],
+  },
 ];
 
 // Função para obter templates por tipo de agente
@@ -377,4 +576,5 @@ export const AVAILABLE_NICHES = [
   { id: "b2b", label: "Consultoria / B2B", icon: "💼" },
   { id: "fitness", label: "Fitness / Ginásio", icon: "💪" },
   { id: "financas", label: "Finanças Pessoais", icon: "💰" },
+  { id: "automacao", label: "Automação / Scrapping", icon: "🤖" },
 ];
