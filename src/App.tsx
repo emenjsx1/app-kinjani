@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import StyleguidePage from "./pages/styleguide/StyleguidePage";
 import DashboardPage from "./pages/DashboardPage";
 import AgentsPage from "./pages/AgentsPage";
+import AgentDetailsPage from "./pages/AgentDetailsPage";
 import WebsitesPage from "./pages/WebsitesPage";
 import DemoPage from "./pages/DemoPage";
 import CreditsPage from "./pages/CreditsPage";
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/agents" element={<AgentsPage />} />
+          <Route path="/agents/:id" element={<AgentDetailsPage />} />
           <Route path="/websites" element={<WebsitesPage />} />
           <Route path="/demo" element={<DemoPage />} />
           <Route path="/credits" element={<CreditsPage />} />
