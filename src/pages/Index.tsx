@@ -1,154 +1,313 @@
+import { useEffect } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, Palette, Layout, Zap, Sparkles } from "lucide-react";
-import { Link } from "react-router-dom";
+import { 
+  ArrowRight, 
+  Bot, 
+  Globe, 
+  MessageCircle, 
+  Zap, 
+  Sparkles, 
+  CheckCircle2,
+  Users,
+  TrendingUp,
+  Shield
+} from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 const features = [
   {
-    icon: Palette,
-    title: "Rich Color Palette",
-    description: "Nature-inspired greens from Caribbean teal to deep forest, with full semantic color support.",
+    icon: Bot,
+    title: "Agentes de IA",
+    description: "Crie agentes inteligentes personalizados para atendimento, vendas e suporte.",
   },
   {
-    icon: Layout,
-    title: "Modern Typography",
-    description: "Plus Jakarta Sans brings a geometric, professional feel inspired by Axiforma.",
+    icon: Globe,
+    title: "Sites Instantâneos",
+    description: "Gere sites profissionais em segundos com templates adaptados ao seu negócio.",
+  },
+  {
+    icon: MessageCircle,
+    title: "Chat Widget",
+    description: "Integre chat IA diretamente nos seus sites com um simples código embed.",
   },
   {
     icon: Zap,
-    title: "Ready Components",
-    description: "Pre-styled buttons, cards, badges, and alerts using your design tokens.",
-  },
-  {
-    icon: Sparkles,
-    title: "Dark Mode Ready",
-    description: "Complete dark theme with inverted colors for comfortable viewing.",
+    title: "WhatsApp Integrado",
+    description: "Conecte os seus agentes ao WhatsApp e automatize conversas 24/7.",
   },
 ];
 
+const benefits = [
+  "Criação de agentes em minutos",
+  "Templates profissionais incluídos",
+  "Suporte a múltiplos canais",
+  "Análises e métricas em tempo real",
+  "Integração com OpenAI e Gemini",
+  "Personalização completa",
+];
+
+const stats = [
+  { value: "10K+", label: "Conversas", icon: MessageCircle },
+  { value: "500+", label: "Agentes Ativos", icon: Bot },
+  { value: "98%", label: "Satisfação", icon: TrendingUp },
+];
+
 export default function Index() {
+  const navigate = useNavigate();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      navigate("/dashboard");
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-rich-black via-dark-green to-bangladesh-green" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--caribbean-green)/0.3),transparent_50%)]" />
-        
-        <div className="relative max-w-6xl mx-auto px-6 py-24 md:py-32">
-          <Badge className="mb-6 bg-caribbean-green/20 text-caribbean-green border-caribbean-green/30 hover:bg-caribbean-green/30">
-            Design System v1.0
-          </Badge>
+      {/* Navbar */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-rich-black/80 backdrop-blur-md border-b border-border/30">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-caribbean-green to-mountain-meadow flex items-center justify-center">
+              <Sparkles className="h-4 w-4 text-rich-black" />
+            </div>
+            <span className="text-xl font-bold text-anti-flash-white">KINJA AI</span>
+          </div>
           
-          <h1 className="text-4xl md:text-6xl font-bold text-anti-flash-white mb-6 max-w-3xl leading-tight">
-            A nature-inspired design system built for{" "}
-            <span className="text-caribbean-green">modern apps</span>
-          </h1>
-          
-          <p className="text-lg md:text-xl text-pistachio max-w-2xl mb-10">
-            Comprehensive tokens, components, and guidelines based on Axiforma typography 
-            and a rich palette of organic greens.
-          </p>
-          
-          <div className="flex flex-wrap gap-4">
-            <Button asChild size="lg" className="bg-caribbean-green hover:bg-mountain-meadow text-rich-black font-semibold">
-              <Link to="/styleguide">
-                Explore Styleguide
+          <div className="flex items-center gap-4">
+            <Link to="/demo" className="text-sm text-pistachio hover:text-anti-flash-white transition-colors hidden sm:block">
+              Demo
+            </Link>
+            <Button asChild variant="ghost" className="text-anti-flash-white hover:text-caribbean-green">
+              <Link to="/auth">Entrar</Link>
+            </Button>
+            <Button asChild className="bg-caribbean-green hover:bg-mountain-meadow text-rich-black font-semibold">
+              <Link to="/auth">
+                Começar Grátis
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button asChild variant="outline" size="lg" className="border-pistachio/30 text-anti-flash-white hover:bg-pistachio/10">
-              <Link to="/styleguide/colors">
-                View Colors
-              </Link>
-            </Button>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="relative overflow-hidden pt-16">
+        <div className="absolute inset-0 bg-gradient-to-br from-rich-black via-dark-green to-bangladesh-green" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--caribbean-green)/0.3),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,hsl(var(--mountain-meadow)/0.2),transparent_40%)]" />
+        
+        <div className="relative max-w-7xl mx-auto px-6 py-24 md:py-32 lg:py-40">
+          <div className="max-w-3xl">
+            <Badge className="mb-6 bg-caribbean-green/20 text-caribbean-green border-caribbean-green/30 hover:bg-caribbean-green/30">
+              <Sparkles className="h-3 w-3 mr-1" />
+              Plataforma de IA para Negócios
+            </Badge>
+            
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-anti-flash-white mb-6 leading-tight">
+              Automatize o seu negócio com{" "}
+              <span className="text-gradient-primary">Agentes de IA</span>
+            </h1>
+            
+            <p className="text-lg md:text-xl text-pistachio mb-10 leading-relaxed">
+              Crie agentes inteligentes, gere sites profissionais e conecte tudo ao WhatsApp. 
+              Tudo numa só plataforma, sem precisar de código.
+            </p>
+            
+            <div className="flex flex-wrap gap-4 mb-12">
+              <Button asChild size="lg" className="bg-caribbean-green hover:bg-mountain-meadow text-rich-black font-semibold text-base px-8">
+                <Link to="/auth">
+                  Começar Gratuitamente
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+              <Button asChild variant="outline" size="lg" className="border-pistachio/40 text-anti-flash-white hover:bg-pistachio/10 text-base">
+                <Link to="/demo">
+                  Ver Demonstração
+                </Link>
+              </Button>
+            </div>
+
+            {/* Stats */}
+            <div className="flex flex-wrap gap-8">
+              {stats.map((stat) => (
+                <div key={stat.label} className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-caribbean-green/20 flex items-center justify-center">
+                    <stat.icon className="h-5 w-5 text-caribbean-green" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-anti-flash-white">{stat.value}</p>
+                    <p className="text-sm text-pistachio">{stat.label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
       {/* Features Grid */}
-      <section className="max-w-6xl mx-auto px-6 py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Everything you need</h2>
-          <p className="text-muted-foreground max-w-xl mx-auto">
-            A complete design foundation with colors, typography, and components working in harmony.
+      <section className="max-w-7xl mx-auto px-6 py-20 lg:py-28">
+        <div className="text-center mb-16">
+          <Badge className="mb-4">Funcionalidades</Badge>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Tudo o que precisa para escalar
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+            Uma plataforma completa para criar, gerir e automatizar a comunicação do seu negócio.
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature) => (
-            <Card key={feature.title} className="border-border/50 hover:border-primary/30 transition-colors">
+            <Card key={feature.title} className="border-border/50 hover:border-primary/40 transition-all hover:shadow-lg hover:shadow-primary/5 group">
               <CardContent className="p-6">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <feature.icon className="h-6 w-6 text-primary" />
+                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center mb-5 group-hover:bg-primary/20 transition-colors">
+                  <feature.icon className="h-7 w-7 text-primary" />
                 </div>
-                <h3 className="font-semibold mb-2">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground">{feature.description}</p>
+                <h3 className="font-semibold text-lg mb-2">{feature.title}</h3>
+                <p className="text-muted-foreground">{feature.description}</p>
               </CardContent>
             </Card>
           ))}
         </div>
       </section>
 
-      {/* Color Preview */}
+      {/* Benefits Section */}
       <section className="bg-card border-t border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 py-20">
-          <h2 className="text-3xl font-bold mb-2">Primary Palette</h2>
-          <p className="text-muted-foreground mb-8">From deep forest to vibrant Caribbean green.</p>
-          
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-2 md:gap-4">
-            <div className="aspect-square rounded-lg bg-rich-black flex items-end p-3">
-              <span className="text-xs text-anti-flash-white font-medium">Rich Black</span>
+        <div className="max-w-7xl mx-auto px-6 py-20 lg:py-28">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <Badge className="mb-4">Porquê KINJA AI</Badge>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">
+                Construído para equipas que querem crescer
+              </h2>
+              <p className="text-muted-foreground text-lg mb-8">
+                Deixe a IA tratar das conversas repetitivas enquanto você foca no que realmente importa - fazer crescer o seu negócio.
+              </p>
+              
+              <div className="grid sm:grid-cols-2 gap-4">
+                {benefits.map((benefit) => (
+                  <div key={benefit} className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="text-foreground">{benefit}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="aspect-square rounded-lg bg-dark-green flex items-end p-3">
-              <span className="text-xs text-anti-flash-white font-medium">Dark Green</span>
-            </div>
-            <div className="aspect-square rounded-lg bg-bangladesh-green flex items-end p-3">
-              <span className="text-xs text-anti-flash-white font-medium">Bangladesh</span>
-            </div>
-            <div className="aspect-square rounded-lg bg-mountain-meadow flex items-end p-3">
-              <span className="text-xs text-rich-black font-medium">Mountain</span>
-            </div>
-            <div className="aspect-square rounded-lg bg-caribbean-green flex items-end p-3">
-              <span className="text-xs text-rich-black font-medium">Caribbean</span>
-            </div>
-            <div className="aspect-square rounded-lg bg-anti-flash-white border border-border flex items-end p-3">
-              <span className="text-xs text-rich-black font-medium">Anti-Flash</span>
+            
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl blur-3xl" />
+              <div className="relative bg-gradient-to-br from-rich-black to-dark-green rounded-2xl p-8 border border-border/50">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-caribbean-green flex items-center justify-center">
+                    <Bot className="h-6 w-6 text-rich-black" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-anti-flash-white">Agente de Suporte</p>
+                    <p className="text-sm text-pistachio">Ativo • 1.2K mensagens/dia</p>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="bg-bangladesh-green/50 rounded-lg p-4">
+                    <p className="text-sm text-pistachio mb-1">Cliente:</p>
+                    <p className="text-anti-flash-white">Qual o horário de funcionamento?</p>
+                  </div>
+                  <div className="bg-caribbean-green/20 rounded-lg p-4 ml-8">
+                    <p className="text-sm text-caribbean-green mb-1">Agente IA:</p>
+                    <p className="text-anti-flash-white">Olá! Estamos abertos de segunda a sexta, das 9h às 18h. Posso ajudá-lo com mais alguma coisa? 😊</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* Trust Section */}
+      <section className="max-w-7xl mx-auto px-6 py-20 lg:py-28">
+        <div className="grid md:grid-cols-3 gap-8 text-center">
+          <div className="p-6">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Shield className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">Dados Seguros</h3>
+            <p className="text-muted-foreground">Infraestrutura segura com encriptação de ponta a ponta.</p>
+          </div>
+          <div className="p-6">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Users className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">Suporte Dedicado</h3>
+            <p className="text-muted-foreground">Equipa disponível para ajudar em cada passo.</p>
+          </div>
+          <div className="p-6">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <TrendingUp className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="font-semibold text-lg mb-2">Sempre a Melhorar</h3>
+            <p className="text-muted-foreground">Novas funcionalidades e melhorias constantes.</p>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
-      <section className="max-w-6xl mx-auto px-6 py-20 text-center">
-        <h2 className="text-3xl font-bold mb-4">Ready to explore?</h2>
-        <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
-          Dive into the full styleguide to see all design tokens, typography scales, and component variants.
-        </p>
-        <Button asChild size="lg" className="bg-primary hover:bg-secondary">
-          <Link to="/styleguide">
-            Open Styleguide
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
+      <section className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-bangladesh-green via-dark-green to-rich-black" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,hsl(var(--caribbean-green)/0.2),transparent_60%)]" />
+        
+        <div className="relative max-w-4xl mx-auto px-6 py-20 lg:py-28 text-center">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-anti-flash-white mb-6">
+            Pronto para automatizar o seu negócio?
+          </h2>
+          <p className="text-lg text-pistachio mb-10 max-w-2xl mx-auto">
+            Junte-se a centenas de empresas que já usam KINJA AI para transformar a sua comunicação.
+          </p>
+          <div className="flex flex-wrap gap-4 justify-center">
+            <Button asChild size="lg" className="bg-caribbean-green hover:bg-mountain-meadow text-rich-black font-semibold text-base px-8">
+              <Link to="/auth">
+                Criar Conta Grátis
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="border-pistachio/40 text-anti-flash-white hover:bg-pistachio/10 text-base">
+              <Link to="/demo">
+                Explorar Demo
+              </Link>
+            </Button>
+          </div>
+        </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-muted-foreground">
-            Nature-Inspired Design System • Built with React & Tailwind
-          </p>
-          <div className="flex gap-4">
-            <Link to="/styleguide" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Styleguide
-            </Link>
-            <Link to="/styleguide/colors" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Colors
-            </Link>
-            <Link to="/styleguide/buttons" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-              Components
-            </Link>
+      <footer className="border-t border-border bg-card">
+        <div className="max-w-7xl mx-auto px-6 py-12">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-caribbean-green to-mountain-meadow flex items-center justify-center">
+                <Sparkles className="h-4 w-4 text-rich-black" />
+              </div>
+              <span className="text-lg font-bold">KINJA AI</span>
+            </div>
+            
+            <p className="text-sm text-muted-foreground">
+              © 2024 KINJA AI. Todos os direitos reservados.
+            </p>
+            
+            <div className="flex gap-6">
+              <Link to="/auth" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Entrar
+              </Link>
+              <Link to="/demo" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Demo
+              </Link>
+            </div>
           </div>
         </div>
       </footer>
