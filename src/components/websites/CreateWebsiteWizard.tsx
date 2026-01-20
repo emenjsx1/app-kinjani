@@ -177,7 +177,7 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
   const canProceed = () => {
     switch (currentStep) {
       case 0: return websiteType !== null;
-      case 1: return selectedCategory !== null;
+      case 1: return true; // Categoria é opcional
       case 2: return selectedTemplate !== null;
       case 3: return prompt.trim().length > 10;
       case 4: return websiteName.trim().length > 2;

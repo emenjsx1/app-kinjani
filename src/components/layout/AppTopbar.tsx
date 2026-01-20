@@ -22,7 +22,7 @@ interface AppTopbarProps {
   credits?: number;
 }
 
-export function AppTopbar({ pageTitle = "Dashboard", credits = 1250 }: AppTopbarProps) {
+export function AppTopbar({ pageTitle = "Dashboard", credits = 0 }: AppTopbarProps) {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
