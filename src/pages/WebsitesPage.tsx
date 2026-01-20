@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Plus, Search, MoreHorizontal, Globe, ExternalLink, Eye, Pencil, Copy, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Plus, Search, MoreHorizontal, Globe, Eye, Pencil, Copy, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -18,50 +18,46 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CreateWebsiteWizard } from "@/components/websites/CreateWebsiteWizard";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
-
-interface Website {
-  id: string;
-  name: string;
-  type: "landing" | "institutional";
-  niche?: string;
-  nicheId?: string;
-  templateId?: string;
-  prompt?: string;
-  status: "active" | "draft" | "inactive";
-  url: string;
-  createdAt: string;
-  customTemplate?: unknown;
-}
-
-const STORAGE_KEY = "kinja-websites";
-
-const getStoredWebsites = (): Website[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveWebsites = (websites: Website[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(websites));
-};
+import { useWebsites, Website } from "@/hooks/useWebsites";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export default function WebsitesPage() {
   const navigate = useNavigate();
-  const [websites, setWebsites] = useState<Website[]>(getStoredWebsites);
+  const { websites, isLoading, createWebsite, deleteWebsite, duplicateWebsite } = useWebsites();
   const [search, setSearch] = useState("");
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [websiteToDelete, setWebsiteToDelete] = useState<string | null>(null);
 
-  useEffect(() => {
-    saveWebsites(websites);
-  }, [websites]);
+  const handleWebsiteCreated = async (newWebsiteData: {
+    name: string;
+    type: 'landing' | 'institutional';
+    niche?: string;
+    nicheId?: string;
+    templateId?: string;
+    prompt?: string;
+    customTemplate?: unknown;
+  }) => {
+    const result = await createWebsite({
+      name: newWebsiteData.name,
+      template: newWebsiteData.templateId || null,
+      status: 'draft',
+      config: {
+        type: newWebsiteData.type,
+        niche: newWebsiteData.niche,
+        nicheId: newWebsiteData.nicheId,
+        templateId: newWebsiteData.templateId,
+        prompt: newWebsiteData.prompt,
+        customTemplate: newWebsiteData.customTemplate as Website['config']['customTemplate'],
+      },
+    });
 
-  const handleWebsiteCreated = (newWebsite: Website) => {
-    setWebsites((prev) => [...prev, newWebsite]);
+    if (result) {
+      toast.success(`Site "${result.name}" criado com sucesso!`);
+      navigate(`/websites/${result.id}/edit`);
+    } else {
+      toast.error("Erro ao criar site");
+    }
   };
 
   const handleDeleteWebsite = (id: string) => {
@@ -69,10 +65,14 @@ export default function WebsitesPage() {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (websiteToDelete) {
-      setWebsites((prev) => prev.filter((site) => site.id !== websiteToDelete));
-      toast.success("Site eliminado com sucesso");
+      const success = await deleteWebsite(websiteToDelete);
+      if (success) {
+        toast.success("Site eliminado com sucesso");
+      } else {
+        toast.error("Erro ao eliminar site");
+      }
       setWebsiteToDelete(null);
     }
     setDeleteDialogOpen(false);
@@ -86,34 +86,21 @@ export default function WebsitesPage() {
     navigate(`/websites/${id}/edit`);
   };
 
-  const handleDuplicateWebsite = (site: Website) => {
-    const duplicatedSite: Website = {
-      ...site,
-      id: Date.now().toString(),
-      name: `${site.name} (Cópia)`,
-      status: "draft",
-      url: "",
-      createdAt: new Date().toLocaleDateString("pt-PT"),
-    };
-    setWebsites((prev) => [...prev, duplicatedSite]);
-    toast.success("Site duplicado com sucesso");
-  };
-
-  const handleViewOnline = (site: Website) => {
-    if (site.status === "draft") {
-      toast.error("Publique o site primeiro para o ver online");
-      return;
+  const handleDuplicateWebsite = async (site: Website) => {
+    const result = await duplicateWebsite(site);
+    if (result) {
+      toast.success("Site duplicado com sucesso");
+    } else {
+      toast.error("Erro ao duplicar site");
     }
-    // Open preview in new tab - since we don't have a real domain, open the editor in preview mode
-    navigate(`/websites/${site.id}/edit`);
-    toast.info("Site aberto em modo de pré-visualização");
   };
 
   const filteredWebsites = websites.filter((site) =>
     site.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const getTypeBadge = (type: Website["type"]) => {
+  const getTypeBadge = (type?: 'landing' | 'institutional') => {
+    if (!type) return null;
     return (
       <Badge variant="outline" className={type === "landing" ? "bg-blue-500/10 text-blue-600" : "bg-purple-500/10 text-purple-600"}>
         {type === "landing" ? "Landing Page" : "Institucional"}
@@ -129,6 +116,20 @@ export default function WebsitesPage() {
       </Badge>
     );
   };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("pt-PT");
+  };
+
+  if (isLoading) {
+    return (
+      <AppLayout pageTitle="Sites" credits={1250}>
+        <div className="flex items-center justify-center h-64">
+          <LoadingSpinner size="lg" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout pageTitle="Sites" credits={1250}>
@@ -182,7 +183,7 @@ export default function WebsitesPage() {
                       <div>
                         <CardTitle className="text-base">{site.name}</CardTitle>
                         <CardDescription className="text-xs">
-                          Criado em {site.createdAt}
+                          Criado em {formatDate(site.created_at)}
                         </CardDescription>
                       </div>
                     </div>
@@ -231,8 +232,8 @@ export default function WebsitesPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap items-center gap-2 mb-3">
-                    {getTypeBadge(site.type)}
-                    {getNicheBadge(site.niche)}
+                    {getTypeBadge(site.config?.type)}
+                    {getNicheBadge(site.config?.niche)}
                     <StatusBadge status={site.status} />
                   </div>
                   <div className="flex gap-2">
