@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Eye, Save, Globe, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { ArrowLeft, Eye, Globe, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,131 +11,134 @@ import { WebsitePreview } from "@/components/websites/WebsitePreview";
 import { getTemplateById, WebsiteTemplate } from "@/lib/website-templates";
 import { toast } from "@/hooks/use-toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-
-interface StoredWebsite {
-  id: string;
-  name: string;
-  type: "landing" | "institutional";
-  niche: string;
-  nicheId: string;
-  templateId: string;
-  prompt: string;
-  status: "active" | "draft" | "inactive";
-  url: string;
-  createdAt: string;
-  customTemplate?: WebsiteTemplate;
-  embedConfig?: EmbedConfig;
-}
-
-const STORAGE_KEY = "kinja-websites";
-
-const getStoredWebsites = (): StoredWebsite[] => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-};
-
-const saveWebsites = (websites: StoredWebsite[]) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(websites));
-};
+import { useWebsites, Website } from "@/hooks/useWebsites";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export default function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [website, setWebsite] = useState<StoredWebsite | null>(null);
+  const { getWebsite, updateWebsite, deleteWebsite } = useWebsites();
+  const [website, setWebsite] = useState<Website | null>(null);
   const [template, setTemplate] = useState<WebsiteTemplate | null>(null);
-  const [activeTab, setActiveTab] = useState("editor");
+  const [activeTab, setActiveTab] = useState("preview");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (id) {
-      const websites = getStoredWebsites();
-      const found = websites.find((w) => w.id === id);
+    const loadWebsite = async () => {
+      if (!id) {
+        navigate("/websites");
+        return;
+      }
+
+      setIsLoading(true);
+      const found = await getWebsite(id);
+      
       if (found) {
         setWebsite(found);
         // Use custom template if exists, otherwise get from catalog
-        const tmpl = found.customTemplate || getTemplateById(found.templateId);
+        const tmpl = found.config?.customTemplate || getTemplateById(found.config?.templateId || '');
         if (tmpl) {
           setTemplate(tmpl);
         }
       } else {
         navigate("/websites");
       }
-    }
-  }, [id, navigate]);
+      setIsLoading(false);
+    };
 
-  if (!website || !template) {
+    loadWebsite();
+  }, [id, navigate, getWebsite]);
+
+  if (isLoading) {
     return (
       <AppLayout pageTitle="Carregando..." credits={1250}>
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <LoadingSpinner size="lg" />
         </div>
       </AppLayout>
     );
   }
 
-  const handleSaveTemplate = (updatedTemplate: WebsiteTemplate, embedCfg?: EmbedConfig) => {
-    const websites = getStoredWebsites();
-    const updatedWebsites = websites.map((w) =>
-      w.id === website.id ? { ...w, customTemplate: updatedTemplate, embedConfig: embedCfg } : w
+  if (!website || !template) {
+    return (
+      <AppLayout pageTitle="Site não encontrado" credits={1250}>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Site não encontrado</p>
+        </div>
+      </AppLayout>
     );
-    saveWebsites(updatedWebsites);
-    setTemplate(updatedTemplate);
-    setWebsite((prev) => prev ? { ...prev, embedConfig: embedCfg } : prev);
-    toast({
-      title: "Site guardado!",
-      description: "As alterações foram guardadas com sucesso.",
-    });
+  }
+
+  const handleSaveTemplate = async (updatedTemplate: WebsiteTemplate, embedCfg?: EmbedConfig) => {
+    const updatedConfig = {
+      ...website.config,
+      customTemplate: updatedTemplate,
+      embedConfig: embedCfg,
+    };
+
+    const result = await updateWebsite(website.id, { config: updatedConfig });
+    
+    if (result) {
+      setTemplate(updatedTemplate);
+      setWebsite(result);
+      toast({
+        title: "Site guardado!",
+        description: "As alterações foram guardadas com sucesso.",
+      });
+    } else {
+      toast({
+        title: "Erro",
+        description: "Erro ao guardar o site.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Generate real preview URL
   const getPreviewUrl = () => {
-    // Use the actual Lovable preview URL with a route
     const baseUrl = window.location.origin;
     return `${baseUrl}/site/${website.id}`;
   };
 
-  const handlePublish = () => {
-    const websites = getStoredWebsites();
+  const handlePublish = async () => {
     const realUrl = getPreviewUrl();
-    const updatedWebsites = websites.map((w) =>
-      w.id === website.id
-        ? {
-            ...w,
-            status: "active" as const,
-            url: realUrl,
-          }
-        : w
-    );
-    saveWebsites(updatedWebsites);
-    setWebsite((prev) =>
-      prev
-        ? {
-            ...prev,
-            status: "active",
-            url: realUrl,
-          }
-        : prev
-    );
-    toast({
-      title: "Site publicado!",
-      description: "O seu site está agora online.",
+    const result = await updateWebsite(website.id, {
+      status: "active",
+      published_url: realUrl,
     });
+
+    if (result) {
+      setWebsite(result);
+      toast({
+        title: "Site publicado!",
+        description: "O seu site está agora online.",
+      });
+    } else {
+      toast({
+        title: "Erro",
+        description: "Erro ao publicar o site.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDelete = () => {
-    const websites = getStoredWebsites();
-    const updatedWebsites = websites.filter((w) => w.id !== website.id);
-    saveWebsites(updatedWebsites);
-    toast({
-      title: "Site eliminado",
-      description: "O site foi removido com sucesso.",
-    });
-    navigate("/websites");
+  const handleDelete = async () => {
+    const success = await deleteWebsite(website.id);
+    if (success) {
+      toast({
+        title: "Site eliminado",
+        description: "O site foi removido com sucesso.",
+      });
+      navigate("/websites");
+    } else {
+      toast({
+        title: "Erro",
+        description: "Erro ao eliminar o site.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isEditing) {
@@ -144,16 +147,18 @@ export default function WebsiteEditorPage() {
         <WebsiteEditor
           template={template}
           websiteName={website.name}
-          prompt={website.prompt}
+          prompt={website.config?.prompt || ""}
           onBack={() => setIsEditing(false)}
           onSave={handleSaveTemplate}
-          initialEmbedConfig={website.embedConfig}
+          initialEmbedConfig={website.config?.embedConfig}
         />
       </div>
     );
   }
 
-  const displayUrl = website.url || getPreviewUrl();
+  const displayUrl = website.published_url || getPreviewUrl();
+  const websiteType = website.config?.type;
+  const websiteNiche = website.config?.niche;
 
   return (
     <AppLayout pageTitle={website.name} credits={1250}>
@@ -170,10 +175,12 @@ export default function WebsiteEditorPage() {
                 <StatusBadge status={website.status} />
               </div>
               <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline">
-                  {website.type === "landing" ? "Landing Page" : "Institucional"}
-                </Badge>
-                <Badge variant="secondary">{website.niche}</Badge>
+                {websiteType && (
+                  <Badge variant="outline">
+                    {websiteType === "landing" ? "Landing Page" : "Institucional"}
+                  </Badge>
+                )}
+                {websiteNiche && <Badge variant="secondary">{websiteNiche}</Badge>}
               </div>
             </div>
           </div>
@@ -239,7 +246,7 @@ export default function WebsiteEditorPage() {
               <WebsitePreview 
                 template={template} 
                 websiteName={website.name}
-                embedConfig={website.embedConfig}
+                embedConfig={website.config?.embedConfig}
               />
             </div>
           </TabsContent>
@@ -256,20 +263,24 @@ export default function WebsiteEditorPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">Tipo</p>
                     <p className="font-medium">
-                      {website.type === "landing" ? "Landing Page" : "Site Institucional"}
+                      {websiteType === "landing" ? "Landing Page" : "Site Institucional"}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Nicho</p>
-                    <p className="font-medium">{website.niche}</p>
-                  </div>
+                  {websiteNiche && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">Nicho</p>
+                      <p className="font-medium">{websiteNiche}</p>
+                    </div>
+                  )}
                   <div>
                     <p className="text-sm text-muted-foreground">Template</p>
                     <p className="font-medium">{template.name}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Data de Criação</p>
-                    <p className="font-medium">{website.createdAt}</p>
+                    <p className="font-medium">
+                      {new Date(website.created_at).toLocaleDateString("pt-PT")}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -277,7 +288,7 @@ export default function WebsiteEditorPage() {
               <div className="space-y-4 p-6 rounded-lg border bg-card">
                 <h3 className="font-semibold">Prompt de Geração</h3>
                 <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {website.prompt || "Nenhum prompt especificado."}
+                  {website.config?.prompt || "Nenhum prompt especificado."}
                 </p>
               </div>
             </div>

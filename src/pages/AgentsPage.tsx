@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, Search, MoreHorizontal, Bot } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -26,75 +26,16 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { CreateAgentWizard } from "@/components/agents/CreateAgentWizard";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
-
-interface Agent {
-  id: string;
-  name: string;
-  type: string;
-  prompt: string;
-  status: "active" | "inactive" | "pending" | "error";
-  channel: "whatsapp" | "embed" | "both";
-  messagesHandled: number;
-  createdAt: string;
-}
-
-const defaultAgents: Agent[] = [
-  {
-    id: "1",
-    name: "Assistente de Vendas",
-    type: "Atendimento / FAQ",
-    prompt: "Você é um assistente de vendas útil...",
-    status: "active",
-    channel: "whatsapp",
-    messagesHandled: 1250,
-    createdAt: "2024-01-15",
-  },
-  {
-    id: "2",
-    name: "Bot FAQ",
-    type: "Atendimento / FAQ",
-    prompt: "Você é um assistente de base de conhecimento...",
-    status: "active",
-    channel: "embed",
-    messagesHandled: 890,
-    createdAt: "2024-01-20",
-  },
-  {
-    id: "3",
-    name: "Qualificador de Leads",
-    type: "Captura de Leads",
-    prompt: "Você é um agente de qualificação de leads...",
-    status: "inactive",
-    channel: "both",
-    messagesHandled: 450,
-    createdAt: "2024-02-01",
-  },
-];
+import { useAgents, Agent } from "@/hooks/useAgents";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export default function AgentsPage() {
   const navigate = useNavigate();
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const { agents, isLoading, createAgent, deleteAgent } = useAgents();
   const [search, setSearch] = useState("");
   const [wizardOpen, setWizardOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
-
-  // Carregar agentes do localStorage ao montar
-  useEffect(() => {
-    const storedAgents = localStorage.getItem("kinja-agents");
-    if (storedAgents) {
-      setAgents(JSON.parse(storedAgents));
-    } else {
-      // Inicializar com agentes padrão
-      localStorage.setItem("kinja-agents", JSON.stringify(defaultAgents));
-      setAgents(defaultAgents);
-    }
-  }, []);
-
-  const saveAgents = (newAgents: Agent[]) => {
-    localStorage.setItem("kinja-agents", JSON.stringify(newAgents));
-    setAgents(newAgents);
-  };
 
   const filteredAgents = agents.filter((agent) =>
     agent.name.toLowerCase().includes(search.toLowerCase())
@@ -110,10 +51,33 @@ export default function AgentsPage() {
     return <Badge variant="outline" className={className}>{label}</Badge>;
   };
 
-  const handleAgentCreated = (newAgent: Agent) => {
-    const updatedAgents = [...agents, newAgent];
-    saveAgents(updatedAgents);
-    toast.success(`Agente "${newAgent.name}" criado com sucesso!`);
+  // Accept the wizard's Agent format (camelCase) and convert to hook format (snake_case)
+  const handleAgentCreated = async (newAgentData: {
+    id: string;
+    name: string;
+    type: string;
+    typeId: string;
+    prompt: string;
+    status: 'active' | 'inactive' | 'pending' | 'error';
+    channel: 'whatsapp' | 'embed' | 'both';
+    messagesHandled: number;
+    createdAt: string;
+  }) => {
+    const result = await createAgent({
+      name: newAgentData.name,
+      type: newAgentData.type,
+      type_id: newAgentData.typeId,
+      prompt: newAgentData.prompt,
+      channel: newAgentData.channel,
+      status: 'inactive',
+      messages_handled: 0,
+    });
+    
+    if (result) {
+      toast.success(`Agente "${result.name}" criado com sucesso!`);
+    } else {
+      toast.error("Erro ao criar agente");
+    }
   };
 
   const handleDeleteAgent = (agent: Agent) => {
@@ -121,11 +85,14 @@ export default function AgentsPage() {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (agentToDelete) {
-      const updatedAgents = agents.filter((a) => a.id !== agentToDelete.id);
-      saveAgents(updatedAgents);
-      toast.success(`Agente "${agentToDelete.name}" eliminado`);
+      const success = await deleteAgent(agentToDelete.id);
+      if (success) {
+        toast.success(`Agente "${agentToDelete.name}" eliminado`);
+      } else {
+        toast.error("Erro ao eliminar agente");
+      }
       setAgentToDelete(null);
     }
     setDeleteDialogOpen(false);
@@ -134,6 +101,16 @@ export default function AgentsPage() {
   const handleRowClick = (agentId: string) => {
     navigate(`/agents/${agentId}`);
   };
+
+  if (isLoading) {
+    return (
+      <AppLayout pageTitle="Agentes" credits={1250}>
+        <div className="flex items-center justify-center h-64">
+          <LoadingSpinner size="lg" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout pageTitle="Agentes" credits={1250}>
@@ -209,7 +186,7 @@ export default function AgentsPage() {
                       </TableCell>
                       <TableCell>{getChannelBadge(agent.channel)}</TableCell>
                       <TableCell className="text-right">
-                        {agent.messagesHandled.toLocaleString()}
+                        {agent.messages_handled.toLocaleString()}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
