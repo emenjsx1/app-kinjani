@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.generate-website-content]
 verify_jwt = false
+
+[functions.ai-edit-section]
+verify_jwt = false
+
+[functions.create-agent-ai]
+verify_jwt = false
