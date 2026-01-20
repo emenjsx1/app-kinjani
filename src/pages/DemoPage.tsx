@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { Bot, MessageSquare, ExternalLink } from "lucide-react";
+import { Bot, MessageSquare, ExternalLink, Sun, Moon, BarChart3, Users, MessageCircle, Code } from "lucide-react";
 import { ChatContainer, Message } from "@/components/chat";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 interface Agent {
@@ -19,7 +18,14 @@ interface Agent {
   createdAt: string;
 }
 
+interface DemoStats {
+  totalMessages: number;
+  agentsTested: Set<string>;
+  sessionStart: number;
+}
+
 const STORAGE_KEY = "kinja-agents";
+const STATS_KEY = "kinja-demo-stats";
 
 const getStoredAgents = (): Agent[] => {
   try {
@@ -28,6 +34,31 @@ const getStoredAgents = (): Agent[] => {
   } catch {
     return [];
   }
+};
+
+const getStoredStats = (): DemoStats => {
+  try {
+    const stored = localStorage.getItem(STATS_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        ...parsed,
+        agentsTested: new Set(parsed.agentsTested || []),
+      };
+    }
+  } catch {}
+  return {
+    totalMessages: 0,
+    agentsTested: new Set(),
+    sessionStart: Date.now(),
+  };
+};
+
+const saveStats = (stats: DemoStats) => {
+  localStorage.setItem(STATS_KEY, JSON.stringify({
+    ...stats,
+    agentsTested: Array.from(stats.agentsTested),
+  }));
 };
 
 // Respostas mock baseadas no tipo de agente
@@ -71,14 +102,36 @@ export default function DemoPage() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [stats, setStats] = useState<DemoStats>(getStoredStats);
 
   useEffect(() => {
     const storedAgents = getStoredAgents();
     setAgents(storedAgents.filter((a) => a.status === "active"));
+    
+    // Check system preference for dark mode
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    setIsDarkMode(prefersDark);
   }, []);
+
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [isDarkMode]);
+
+  useEffect(() => {
+    saveStats(stats);
+  }, [stats]);
 
   const handleSelectAgent = (agent: Agent) => {
     setSelectedAgent(agent);
+    setStats((prev) => ({
+      ...prev,
+      agentsTested: new Set([...prev.agentsTested, agent.id]),
+    }));
     setMessages([
       {
         id: "welcome",
@@ -100,6 +153,7 @@ export default function DemoPage() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    setStats((prev) => ({ ...prev, totalMessages: prev.totalMessages + 1 }));
     setIsLoading(true);
 
     // Simular resposta da IA com delay
@@ -120,6 +174,13 @@ export default function DemoPage() {
     setMessages([]);
   };
 
+  const getSessionDuration = () => {
+    const minutes = Math.floor((Date.now() - stats.sessionStart) / 60000);
+    if (minutes < 1) return "< 1 min";
+    if (minutes < 60) return `${minutes} min`;
+    return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       {/* Header Público */}
@@ -132,16 +193,81 @@ export default function DemoPage() {
             <span className="font-bold text-xl">KINJA AI</span>
             <Badge variant="secondary" className="ml-2">Demo</Badge>
           </div>
-          <Button variant="outline" size="sm" asChild>
-            <a href="/dashboard">
-              Aceder ao Painel
-              <ExternalLink className="ml-2 h-4 w-4" />
-            </a>
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Theme Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="h-9 w-9"
+            >
+              {isDarkMode ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <a href="/dashboard">
+                Aceder ao Painel
+                <ExternalLink className="ml-2 h-4 w-4" />
+              </a>
+            </Button>
+          </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        {/* Estatísticas de Uso */}
+        <div className="max-w-4xl mx-auto mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="bg-card/50 backdrop-blur-sm">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <MessageCircle className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.totalMessages}</p>
+                  <p className="text-xs text-muted-foreground">Mensagens</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-card/50 backdrop-blur-sm">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-secondary/10 flex items-center justify-center">
+                  <Users className="h-5 w-5 text-secondary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.agentsTested.size}</p>
+                  <p className="text-xs text-muted-foreground">Agentes Testados</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-card/50 backdrop-blur-sm">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                  <BarChart3 className="h-5 w-5 text-accent" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{agents.length}</p>
+                  <p className="text-xs text-muted-foreground">Agentes Ativos</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-card/50 backdrop-blur-sm">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                  <Code className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{getSessionDuration()}</p>
+                  <p className="text-xs text-muted-foreground">Tempo de Sessão</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
         {!selectedAgent ? (
           /* Seleção de Agentes */
           <div className="max-w-4xl mx-auto space-y-8">
@@ -206,7 +332,7 @@ export default function DemoPage() {
         ) : (
           /* Chat com Agente Selecionado */
           <div className="max-w-3xl mx-auto">
-            <Card className="h-[calc(100vh-12rem)] flex flex-col">
+            <Card className="h-[calc(100vh-20rem)] flex flex-col">
               <CardHeader className="border-b shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
