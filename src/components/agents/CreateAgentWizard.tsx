@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, MessageSquare, Users, Sparkles, Calendar, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Bot, MessageSquare, Users, Sparkles, Calendar, ArrowRight, CheckCircle2, FileText } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Stepper, CardSelect } from "@/components/ui/stepper";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
+import { PROMPT_TEMPLATES, getTemplatesForAgentType, PromptTemplate } from "@/lib/agent-templates";
 
 interface Agent {
   id: string;
@@ -31,7 +34,7 @@ interface CreateAgentWizardProps {
   onAgentCreated: (agent: Agent) => void;
 }
 
-const STEPS = ["Tipo", "Prompt", "Nome", "Canal", "Concluído"];
+const STEPS = ["Tipo", "Template", "Prompt", "Nome", "Canal", "Concluído"];
 
 const AGENT_TYPES = [
   {
@@ -84,13 +87,18 @@ const CHANNEL_OPTIONS = [
 export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: CreateAgentWizardProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [agentType, setAgentType] = useState<string | null>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<PromptTemplate | null>(null);
   const [prompt, setPrompt] = useState("");
   const [agentName, setAgentName] = useState("");
   const [channel, setChannel] = useState<string | null>("embed");
 
+  // Templates disponíveis para o tipo selecionado
+  const availableTemplates = agentType ? getTemplatesForAgentType(agentType) : [];
+
   const resetWizard = () => {
     setCurrentStep(0);
     setAgentType(null);
+    setSelectedTemplate(null);
     setPrompt("");
     setAgentName("");
     setChannel("embed");
@@ -103,6 +111,10 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
 
   const handleNext = () => {
     if (currentStep < STEPS.length - 1) {
+      // Se selecionar template, preencher o prompt automaticamente
+      if (currentStep === 1 && selectedTemplate) {
+        setPrompt(selectedTemplate.prompt);
+      }
       setCurrentStep(currentStep + 1);
     }
   };
@@ -111,6 +123,11 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
+  };
+
+  const handleSkipTemplate = () => {
+    setSelectedTemplate(null);
+    setCurrentStep(2); // Ir direto para o prompt
   };
 
   const handleCreate = () => {
@@ -135,10 +152,12 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
       case 0:
         return agentType !== null;
       case 1:
-        return prompt.trim().length > 10;
+        return true; // Template é opcional
       case 2:
-        return agentName.trim().length > 2;
+        return prompt.trim().length > 10;
       case 3:
+        return agentName.trim().length > 2;
+      case 4:
         return channel !== null;
       default:
         return true;
@@ -169,9 +188,71 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
         return (
           <div className="space-y-4">
             <div>
+              <h3 className="text-lg font-semibold">Escolher Template (Opcional)</h3>
+              <p className="text-sm text-muted-foreground">
+                Use um template profissional ou crie o seu próprio prompt
+              </p>
+            </div>
+            
+            {availableTemplates.length > 0 ? (
+              <ScrollArea className="h-[300px] pr-4">
+                <div className="space-y-3">
+                  {availableTemplates.map((template) => (
+                    <div
+                      key={template.id}
+                      className={`p-4 border rounded-lg cursor-pointer transition-all hover:border-primary/50 ${
+                        selectedTemplate?.id === template.id
+                          ? "border-primary bg-primary/5"
+                          : "border-border"
+                      }`}
+                      onClick={() => setSelectedTemplate(template)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 rounded-md bg-primary/10">
+                          <FileText className="h-4 w-4 text-primary" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{template.name}</h4>
+                            <Badge variant="secondary" className="text-xs">
+                              {template.nicheLabel}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {template.description}
+                          </p>
+                        </div>
+                        {selectedTemplate?.id === template.id && (
+                          <CheckCircle2 className="h-5 w-5 text-primary" />
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>Nenhum template disponível para este tipo.</p>
+                <p className="text-sm">Você pode criar o seu próprio prompt.</p>
+              </div>
+            )}
+
+            <Button variant="ghost" onClick={handleSkipTemplate} className="w-full">
+              Criar prompt do zero →
+            </Button>
+          </div>
+        );
+
+      case 2:
+        return (
+          <div className="space-y-4">
+            <div>
               <h3 className="text-lg font-semibold">Definir Comportamento do Agente</h3>
               <p className="text-sm text-muted-foreground">
-                Escreva um prompt que descreva como o seu agente deve comportar-se
+                {selectedTemplate
+                  ? "Personalize o template ou use como está"
+                  : "Escreva um prompt que descreva como o seu agente deve comportar-se"}
               </p>
             </div>
             <div className="space-y-2">
@@ -181,7 +262,7 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
                 placeholder="Você é um assistente de apoio ao cliente da [Nome da Empresa]. Ajuda os utilizadores com..."
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                className="min-h-[200px]"
+                className="min-h-[200px] font-mono text-sm"
               />
               <p className="text-xs text-muted-foreground">
                 Mínimo 10 caracteres. Seja específico sobre a personalidade e conhecimento do agente.
@@ -190,7 +271,7 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
           </div>
         );
 
-      case 2:
+      case 3:
         return (
           <div className="space-y-4">
             <div>
@@ -211,7 +292,7 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
           </div>
         );
 
-      case 3:
+      case 4:
         return (
           <div className="space-y-4">
             <div>
@@ -229,7 +310,7 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
           </div>
         );
 
-      case 4:
+      case 5:
         return (
           <div className="flex flex-col items-center justify-center py-8 space-y-4">
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -239,6 +320,9 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
               <h3 className="text-xl font-semibold">Agente Criado!</h3>
               <p className="text-muted-foreground">
                 O seu agente <span className="font-medium text-foreground">{agentName}</span> está pronto a usar.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Teste o agente com IA real na aba "Testar Agente".
               </p>
             </div>
           </div>
@@ -251,7 +335,7 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Criar Novo Agente</DialogTitle>
           <DialogDescription>
@@ -265,12 +349,12 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
         </div>
 
         <div className="flex justify-between pt-4 border-t">
-          {currentStep < 4 ? (
+          {currentStep < 5 ? (
             <>
               <Button variant="outline" onClick={handleBack} disabled={currentStep === 0}>
                 Voltar
               </Button>
-              {currentStep === 3 ? (
+              {currentStep === 4 ? (
                 <Button onClick={handleCreate} disabled={!canProceed()}>
                   Criar Agente
                 </Button>
