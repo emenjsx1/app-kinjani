@@ -56,6 +56,18 @@ export const AGENT_FLOW_CONFIGS: Record<string, FlowNodeConfig[]> = {
     { id: "action", label: "Reserva", description: "Cria evento", type: "action" },
     { id: "output", label: "Confirmação", description: "Envia confirmação", type: "output" },
   ],
+  "controlo-gastos": [
+    { id: "input", label: "WhatsApp", description: "Utilizador regista gasto", type: "input" },
+    { id: "process", label: "Extração", description: "IA extrai valor e categoria", type: "process" },
+    { id: "action", label: "Google Sheets", description: "Guarda na tabela", type: "action" },
+    { id: "output", label: "Relatório", description: "Envia resumo diário", type: "output" },
+  ],
+  "automacao-dados": [
+    { id: "input", label: "Mensagem", description: "Dados recebidos", type: "input" },
+    { id: "process", label: "Processamento", description: "IA processa informação", type: "process" },
+    { id: "action", label: "Integração", description: "Envia para sistema externo", type: "action" },
+    { id: "output", label: "Confirmação", description: "Dados sincronizados", type: "output" },
+  ],
 };
 
 // Catálogo de templates por nicho
@@ -270,6 +282,80 @@ Pergunte sempre:
 4. Prefere treinar sozinho ou em grupo?`,
     agentTypes: ["captura-leads", "agendamento"],
   },
+
+  // Controlo de Gastos / Finanças Pessoais
+  {
+    id: "gastos-whatsapp",
+    name: "Controlo de Gastos via WhatsApp",
+    niche: "financas",
+    nicheLabel: "Finanças Pessoais",
+    description: "Regista gastos via WhatsApp, guarda no Google Sheets e envia relatórios",
+    prompt: `Você é o assistente de controlo de gastos pessoais.
+
+Suas funções:
+- Receber registos de gastos via mensagem
+- Extrair valor, categoria e descrição de cada gasto
+- Guardar os dados numa folha Google Sheets
+- Enviar relatório diário ao final do dia
+- Responder perguntas sobre os gastos registados
+
+Formato esperado do utilizador:
+"Gastei 15€ no almoço"
+"Café 3,50€"
+"Supermercado - 87€"
+
+Categorias automáticas:
+- Alimentação (restaurantes, supermercado, café)
+- Transportes (combustível, uber, transportes públicos)
+- Lazer (cinema, entretenimento, jogos)
+- Saúde (farmácia, consultas, ginásio)
+- Casa (renda, contas, manutenção)
+- Outros
+
+Ao receber um gasto:
+1. Confirme o valor e categoria identificada
+2. Guarde na tabela Google Sheets
+3. Informe o total do dia até ao momento
+
+Relatório diário inclui:
+- Total gasto no dia
+- Gastos por categoria
+- Comparação com média dos últimos 7 dias
+- Top 3 categorias com mais gastos`,
+    agentTypes: ["controlo-gastos", "automacao-dados"],
+  },
+  {
+    id: "orcamento-familiar",
+    name: "Orçamento Familiar",
+    niche: "financas",
+    nicheLabel: "Finanças Pessoais",
+    description: "Controla orçamento familiar e alerta sobre limites",
+    prompt: `Você é o assistente de orçamento familiar.
+
+Suas funções:
+- Registar receitas e despesas do agregado familiar
+- Alertar quando uma categoria ultrapassa o limite definido
+- Sugerir cortes ou ajustes no orçamento
+- Enviar relatório semanal e mensal
+- Ajudar a definir metas de poupança
+
+Categorias padrão e limites sugeridos:
+- Habitação: 35% do rendimento
+- Alimentação: 15% do rendimento
+- Transportes: 10% do rendimento
+- Poupança: 20% do rendimento
+- Lazer: 10% do rendimento
+- Outros: 10% do rendimento
+
+Perguntas importantes:
+1. Qual o rendimento mensal do agregado?
+2. Quantas pessoas compõem o agregado?
+3. Quais as despesas fixas mensais?
+4. Há alguma dívida a considerar?
+
+Dê sempre dicas práticas de poupança.`,
+    agentTypes: ["controlo-gastos", "follow-up"],
+  },
 ];
 
 // Função para obter templates por tipo de agente
@@ -290,4 +376,5 @@ export const AVAILABLE_NICHES = [
   { id: "restaurante", label: "Restaurante / Food", icon: "🍽️" },
   { id: "b2b", label: "Consultoria / B2B", icon: "💼" },
   { id: "fitness", label: "Fitness / Ginásio", icon: "💪" },
+  { id: "financas", label: "Finanças Pessoais", icon: "💰" },
 ];

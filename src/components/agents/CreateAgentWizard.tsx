@@ -71,6 +71,12 @@ const AGENT_TYPES = [
     description: "Agenda reuniões e compromissos",
     icon: <Calendar className="h-5 w-5" />,
   },
+  {
+    id: "controlo-gastos",
+    title: "Controlo de Gastos",
+    description: "Regista gastos, guarda em Google Sheets e envia relatórios",
+    icon: <Coins className="h-5 w-5" />,
+  },
 ];
 
 const CHANNEL_OPTIONS = [
