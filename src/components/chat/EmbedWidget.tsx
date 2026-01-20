@@ -211,8 +211,27 @@ export function EmbedWidget({
   );
 }
 
+// Interface para opções de embed
+interface EmbedCodeOptions {
+  agentId: string;
+  agentName?: string;
+  primaryColor?: string;
+  position?: "right" | "left" | "bottom-right" | "bottom-left";
+  welcomeMessage?: string;
+}
+
 // Código de embed para copiar
-export function generateEmbedCode(agentId: string, agentName: string): string {
+export function generateEmbedCode(options: EmbedCodeOptions): string {
+  const {
+    agentId,
+    agentName = "Assistente KINJA",
+    primaryColor = "#00DF81",
+    position = "bottom-right",
+    welcomeMessage = "Olá! Como posso ajudá-lo?",
+  } = options;
+
+  const positionValue = position === "left" ? "bottom-left" : position === "right" ? "bottom-right" : position;
+
   return `<!-- KINJA AI Chat Widget -->
 <script>
   (function() {
@@ -225,8 +244,9 @@ export function generateEmbedCode(agentId: string, agentName: string): string {
       w.KinjaChat.init({
         agentId: '${agentId}',
         agentName: '${agentName}',
-        primaryColor: '#00DF81',
-        position: 'bottom-right'
+        primaryColor: '${primaryColor}',
+        position: '${positionValue}',
+        welcomeMessage: '${welcomeMessage}'
       });
     };
     d.head.appendChild(s);

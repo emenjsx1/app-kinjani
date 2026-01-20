@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { WebsiteEditor } from "@/components/websites/WebsiteEditor";
+import { WebsiteEditor, EmbedConfig } from "@/components/websites/WebsiteEditor";
 import { WebsitePreview } from "@/components/websites/WebsitePreview";
 import { getTemplateById, WebsiteTemplate } from "@/lib/website-templates";
 import { toast } from "@/hooks/use-toast";
@@ -24,6 +24,7 @@ interface StoredWebsite {
   url: string;
   createdAt: string;
   customTemplate?: WebsiteTemplate;
+  embedConfig?: EmbedConfig;
 }
 
 const STORAGE_KEY = "kinja-websites";
@@ -77,27 +78,36 @@ export default function WebsiteEditorPage() {
     );
   }
 
-  const handleSaveTemplate = (updatedTemplate: WebsiteTemplate) => {
+  const handleSaveTemplate = (updatedTemplate: WebsiteTemplate, embedCfg?: EmbedConfig) => {
     const websites = getStoredWebsites();
     const updatedWebsites = websites.map((w) =>
-      w.id === website.id ? { ...w, customTemplate: updatedTemplate } : w
+      w.id === website.id ? { ...w, customTemplate: updatedTemplate, embedConfig: embedCfg } : w
     );
     saveWebsites(updatedWebsites);
     setTemplate(updatedTemplate);
+    setWebsite((prev) => prev ? { ...prev, embedConfig: embedCfg } : prev);
     toast({
       title: "Site guardado!",
       description: "As alterações foram guardadas com sucesso.",
     });
   };
 
+  // Generate real preview URL
+  const getPreviewUrl = () => {
+    // Use the actual Lovable preview URL with a route
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/site/${website.id}`;
+  };
+
   const handlePublish = () => {
     const websites = getStoredWebsites();
+    const realUrl = getPreviewUrl();
     const updatedWebsites = websites.map((w) =>
       w.id === website.id
         ? {
             ...w,
             status: "active" as const,
-            url: `https://${website.name.toLowerCase().replace(/\s+/g, "-")}.kinja.ai`,
+            url: realUrl,
           }
         : w
     );
@@ -107,7 +117,7 @@ export default function WebsiteEditorPage() {
         ? {
             ...prev,
             status: "active",
-            url: `https://${prev.name.toLowerCase().replace(/\s+/g, "-")}.kinja.ai`,
+            url: realUrl,
           }
         : prev
     );
@@ -137,10 +147,13 @@ export default function WebsiteEditorPage() {
           prompt={website.prompt}
           onBack={() => setIsEditing(false)}
           onSave={handleSaveTemplate}
+          initialEmbedConfig={website.embedConfig}
         />
       </div>
     );
   }
+
+  const displayUrl = website.url || getPreviewUrl();
 
   return (
     <AppLayout pageTitle={website.name} credits={1250}>
@@ -177,7 +190,7 @@ export default function WebsiteEditorPage() {
             ) : (
               <Button variant="outline" asChild>
                 <a
-                  href={website.url}
+                  href={displayUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -219,11 +232,15 @@ export default function WebsiteEditorPage() {
                 </div>
                 <div className="flex-1 text-center">
                   <span className="text-xs text-muted-foreground">
-                    {website.url || `${website.name.toLowerCase().replace(/\s+/g, "-")}.kinja.ai`}
+                    {displayUrl}
                   </span>
                 </div>
               </div>
-              <WebsitePreview template={template} websiteName={website.name} />
+              <WebsitePreview 
+                template={template} 
+                websiteName={website.name}
+                embedConfig={website.embedConfig}
+              />
             </div>
           </TabsContent>
 
