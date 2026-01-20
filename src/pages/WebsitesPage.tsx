@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Search, MoreHorizontal, Globe, ExternalLink } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Globe, ExternalLink, Eye, Pencil, Copy, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CreateWebsiteWizard } from "@/components/websites/CreateWebsiteWizard";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
 
 interface Website {
   id: string;
@@ -51,6 +53,8 @@ export default function WebsitesPage() {
   const [websites, setWebsites] = useState<Website[]>(getStoredWebsites);
   const [search, setSearch] = useState("");
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [websiteToDelete, setWebsiteToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     saveWebsites(websites);
@@ -61,7 +65,48 @@ export default function WebsitesPage() {
   };
 
   const handleDeleteWebsite = (id: string) => {
-    setWebsites((prev) => prev.filter((site) => site.id !== id));
+    setWebsiteToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = () => {
+    if (websiteToDelete) {
+      setWebsites((prev) => prev.filter((site) => site.id !== websiteToDelete));
+      toast.success("Site eliminado com sucesso");
+      setWebsiteToDelete(null);
+    }
+    setDeleteDialogOpen(false);
+  };
+
+  const handleEditWebsite = (id: string) => {
+    navigate(`/websites/${id}/edit`);
+  };
+
+  const handleViewWebsite = (id: string) => {
+    navigate(`/websites/${id}/edit`);
+  };
+
+  const handleDuplicateWebsite = (site: Website) => {
+    const duplicatedSite: Website = {
+      ...site,
+      id: Date.now().toString(),
+      name: `${site.name} (Cópia)`,
+      status: "draft",
+      url: "",
+      createdAt: new Date().toLocaleDateString("pt-PT"),
+    };
+    setWebsites((prev) => [...prev, duplicatedSite]);
+    toast.success("Site duplicado com sucesso");
+  };
+
+  const handleViewOnline = (site: Website) => {
+    if (site.status === "draft") {
+      toast.error("Publique o site primeiro para o ver online");
+      return;
+    }
+    // Open preview in new tab - since we don't have a real domain, open the editor in preview mode
+    navigate(`/websites/${site.id}/edit`);
+    toast.info("Site aberto em modo de pré-visualização");
   };
 
   const filteredWebsites = websites.filter((site) =>
@@ -123,7 +168,11 @@ export default function WebsitesPage() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {filteredWebsites.map((site) => (
-              <Card key={site.id} className="hover:shadow-md transition-shadow cursor-pointer">
+              <Card 
+                key={site.id} 
+                className="hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => handleViewWebsite(site.id)}
+              >
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
@@ -138,24 +187,42 @@ export default function WebsitesPage() {
                       </div>
                     </div>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Editar</DropdownMenuItem>
-                        <DropdownMenuItem>Duplicar</DropdownMenuItem>
-                        {site.url && (
-                          <DropdownMenuItem onClick={() => window.open(site.url, "_blank")}>
-                            Ver Online
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewWebsite(site.id);
+                        }}>
+                          <Eye className="h-4 w-4 mr-2" />
+                          Ver / Pré-visualizar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditWebsite(site.id);
+                        }}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => {
+                          e.stopPropagation();
+                          handleDuplicateWebsite(site);
+                        }}>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Duplicar
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           className="text-destructive"
-                          onClick={() => handleDeleteWebsite(site.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteWebsite(site.id);
+                          }}
                         >
+                          <Trash2 className="h-4 w-4 mr-2" />
                           Eliminar
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -168,18 +235,32 @@ export default function WebsitesPage() {
                     {getNicheBadge(site.niche)}
                     <StatusBadge status={site.status} />
                   </div>
-                  {site.url && (
-                    <a
-                      href={site.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-sm text-primary hover:underline"
-                      onClick={(e) => e.stopPropagation()}
+                  <div className="flex gap-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditWebsite(site.id);
+                      }}
                     >
-                      <ExternalLink className="h-3 w-3" />
-                      {site.url.replace("https://", "")}
-                    </a>
-                  )}
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Editar
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="default" 
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleViewWebsite(site.id);
+                      }}
+                    >
+                      <Eye className="h-3 w-3 mr-1" />
+                      Ver
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -191,6 +272,17 @@ export default function WebsitesPage() {
         open={isWizardOpen}
         onOpenChange={setIsWizardOpen}
         onWebsiteCreated={handleWebsiteCreated}
+      />
+
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Eliminar Site"
+        description="Tem a certeza que deseja eliminar este site? Esta ação não pode ser revertida."
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        onConfirm={confirmDelete}
+        variant="destructive"
       />
     </AppLayout>
   );
