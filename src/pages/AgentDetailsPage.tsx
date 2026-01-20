@@ -13,33 +13,26 @@ import { CodeBlock } from "@/components/ui/code-block";
 import { ChatContainer } from "@/components/chat";
 import { AgentFlowVisual } from "@/components/agents/AgentFlowVisual";
 import { useAgentChat } from "@/hooks/useAgentChat";
+import { useAgents, Agent } from "@/hooks/useAgents";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { toast } from "sonner";
-
-interface Agent {
-  id: string;
-  name: string;
-  type: string;
-  typeId?: string;
-  prompt: string;
-  status: "active" | "inactive" | "pending" | "error";
-  channel: "whatsapp" | "embed" | "both";
-  messagesHandled: number;
-  createdAt: string;
-}
 
 export default function AgentDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { getAgent, updateAgent } = useAgents();
+  
   const [agent, setAgent] = useState<Agent | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [prompt, setPrompt] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
   // Hook de chat com IA real
-  const { messages, isLoading, sendMessage, clearMessages } = useAgentChat({
-    agentType: agent?.typeId || "atendimento-faq",
+  const { messages, isLoading: isChatLoading, sendMessage, clearMessages } = useAgentChat({
+    agentType: agent?.type_id || "atendimento-faq",
     agentPrompt: prompt,
   });
 
@@ -47,47 +40,55 @@ export default function AgentDetailsPage() {
   const defaultTab = searchParams.get("tab") || "settings";
 
   useEffect(() => {
-    // Carregar agente do localStorage
-    const storedAgents = localStorage.getItem("kinja-agents");
-    if (storedAgents) {
-      const agents: Agent[] = JSON.parse(storedAgents);
-      const foundAgent = agents.find((a) => a.id === id);
+    const loadAgent = async () => {
+      if (!id) {
+        navigate("/agents");
+        return;
+      }
+
+      setIsLoading(true);
+      const foundAgent = await getAgent(id);
+      
       if (foundAgent) {
         setAgent(foundAgent);
         setIsActive(foundAgent.status === "active");
         setPrompt(foundAgent.prompt || "");
       }
-    }
-  }, [id]);
+      setIsLoading(false);
+    };
 
-  const handleStatusChange = (checked: boolean) => {
+    loadAgent();
+  }, [id, navigate, getAgent]);
+
+  const handleStatusChange = async (checked: boolean) => {
+    if (!agent) return;
+    
     setIsActive(checked);
-    if (agent) {
-      const newStatus = checked ? "active" : "inactive";
-      updateAgent({ ...agent, status: newStatus });
+    const newStatus = checked ? "active" : "inactive";
+    
+    const result = await updateAgent(agent.id, { status: newStatus });
+    if (result) {
+      setAgent(result);
       toast.success(`Agente ${checked ? "ativado" : "desativado"}`);
+    } else {
+      setIsActive(!checked); // Revert on error
+      toast.error("Erro ao atualizar estado do agente");
     }
   };
 
-  const handleSavePrompt = () => {
-    if (agent) {
-      setIsSaving(true);
-      setTimeout(() => {
-        updateAgent({ ...agent, prompt });
-        setIsSaving(false);
-        toast.success("Prompt guardado com sucesso");
-      }, 500);
+  const handleSavePrompt = async () => {
+    if (!agent) return;
+    
+    setIsSaving(true);
+    const result = await updateAgent(agent.id, { prompt });
+    
+    if (result) {
+      setAgent(result);
+      toast.success("Prompt guardado com sucesso");
+    } else {
+      toast.error("Erro ao guardar prompt");
     }
-  };
-
-  const updateAgent = (updatedAgent: Agent) => {
-    const storedAgents = localStorage.getItem("kinja-agents");
-    if (storedAgents) {
-      const agents: Agent[] = JSON.parse(storedAgents);
-      const updatedAgents = agents.map((a) => (a.id === updatedAgent.id ? updatedAgent : a));
-      localStorage.setItem("kinja-agents", JSON.stringify(updatedAgents));
-      setAgent(updatedAgent);
-    }
+    setIsSaving(false);
   };
 
   const embedCode = `<!-- KINJA AI Chat Widget -->
@@ -116,6 +117,16 @@ export default function AgentDetailsPage() {
     clearMessages();
     toast.success("Conversa reiniciada");
   };
+
+  if (isLoading) {
+    return (
+      <AppLayout pageTitle="Carregando..." credits={1250}>
+        <div className="flex items-center justify-center h-64">
+          <LoadingSpinner size="lg" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   if (!agent) {
     return (
@@ -198,7 +209,7 @@ export default function AgentDetailsPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <AgentFlowVisual className="py-4" agentType={agent.typeId} />
+                <AgentFlowVisual className="py-4" agentType={agent.type_id || undefined} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -251,7 +262,7 @@ export default function AgentDetailsPage() {
                   <ChatContainer
                     messages={messages}
                     onSendMessage={handleSendMessage}
-                    isLoading={isLoading}
+                    isLoading={isChatLoading}
                     placeholder="Escreva uma mensagem de teste..."
                   />
                 </div>
