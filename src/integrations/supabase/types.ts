@@ -14,16 +14,236 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agents: {
+        Row: {
+          channel: string
+          created_at: string
+          id: string
+          messages_handled: number
+          name: string
+          prompt: string | null
+          status: string
+          type: string
+          type_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          id?: string
+          messages_handled?: number
+          name: string
+          prompt?: string | null
+          status?: string
+          type: string
+          type_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          id?: string
+          messages_handled?: number
+          name?: string
+          prompt?: string | null
+          status?: string
+          type?: string
+          type_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          action: string
+          amount: number
+          created_at: string
+          description: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          amount: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          amount?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          company: string | null
+          created_at: string
+          credits_balance: number
+          email: string | null
+          full_name: string | null
+          id: string
+          plan: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company?: string | null
+          created_at?: string
+          credits_balance?: number
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          plan?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company?: string | null
+          created_at?: string
+          credits_balance?: number
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          plan?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      websites: {
+        Row: {
+          config: Json | null
+          created_at: string
+          id: string
+          name: string
+          published_url: string | null
+          status: string
+          template: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string
+          id?: string
+          name: string
+          published_url?: string | null
+          status?: string
+          template?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string
+          id?: string
+          name?: string
+          published_url?: string | null
+          status?: string
+          template?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      whatsapp_instances: {
+        Row: {
+          agent_id: string | null
+          client_token: string | null
+          connected_at: string | null
+          created_at: string
+          id: string
+          instance_key: string | null
+          instance_name: string
+          is_for_client: boolean
+          phone_number: string | null
+          qr_code: string | null
+          status: string
+          user_id: string
+          webhook_url: string | null
+        }
+        Insert: {
+          agent_id?: string | null
+          client_token?: string | null
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          instance_key?: string | null
+          instance_name: string
+          is_for_client?: boolean
+          phone_number?: string | null
+          qr_code?: string | null
+          status?: string
+          user_id: string
+          webhook_url?: string | null
+        }
+        Update: {
+          agent_id?: string | null
+          client_token?: string | null
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          instance_key?: string | null
+          instance_name?: string
+          is_for_client?: boolean
+          phone_number?: string | null
+          qr_code?: string | null
+          status?: string
+          user_id?: string
+          webhook_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instances_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +370,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const

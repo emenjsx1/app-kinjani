@@ -1,41 +1,79 @@
-import { Coins, CreditCard, TrendingDown } from "lucide-react";
+import { Coins, CreditCard, TrendingDown, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { UsageBar, UsageTable } from "@/components/ui/usage-bar";
-
-const usageHistory = [
-  { id: "1", date: "20 Jan, 2024", action: "Chat Agente - Bot Vendas", credits: -15 },
-  { id: "2", date: "20 Jan, 2024", action: "Geração de Site", credits: -50 },
-  { id: "3", date: "19 Jan, 2024", action: "Compra de Créditos", credits: 500 },
-  { id: "4", date: "19 Jan, 2024", action: "Chat Agente - Bot FAQ", credits: -8 },
-  { id: "5", date: "18 Jan, 2024", action: "Criação de Novo Agente", credits: -25 },
-  { id: "6", date: "18 Jan, 2024", action: "Chat Agente - Suporte", credits: -12 },
-];
+import { useProfile } from "@/hooks/useProfile";
+import { useCredits } from "@/hooks/useCredits";
+import { format } from "date-fns";
+import { pt } from "date-fns/locale";
 
 export default function CreditsPage() {
+  const { profile, isLoading: profileLoading } = useProfile();
+  const { transactions, isLoading: transactionsLoading, getUsageThisMonth, getUsageByCategory } = useCredits();
+
+  const isLoading = profileLoading || transactionsLoading;
+  const usageThisMonth = getUsageThisMonth();
+  const usageByCategory = getUsageByCategory();
+
+  // Transform transactions for the table
+  const usageHistory = transactions.map(t => ({
+    id: t.id,
+    date: format(new Date(t.created_at), "dd MMM, yyyy", { locale: pt }),
+    action: t.action + (t.description ? ` - ${t.description}` : ''),
+    credits: t.amount,
+  }));
+
+  // Get next billing date (first of next month)
+  const getNextBillingDate = () => {
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return format(nextMonth, "d MMM", { locale: pt });
+  };
+
+  // Calculate monthly limit based on plan
+  const getMonthlyLimit = () => {
+    switch (profile?.plan) {
+      case 'pro': return 2000;
+      case 'business': return 5000;
+      default: return 500;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <AppLayout pageTitle="Créditos" credits={0}>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  const monthlyLimit = getMonthlyLimit();
+
   return (
-    <AppLayout pageTitle="Créditos" credits={1250}>
+    <AppLayout pageTitle="Créditos" credits={profile?.credits_balance || 0}>
       <div className="space-y-6">
         {/* Visão Geral dos Créditos */}
         <div className="grid gap-4 md:grid-cols-3">
           <StatCard
             title="Saldo Atual"
-            value="1.250"
+            value={(profile?.credits_balance || 0).toLocaleString()}
             icon={Coins}
             variant="primary"
             description="créditos disponíveis"
           />
           <StatCard
             title="Usados Este Mês"
-            value="750"
+            value={usageThisMonth.toLocaleString()}
             icon={TrendingDown}
-            description="de 2.000 mensais"
+            description={`de ${monthlyLimit.toLocaleString()} mensais`}
           />
           <StatCard
             title="Próxima Faturação"
-            value="1 Fev"
+            value={getNextBillingDate()}
             icon={CreditCard}
             description="Renovação mensal"
           />
@@ -51,23 +89,34 @@ export default function CreditsPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <UsageBar
-              used={750}
-              total={2000}
+              used={usageThisMonth}
+              total={monthlyLimit}
               label="Créditos Usados"
             />
             <div className="grid gap-4 md:grid-cols-3">
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <p className="text-2xl font-bold text-primary">450</p>
-                <p className="text-sm text-muted-foreground">Chats de Agentes</p>
-              </div>
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <p className="text-2xl font-bold text-primary">200</p>
-                <p className="text-sm text-muted-foreground">Geração de Sites</p>
-              </div>
-              <div className="text-center p-4 rounded-lg bg-muted/50">
-                <p className="text-2xl font-bold text-primary">100</p>
-                <p className="text-sm text-muted-foreground">Chamadas API</p>
-              </div>
+              {usageByCategory.length > 0 ? (
+                usageByCategory.slice(0, 3).map((category, index) => (
+                  <div key={index} className="text-center p-4 rounded-lg bg-muted/50">
+                    <p className="text-2xl font-bold text-primary">{category.value}</p>
+                    <p className="text-sm text-muted-foreground">{category.name}</p>
+                  </div>
+                ))
+              ) : (
+                <>
+                  <div className="text-center p-4 rounded-lg bg-muted/50">
+                    <p className="text-2xl font-bold text-primary">0</p>
+                    <p className="text-sm text-muted-foreground">Chats de Agentes</p>
+                  </div>
+                  <div className="text-center p-4 rounded-lg bg-muted/50">
+                    <p className="text-2xl font-bold text-primary">0</p>
+                    <p className="text-sm text-muted-foreground">Geração de Sites</p>
+                  </div>
+                  <div className="text-center p-4 rounded-lg bg-muted/50">
+                    <p className="text-2xl font-bold text-primary">0</p>
+                    <p className="text-sm text-muted-foreground">Criação de Agentes</p>
+                  </div>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -128,7 +177,13 @@ export default function CreditsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <UsageTable data={usageHistory} />
+            {usageHistory.length > 0 ? (
+              <UsageTable data={usageHistory} />
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                Nenhuma transação registada ainda
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
