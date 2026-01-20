@@ -276,6 +276,8 @@ serve(async (req) => {
         });
       }
 
+      console.log(`Getting QR code for instance: ${instanceKey}`);
+
       const qrResponse = await fetch(`${evolutionApiUrl}/instance/connect/${instanceKey}`, {
         headers: {
           'apikey': evolutionApiKey,
@@ -295,10 +297,25 @@ serve(async (req) => {
       }
 
       const qrData = await qrResponse.json();
+      console.log('QR Data received, keys:', Object.keys(qrData));
+      
+      // Handle different QR code formats from Evolution API
+      let qrcode = null;
+      if (qrData.base64) {
+        qrcode = qrData.base64;
+      } else if (qrData.qrcode?.base64) {
+        qrcode = qrData.qrcode.base64;
+      } else if (qrData.code) {
+        qrcode = qrData.code;
+      } else if (typeof qrData === 'string') {
+        qrcode = qrData;
+      }
+      
+      console.log('QR code extracted:', qrcode ? `${qrcode.substring(0, 50)}...` : 'null');
 
       return new Response(JSON.stringify({ 
-        qrcode: qrData.base64 || qrData.qrcode?.base64 || null,
-        status: qrData.state || 'unknown',
+        qrcode,
+        status: qrData.state || qrData.instance?.state || 'unknown',
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
