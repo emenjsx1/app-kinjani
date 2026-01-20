@@ -13,9 +13,12 @@ import {
   CheckCircle2,
   Users,
   TrendingUp,
-  Shield
+  Shield,
+  MousePointer,
+  Layers
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 const features = [
   {
@@ -81,6 +84,7 @@ export default function Index() {
             <Link to="/demo" className="text-sm text-pistachio hover:text-anti-flash-white transition-colors hidden sm:block">
               Demo
             </Link>
+            <ThemeToggle />
             <Button asChild variant="ghost" className="text-anti-flash-white hover:text-caribbean-green">
               <Link to="/auth">Entrar</Link>
             </Button>
@@ -144,6 +148,189 @@ export default function Index() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Mockup: Criação de Agentes com 1 Clique */}
+      <section className="max-w-7xl mx-auto px-6 py-20 lg:py-28">
+        <div className="text-center mb-16">
+          <Badge className="mb-4">
+            <MousePointer className="h-3 w-3 mr-1" />
+            1 Clique
+          </Badge>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            Crie Agentes de IA em Segundos
+          </h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+            Selecione um template, personalize o prompt e o seu agente está pronto para atender clientes 24/7.
+          </p>
+        </div>
+
+        {/* Agent Creation Mockup */}
+        <div className="relative max-w-5xl mx-auto">
+          <div className="absolute inset-0 bg-gradient-to-br from-caribbean-green/20 to-mountain-meadow/10 rounded-3xl blur-3xl" />
+          <div className="relative bg-card border border-border rounded-2xl overflow-hidden shadow-2xl">
+            {/* Window Header */}
+            <div className="bg-muted/50 border-b border-border px-4 py-3 flex items-center gap-2">
+              <div className="w-3 h-3 rounded-full bg-destructive/60" />
+              <div className="w-3 h-3 rounded-full bg-warning/60" />
+              <div className="w-3 h-3 rounded-full bg-success/60" />
+              <span className="ml-4 text-sm text-muted-foreground">KINJA AI - Criar Novo Agente</span>
+            </div>
+            
+            {/* Wizard Content */}
+            <div className="p-8">
+              {/* Steps */}
+              <div className="flex items-center justify-center gap-4 mb-10">
+                {['Tipo', 'Template', 'Prompt', 'Nome', 'Canal', 'Concluído'].map((step, i) => (
+                  <div key={step} className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                      i < 3 ? 'bg-caribbean-green text-rich-black' : 'bg-muted text-muted-foreground'
+                    }`}>
+                      {i < 3 ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
+                    </div>
+                    <span className={`text-sm hidden md:block ${i < 3 ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                      {step}
+                    </span>
+                    {i < 5 && <div className="w-8 h-0.5 bg-border hidden lg:block" />}
+                  </div>
+                ))}
+              </div>
+
+              {/* Template Selection Grid */}
+              <div className="grid md:grid-cols-3 gap-4">
+                {[
+                  { name: 'Atendimento ao Cliente', icon: MessageCircle, active: true },
+                  { name: 'Vendas e Leads', icon: TrendingUp, active: false },
+                  { name: 'Suporte Técnico', icon: Bot, active: false },
+                ].map((template) => (
+                  <div
+                    key={template.name}
+                    className={`p-6 rounded-xl border-2 transition-all cursor-pointer ${
+                      template.active 
+                        ? 'border-caribbean-green bg-caribbean-green/10' 
+                        : 'border-border hover:border-muted-foreground/50'
+                    }`}
+                  >
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center mb-4 ${
+                      template.active ? 'bg-caribbean-green text-rich-black' : 'bg-muted'
+                    }`}>
+                      <template.icon className="h-6 w-6" />
+                    </div>
+                    <p className="font-semibold">{template.name}</p>
+                    <p className="text-sm text-muted-foreground mt-1">Template pré-configurado</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Action Button */}
+              <div className="flex justify-end mt-8">
+                <Button className="bg-caribbean-green hover:bg-mountain-meadow text-rich-black font-semibold px-8">
+                  Próximo Passo
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Mockup: Criação de Sites */}
+      <section className="bg-card border-t border-b border-border">
+        <div className="max-w-7xl mx-auto px-6 py-20 lg:py-28">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <Badge className="mb-4">
+                <Layers className="h-3 w-3 mr-1" />
+                Site Builder
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold mb-6">
+                Sites Profissionais com IA
+              </h2>
+              <p className="text-muted-foreground text-lg mb-8">
+                Gere sites completos em segundos. A IA cria textos, estrutura páginas e aplica o seu branding automaticamente.
+              </p>
+              
+              <div className="space-y-4">
+                {[
+                  'Templates modernos e responsivos',
+                  'Textos gerados por IA',
+                  'Editor visual drag & drop',
+                  'Publicação com 1 clique',
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-caribbean-green/20 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle2 className="h-4 w-4 text-caribbean-green" />
+                    </div>
+                    <span>{item}</span>
+                  </div>
+                ))}
+              </div>
+
+              <Button asChild size="lg" className="mt-8 bg-caribbean-green hover:bg-mountain-meadow text-rich-black font-semibold">
+                <Link to="/auth">
+                  Criar Meu Site
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Link>
+              </Button>
+            </div>
+
+            {/* Site Mockup */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-caribbean-green/20 to-mountain-meadow/10 rounded-2xl blur-3xl" />
+              <div className="relative bg-background border border-border rounded-2xl overflow-hidden shadow-2xl">
+                {/* Browser Header */}
+                <div className="bg-muted/50 border-b border-border px-4 py-3 flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-destructive/60" />
+                  <div className="w-3 h-3 rounded-full bg-warning/60" />
+                  <div className="w-3 h-3 rounded-full bg-success/60" />
+                  <div className="ml-4 flex-1 bg-background rounded px-3 py-1 text-xs text-muted-foreground">
+                    meusite.kinja.ai
+                  </div>
+                </div>
+                
+                {/* Site Preview */}
+                <div className="p-6">
+                  {/* Nav */}
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-caribbean-green" />
+                      <span className="font-bold">TechStartup</span>
+                    </div>
+                    <div className="flex gap-4 text-sm text-muted-foreground">
+                      <span>Sobre</span>
+                      <span>Serviços</span>
+                      <span>Contacto</span>
+                    </div>
+                  </div>
+
+                  {/* Hero */}
+                  <div className="bg-gradient-to-br from-bangladesh-green to-dark-green rounded-xl p-8 mb-6">
+                    <h3 className="text-2xl font-bold text-anti-flash-white mb-2">
+                      Transforme o seu Negócio
+                    </h3>
+                    <p className="text-pistachio mb-4">
+                      Soluções inovadoras para o seu sucesso digital.
+                    </p>
+                    <div className="inline-block bg-caribbean-green text-rich-black px-4 py-2 rounded-lg text-sm font-semibold">
+                      Saiba Mais
+                    </div>
+                  </div>
+
+                  {/* Features Grid */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="bg-muted/50 rounded-lg p-4">
+                        <div className="w-8 h-8 rounded bg-caribbean-green/20 mb-2" />
+                        <div className="h-2 bg-muted rounded w-3/4 mb-1" />
+                        <div className="h-2 bg-muted rounded w-1/2" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
