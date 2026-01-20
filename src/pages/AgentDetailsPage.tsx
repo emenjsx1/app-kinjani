@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Copy, Check, Bot, RotateCcw } from "lucide-react";
+import { ArrowLeft, Copy, Check, Bot, RotateCcw, MessageSquare, AlertCircle } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +14,9 @@ import { ChatContainer } from "@/components/chat";
 import { AgentFlowVisual } from "@/components/agents/AgentFlowVisual";
 import { useAgentChat } from "@/hooks/useAgentChat";
 import { useAgents, Agent } from "@/hooks/useAgents";
+import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 export default function AgentDetailsPage() {
@@ -22,11 +24,14 @@ export default function AgentDetailsPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { getAgent, updateAgent } = useAgents();
+  const { instances, isLoading: isLoadingInstances, refetch: fetchInstances } = useWhatsAppInstances();
   
   const [agent, setAgent] = useState<Agent | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [prompt, setPrompt] = useState("");
+  const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingInstance, setIsSavingInstance] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
@@ -56,6 +61,7 @@ export default function AgentDetailsPage() {
           setAgent(foundAgent);
           setIsActive(foundAgent.status === "active");
           setPrompt(foundAgent.prompt || "");
+          setSelectedInstanceId(foundAgent.instance_id || null);
         }
       } finally {
         if (isMounted) {
@@ -65,6 +71,7 @@ export default function AgentDetailsPage() {
     };
 
     loadAgent();
+    fetchInstances();
     
     return () => {
       isMounted = false;
@@ -101,6 +108,23 @@ export default function AgentDetailsPage() {
     }
     setIsSaving(false);
   };
+
+  const handleSaveInstance = async () => {
+    if (!agent) return;
+    
+    setIsSavingInstance(true);
+    const result = await updateAgent(agent.id, { instance_id: selectedInstanceId });
+    
+    if (result) {
+      setAgent(result);
+      toast.success("Instância WhatsApp atualizada com sucesso");
+    } else {
+      toast.error("Erro ao atualizar instância");
+    }
+    setIsSavingInstance(false);
+  };
+
+  const connectedInstances = instances.filter(i => i.status === "connected");
 
   const embedCode = `<!-- KINJA AI Chat Widget -->
 <script>
@@ -190,6 +214,74 @@ export default function AgentDetailsPage() {
           </TabsList>
 
           <TabsContent value="settings" className="space-y-4">
+            {/* Instância WhatsApp */}
+            {agent.channel === "whatsapp" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5" />
+                    Instância WhatsApp
+                  </CardTitle>
+                  <CardDescription>
+                    Selecione qual instância WhatsApp este agente deve usar para responder mensagens
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {connectedInstances.length === 0 ? (
+                    <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border border-dashed">
+                      <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">Nenhuma instância conectada</p>
+                        <p className="text-xs text-muted-foreground">
+                          Primeiro crie e conecte uma instância WhatsApp em Integrações
+                        </p>
+                      </div>
+                      <Button variant="outline" size="sm" onClick={() => navigate("/integrations")}>
+                        Ir para Integrações
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Instância WhatsApp</Label>
+                        <Select
+                          value={selectedInstanceId || "none"}
+                          onValueChange={(value) => setSelectedInstanceId(value === "none" ? null : value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma instância" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Nenhuma instância</SelectItem>
+                            {connectedInstances.map((instance) => (
+                              <SelectItem key={instance.id} value={instance.id}>
+                                <div className="flex items-center gap-2">
+                                  <span className="h-2 w-2 rounded-full bg-green-500" />
+                                  {instance.instance_name}
+                                  {instance.phone_number && (
+                                    <span className="text-muted-foreground">
+                                      ({instance.phone_number})
+                                    </span>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button 
+                        onClick={handleSaveInstance} 
+                        disabled={isSavingInstance || selectedInstanceId === agent.instance_id}
+                      >
+                        {isSavingInstance ? "A guardar..." : "Guardar Instância"}
+                      </Button>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Prompt do Agente */}
             <Card>
               <CardHeader>
                 <CardTitle>Prompt do Agente</CardTitle>
