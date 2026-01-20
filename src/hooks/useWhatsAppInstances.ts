@@ -185,6 +185,22 @@ export function useWhatsAppInstances() {
     return `${window.location.origin}/connect/${clientToken}`;
   };
 
+  // Polling for connection status
+  const startPolling = (instanceKey: string, onConnected?: () => void) => {
+    const pollInterval = setInterval(async () => {
+      const result = await getStatus(instanceKey);
+      if (result?.status === 'connected') {
+        clearInterval(pollInterval);
+        onConnected?.();
+      }
+    }, 3000); // Poll every 3 seconds
+
+    // Stop polling after 5 minutes
+    setTimeout(() => clearInterval(pollInterval), 5 * 60 * 1000);
+
+    return () => clearInterval(pollInterval);
+  };
+
   useEffect(() => {
     fetchInstances();
 
@@ -204,6 +220,7 @@ export function useWhatsAppInstances() {
     getStatus,
     deleteInstance,
     getClientConnectUrl,
+    startPolling,
     refetch: fetchInstances,
   };
 }

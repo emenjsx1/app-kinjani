@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, MoreHorizontal, Bot } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Bot, MessageSquare } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,11 +27,14 @@ import { CreateAgentWizard } from "@/components/agents/CreateAgentWizard";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 import { useAgents, Agent } from "@/hooks/useAgents";
+import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function AgentsPage() {
   const navigate = useNavigate();
   const { agents, isLoading, createAgent, deleteAgent } = useAgents();
+  const { instances } = useWhatsAppInstances();
   const [search, setSearch] = useState("");
   const [wizardOpen, setWizardOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -51,6 +54,13 @@ export default function AgentsPage() {
     return <Badge variant="outline" className={className}>{label}</Badge>;
   };
 
+  // Get instance name by ID
+  const getInstanceName = (instanceId: string | null) => {
+    if (!instanceId) return null;
+    const instance = instances.find(i => i.id === instanceId);
+    return instance ? instance.instance_name : null;
+  };
+
   // Accept the wizard's Agent format (camelCase) and convert to hook format (snake_case)
   const handleAgentCreated = async (newAgentData: {
     id: string;
@@ -62,6 +72,7 @@ export default function AgentsPage() {
     channel: 'whatsapp' | 'embed' | 'both';
     messagesHandled: number;
     createdAt: string;
+    instanceId?: string | null;
   }) => {
     const result = await createAgent({
       name: newAgentData.name,
@@ -71,6 +82,7 @@ export default function AgentsPage() {
       channel: newAgentData.channel,
       status: 'inactive',
       messages_handled: 0,
+      instance_id: newAgentData.instanceId || null,
     });
     
     if (result) {
@@ -159,76 +171,101 @@ export default function AgentsPage() {
                     <TableHead>Tipo</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>Canal</TableHead>
+                    <TableHead>Instância</TableHead>
                     <TableHead className="text-right">Mensagens</TableHead>
                     <TableHead className="w-12"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredAgents.map((agent) => (
-                    <TableRow 
-                      key={agent.id} 
-                      className="cursor-pointer hover:bg-muted/50"
-                      onClick={() => handleRowClick(agent.id)}
-                    >
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Bot className="h-4 w-4 text-primary" />
+                  {filteredAgents.map((agent) => {
+                    const instanceName = getInstanceName(agent.instance_id);
+                    return (
+                      <TableRow 
+                        key={agent.id} 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => handleRowClick(agent.id)}
+                      >
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                              <Bot className="h-4 w-4 text-primary" />
+                            </div>
+                            {agent.name}
                           </div>
-                          {agent.name}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {agent.type}
-                      </TableCell>
-                      <TableCell>
-                        <StatusBadge status={agent.status} />
-                      </TableCell>
-                      <TableCell>{getChannelBadge(agent.channel)}</TableCell>
-                      <TableCell className="text-right">
-                        {agent.messages_handled.toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                            <Button variant="ghost" size="icon">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/agents/${agent.id}`);
-                            }}>
-                              Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/agents/${agent.id}?tab=test`);
-                            }}>
-                              Testar Agente
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/agents/${agent.id}?tab=embed`);
-                            }}>
-                              Copiar Código Embed
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={(e) => {
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {agent.type}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={agent.status} />
+                        </TableCell>
+                        <TableCell>{getChannelBadge(agent.channel)}</TableCell>
+                        <TableCell>
+                          {agent.channel === 'whatsapp' && instanceName ? (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger>
+                                  <div className="flex items-center gap-1.5">
+                                    <MessageSquare className="h-3.5 w-3.5 text-green-500" />
+                                    <span className="text-sm truncate max-w-[120px]">{instanceName}</span>
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Instância: {instanceName}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ) : agent.channel === 'whatsapp' ? (
+                            <span className="text-xs text-muted-foreground">Não configurada</span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {agent.messages_handled.toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={(e) => {
                                 e.stopPropagation();
-                                handleDeleteAgent(agent);
-                              }}
-                            >
-                              Eliminar
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                                navigate(`/agents/${agent.id}`);
+                              }}>
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/agents/${agent.id}?tab=test`);
+                              }}>
+                                Testar Agente
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/agents/${agent.id}?tab=embed`);
+                              }}>
+                                Copiar Código Embed
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                className="text-destructive"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteAgent(agent);
+                                }}
+                              >
+                                Eliminar
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}

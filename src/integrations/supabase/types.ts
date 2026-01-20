@@ -19,6 +19,7 @@ export type Database = {
           channel: string
           created_at: string
           id: string
+          instance_id: string | null
           messages_handled: number
           name: string
           prompt: string | null
@@ -32,6 +33,7 @@ export type Database = {
           channel?: string
           created_at?: string
           id?: string
+          instance_id?: string | null
           messages_handled?: number
           name: string
           prompt?: string | null
@@ -45,6 +47,7 @@ export type Database = {
           channel?: string
           created_at?: string
           id?: string
+          instance_id?: string | null
           messages_handled?: number
           name?: string
           prompt?: string | null
@@ -54,7 +57,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "agents_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       credit_transactions: {
         Row: {
