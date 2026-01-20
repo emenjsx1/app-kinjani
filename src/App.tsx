@@ -15,6 +15,8 @@ import DemoPage from "./pages/DemoPage";
 import CreditsPage from "./pages/CreditsPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import SettingsPage from "./pages/SettingsPage";
+import ClientConnectPage from "./pages/ClientConnectPage";
+import PublicWebsitePage from "./pages/PublicWebsitePage";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,9 @@ const App = () => (
           <Route path="/integrations" element={<IntegrationsPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/styleguide" element={<StyleguidePage />} />
+          {/* Public routes */}
+          <Route path="/connect/:token" element={<ClientConnectPage />} />
+          <Route path="/site/:siteId" element={<PublicWebsitePage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

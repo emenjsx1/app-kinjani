@@ -3,13 +3,31 @@ import { WebsiteTemplate, WebsiteSection } from "@/lib/website-templates";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-interface WebsitePreviewProps {
-  template: WebsiteTemplate;
-  websiteName: string;
-  showChatWidget?: boolean;
+interface EmbedConfig {
+  enabled: boolean;
+  agentId?: string;
+  position?: "right" | "left";
+  primaryColor?: string;
+  welcomeMessage?: string;
 }
 
-export function WebsitePreview({ template, websiteName, showChatWidget = true }: WebsitePreviewProps) {
+export interface WebsitePreviewProps {
+  template: WebsiteTemplate;
+  websiteName?: string;
+  showChatWidget?: boolean;
+  fullscreen?: boolean;
+  embedConfig?: EmbedConfig;
+}
+
+export function WebsitePreview({ 
+  template, 
+  websiteName, 
+  showChatWidget = true,
+  fullscreen = false,
+  embedConfig,
+}: WebsitePreviewProps) {
+  // Use website name from template if not provided
+  const displayName = websiteName || template.name || "Meu Site";
   const enabledSections = template.sections
     .filter((s) => s.enabled)
     .sort((a, b) => a.order - b.order);
@@ -385,15 +403,33 @@ export function WebsitePreview({ template, websiteName, showChatWidget = true }:
     }
   };
 
+  // Determine chat widget settings
+  const showWidget = embedConfig?.enabled ?? showChatWidget;
+  const widgetPosition = embedConfig?.position || "right";
+  const widgetColor = embedConfig?.primaryColor || primaryColor;
+
   return (
-    <div className="relative min-h-[600px]" style={{ fontFamily: template.font }}>
+    <div 
+      className={cn("relative", fullscreen ? "min-h-screen" : "min-h-[600px]")} 
+      style={{ fontFamily: template.font }}
+    >
       {/* Navbar */}
       <nav
         className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-white border-b"
       >
-        <span className="font-bold text-lg" style={{ color: primaryColor }}>
-          {websiteName}
-        </span>
+        {/* Logo */}
+        <div className="flex items-center gap-2">
+          {template.logoUrl && (
+            <img 
+              src={template.logoUrl} 
+              alt="Logo" 
+              className="h-8 w-auto object-contain"
+            />
+          )}
+          <span className="font-bold text-lg" style={{ color: primaryColor }}>
+            {displayName}
+          </span>
+        </div>
         <div className="flex items-center gap-6">
           <span className="text-sm text-gray-600 hidden md:block">Início</span>
           <span className="text-sm text-gray-600 hidden md:block">Sobre</span>
@@ -414,9 +450,9 @@ export function WebsitePreview({ template, websiteName, showChatWidget = true }:
       {/* Footer */}
       <footer className="py-8 px-6 bg-gray-900 text-white">
         <div className="max-w-4xl mx-auto text-center">
-          <p className="font-bold text-lg mb-2">{websiteName}</p>
+          <p className="font-bold text-lg mb-2">{displayName}</p>
           <p className="text-gray-400 text-sm mb-4">
-            © 2024 {websiteName}. Todos os direitos reservados.
+            © 2024 {displayName}. Todos os direitos reservados.
           </p>
           <p className="text-gray-500 text-xs">
             Criado com KINJA AI
@@ -424,12 +460,17 @@ export function WebsitePreview({ template, websiteName, showChatWidget = true }:
         </div>
       </footer>
 
-      {/* Chat Widget (Mock) */}
-      {showChatWidget && (
-        <div className="fixed bottom-4 right-4 z-20">
+      {/* Chat Widget */}
+      {showWidget && (
+        <div 
+          className={cn(
+            "fixed bottom-4 z-20",
+            widgetPosition === "left" ? "left-4" : "right-4"
+          )}
+        >
           <button
             className="w-14 h-14 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform"
-            style={{ backgroundColor: primaryColor }}
+            style={{ backgroundColor: widgetColor }}
           >
             <MessageCircle className="w-6 h-6 text-white" />
           </button>

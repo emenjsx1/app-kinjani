@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MessageSquare, Plus, QrCode, Trash2, Copy, Link2, RefreshCw, Loader2 } from "lucide-react";
+import { MessageSquare, Plus, QrCode, Trash2, Copy, Link2, RefreshCw, Loader2, Key, Sparkles, Eye, EyeOff, Check, X } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,28 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 import { useProfile } from "@/hooks/useProfile";
+import { useUserApiKeys } from "@/hooks/useUserApiKeys";
 import { toast } from "sonner";
+
+// API Key provider configurations
+const apiProviders = [
+  {
+    id: "openai",
+    name: "OpenAI",
+    description: "GPT-4, GPT-3.5 e outros modelos OpenAI",
+    placeholder: "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    icon: "🤖",
+    docsUrl: "https://platform.openai.com/api-keys",
+  },
+  {
+    id: "gemini",
+    name: "Google Gemini",
+    description: "Gemini Pro e outros modelos Google AI",
+    placeholder: "AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    icon: "💎",
+    docsUrl: "https://ai.google.dev/",
+  },
+];
 
 export default function IntegrationsPage() {
   const { profile } = useProfile();
@@ -26,6 +47,8 @@ export default function IntegrationsPage() {
     getClientConnectUrl 
   } = useWhatsAppInstances();
 
+  const { keys, isLoading: isLoadingKeys, isSaving, saveKey, deleteKey, hasKey } = useUserApiKeys();
+
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -38,6 +61,14 @@ export default function IntegrationsPage() {
   const [currentQRCode, setCurrentQRCode] = useState<string | null>(null);
   const [currentInstanceName, setCurrentInstanceName] = useState("");
   const [isLoadingQR, setIsLoadingQR] = useState(false);
+
+  // API Keys state
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<typeof apiProviders[0] | null>(null);
+  const [apiKeyInput, setApiKeyInput] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [deleteKeyDialogOpen, setDeleteKeyDialogOpen] = useState(false);
+  const [providerToDelete, setProviderToDelete] = useState<string | null>(null);
 
   const handleCreateInstance = async () => {
     if (!newInstanceName.trim()) {
@@ -121,9 +152,117 @@ export default function IntegrationsPage() {
     }
   };
 
+  const handleOpenApiKeyDialog = (provider: typeof apiProviders[0]) => {
+    setSelectedProvider(provider);
+    setApiKeyInput("");
+    setShowApiKey(false);
+    setApiKeyDialogOpen(true);
+  };
+
+  const handleSaveApiKey = async () => {
+    if (!selectedProvider || !apiKeyInput.trim()) return;
+    const success = await saveKey(selectedProvider.id, apiKeyInput);
+    if (success) {
+      setApiKeyDialogOpen(false);
+      setApiKeyInput("");
+    }
+  };
+
+  const handleDeleteApiKey = async () => {
+    if (!providerToDelete) return;
+    await deleteKey(providerToDelete);
+    setDeleteKeyDialogOpen(false);
+    setProviderToDelete(null);
+  };
+
   return (
     <AppLayout pageTitle="Integrações" credits={profile?.credits_balance || 0}>
       <div className="space-y-6">
+        {/* API Keys Section */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Key className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle>Chaves de API Pessoais</CardTitle>
+                <CardDescription>
+                  Configure as suas próprias chaves de API para os modelos de IA
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {apiProviders.map((provider) => {
+                const configured = hasKey(provider.id);
+                return (
+                  <div
+                    key={provider.id}
+                    className="flex items-center justify-between p-4 rounded-lg border bg-card"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center text-xl">
+                        {provider.icon}
+                      </div>
+                      <div>
+                        <p className="font-medium">{provider.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {provider.description}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {configured ? (
+                        <>
+                          <span className="text-sm text-green-600 flex items-center gap-1">
+                            <Check className="h-4 w-4" />
+                            Configurada
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenApiKeyDialog(provider)}
+                          >
+                            Alterar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              setProviderToDelete(provider.id);
+                              setDeleteKeyDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          onClick={() => handleOpenApiKeyDialog(provider)}
+                        >
+                          <Key className="mr-2 h-4 w-4" />
+                          Configurar
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-4 p-3 rounded-lg bg-muted/50">
+              <p className="text-sm text-muted-foreground flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span>
+                  Se não configurar, usamos <strong>Lovable AI</strong> gratuitamente incluído no seu plano.
+                </span>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* WhatsApp Instances Section */}
         <Card>
           <CardHeader>
@@ -317,7 +456,7 @@ export default function IntegrationsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
+      {/* Delete Instance Confirmation Dialog */}
       <ConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
@@ -325,6 +464,85 @@ export default function IntegrationsPage() {
         description="Tem a certeza que deseja eliminar esta instância? A conexão WhatsApp será perdida."
         confirmLabel="Eliminar"
         onConfirm={handleDeleteInstance}
+        variant="destructive"
+      />
+
+      {/* API Key Dialog */}
+      <Dialog open={apiKeyDialogOpen} onOpenChange={setApiKeyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className="text-xl">{selectedProvider?.icon}</span>
+              Configurar {selectedProvider?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Introduza a sua chave de API. A chave será validada e guardada de forma segura.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label htmlFor="apiKey">Chave de API</Label>
+              <div className="relative">
+                <Input
+                  id="apiKey"
+                  type={showApiKey ? "text" : "password"}
+                  placeholder={selectedProvider?.placeholder}
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                >
+                  {showApiKey ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Não tem uma chave?{" "}
+              <a
+                href={selectedProvider?.docsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline"
+              >
+                Obtenha aqui →
+              </a>
+            </p>
+            <Button 
+              onClick={handleSaveApiKey} 
+              className="w-full"
+              disabled={isSaving || !apiKeyInput.trim()}
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  A validar e guardar...
+                </>
+              ) : (
+                "Guardar Chave de API"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete API Key Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteKeyDialogOpen}
+        onOpenChange={setDeleteKeyDialogOpen}
+        title="Remover Chave de API"
+        description="Tem a certeza que deseja remover esta chave de API? Os agentes passarão a usar Lovable AI."
+        confirmLabel="Remover"
+        onConfirm={handleDeleteApiKey}
         variant="destructive"
       />
     </AppLayout>
