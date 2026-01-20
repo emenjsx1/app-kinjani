@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+const SUPABASE_URL = "https://mpxsivfiltwvnvqtixuo.supabase.co";
+
 interface ApiKeyInfo {
   id: string;
   provider: string;
@@ -16,22 +18,30 @@ export function useUserApiKeys() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const getAuthToken = async (): Promise<string | null> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  };
+
   const fetchKeys = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("user-api-keys", {
-        body: {},
-        headers: {},
-      });
+      const token = await getAuthToken();
+      
+      if (!token) {
+        console.log("No auth token available - user not logged in");
+        setKeys([]);
+        setIsLoading(false);
+        return;
+      }
 
-      // Add action as query param
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/user-api-keys?action=list`,
+        `${SUPABASE_URL}/functions/v1/user-api-keys?action=list`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            "Authorization": `Bearer ${token}`,
           },
         }
       );
@@ -40,6 +50,8 @@ export function useUserApiKeys() {
 
       if (result.success) {
         setKeys(result.keys || []);
+      } else {
+        console.error("Error fetching API keys:", result.error);
       }
     } catch (error) {
       console.error("Error fetching API keys:", error);
@@ -51,13 +63,20 @@ export function useUserApiKeys() {
   const saveKey = async (provider: string, apiKey: string) => {
     setIsSaving(true);
     try {
+      const token = await getAuthToken();
+      
+      if (!token) {
+        toast.error("Precisa de estar autenticado para guardar chaves de API");
+        return false;
+      }
+
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/user-api-keys?action=save`,
+        `${SUPABASE_URL}/functions/v1/user-api-keys?action=save`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            "Authorization": `Bearer ${token}`,
           },
           body: JSON.stringify({ provider, apiKey }),
         }
@@ -84,13 +103,20 @@ export function useUserApiKeys() {
 
   const deleteKey = async (provider: string) => {
     try {
+      const token = await getAuthToken();
+      
+      if (!token) {
+        toast.error("Precisa de estar autenticado para remover chaves de API");
+        return false;
+      }
+
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/user-api-keys?action=delete`,
+        `${SUPABASE_URL}/functions/v1/user-api-keys?action=delete`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            "Authorization": `Bearer ${token}`,
           },
           body: JSON.stringify({ provider }),
         }
@@ -119,6 +145,13 @@ export function useUserApiKeys() {
 
   useEffect(() => {
     fetchKeys();
+    
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      fetchKeys();
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   return {
