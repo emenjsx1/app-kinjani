@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import logoLight from "@/assets/logo-light.png";
+import logoDark from "@/assets/logo-dark.png";
 
 const features = [
   {
@@ -61,6 +64,7 @@ const stats = [
 export default function Index() {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useAuth();
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
@@ -68,17 +72,20 @@ export default function Index() {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
+  const logo = resolvedTheme === "dark" ? logoDark : logoLight;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navbar */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-rich-black/80 backdrop-blur-md border-b border-border/30">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-caribbean-green to-mountain-meadow flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-rich-black" />
-            </div>
-            <span className="text-xl font-bold text-anti-flash-white">KINJA AI</span>
-          </div>
+          <Link to="/" className="flex items-center">
+            <img 
+              src={logo} 
+              alt="KINJA AI" 
+              className="h-10 w-auto"
+            />
+          </Link>
           
           <div className="flex items-center gap-4">
             <Link to="/demo" className="text-sm text-pistachio hover:text-anti-flash-white transition-colors hidden sm:block">
@@ -476,12 +483,13 @@ export default function Index() {
       <footer className="border-t border-border bg-card">
         <div className="max-w-7xl mx-auto px-6 py-12">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-caribbean-green to-mountain-meadow flex items-center justify-center">
-                <Sparkles className="h-4 w-4 text-rich-black" />
-              </div>
-              <span className="text-lg font-bold">KINJA AI</span>
-            </div>
+            <Link to="/" className="flex items-center">
+              <img 
+                src={logo} 
+                alt="KINJA AI" 
+                className="h-8 w-auto"
+              />
+            </Link>
             
             <p className="text-sm text-muted-foreground">
               © 2024 KINJA AI. Todos os direitos reservados.
