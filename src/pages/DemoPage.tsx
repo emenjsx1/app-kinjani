@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
 import { Bot, MessageSquare, ExternalLink, Sun, Moon, BarChart3, Users, MessageCircle, Code } from "lucide-react";
+import { useTheme } from "next-themes";
 import { ChatContainer, Message } from "@/components/chat";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import logoLight from "@/assets/logo-light.png";
+import logoDark from "@/assets/logo-dark.png";
 
 interface Agent {
   id: string;
@@ -102,25 +105,16 @@ export default function DemoPage() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const { resolvedTheme, setTheme } = useTheme();
   const [stats, setStats] = useState<DemoStats>(getStoredStats);
+
+  const logo = resolvedTheme === "dark" ? logoDark : logoLight;
 
   useEffect(() => {
     const storedAgents = getStoredAgents();
     setAgents(storedAgents.filter((a) => a.status === "active"));
-    
-    // Check system preference for dark mode
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    setIsDarkMode(prefersDark);
   }, []);
 
-  useEffect(() => {
-    if (isDarkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [isDarkMode]);
 
   useEffect(() => {
     saveStats(stats);
@@ -187,10 +181,7 @@ export default function DemoPage() {
       <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-              <Bot className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-xl">KINJA AI</span>
+            <img src={logo} alt="KINJA AI" className="h-8 w-auto" />
             <Badge variant="secondary" className="ml-2">Demo</Badge>
           </div>
           <div className="flex items-center gap-2">
@@ -198,10 +189,10 @@ export default function DemoPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsDarkMode(!isDarkMode)}
+              onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
               className="h-9 w-9"
             >
-              {isDarkMode ? (
+              {resolvedTheme === "dark" ? (
                 <Sun className="h-5 w-5" />
               ) : (
                 <Moon className="h-5 w-5" />
