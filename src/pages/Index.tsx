@@ -16,7 +16,11 @@ import {
   TrendingUp,
   Shield,
   MousePointer,
-  Layers
+  Layers,
+  Briefcase,
+  DollarSign,
+  Repeat,
+  UserPlus
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
@@ -335,6 +339,135 @@ export default function Index() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Mockup: Revenda & Agências */}
+      <section className="max-w-7xl mx-auto px-6 py-20 lg:py-28">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Business Mockup */}
+          <div className="relative order-2 lg:order-1">
+            <div className="absolute inset-0 bg-gradient-to-br from-caribbean-green/20 to-mountain-meadow/10 rounded-2xl blur-3xl" />
+            <div className="relative bg-card border border-border rounded-2xl overflow-hidden shadow-2xl">
+              {/* Window Header */}
+              <div className="bg-muted/50 border-b border-border px-4 py-3 flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-destructive/60" />
+                <div className="w-3 h-3 rounded-full bg-warning/60" />
+                <div className="w-3 h-3 rounded-full bg-success/60" />
+                <span className="ml-4 text-sm text-muted-foreground">Painel de Revenda</span>
+              </div>
+              
+              <div className="p-6">
+                {/* Stats Row */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-caribbean-green/10 rounded-xl p-4 text-center">
+                    <DollarSign className="h-6 w-6 text-caribbean-green mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-foreground">€4.800</p>
+                    <p className="text-xs text-muted-foreground">Receita Mensal</p>
+                  </div>
+                  <div className="bg-mountain-meadow/10 rounded-xl p-4 text-center">
+                    <Users className="h-6 w-6 text-mountain-meadow mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-foreground">24</p>
+                    <p className="text-xs text-muted-foreground">Clientes Ativos</p>
+                  </div>
+                  <div className="bg-pistachio/10 rounded-xl p-4 text-center">
+                    <Bot className="h-6 w-6 text-pistachio mx-auto mb-2" />
+                    <p className="text-2xl font-bold text-foreground">38</p>
+                    <p className="text-xs text-muted-foreground">Agentes Vendidos</p>
+                  </div>
+                </div>
+
+                {/* Clients List */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-caribbean-green to-mountain-meadow flex items-center justify-center text-rich-black font-bold">
+                        M
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">Mercado Lisboa</p>
+                        <p className="text-xs text-muted-foreground">2 Agentes • 1 Site</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="bg-success/10 text-success border-success/30">
+                      Ativo
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pistachio to-caribbean-green flex items-center justify-center text-rich-black font-bold">
+                        C
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">Clínica Dental Pro</p>
+                        <p className="text-xs text-muted-foreground">1 Agente • 1 Site</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="bg-success/10 text-success border-success/30">
+                      Ativo
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-mountain-meadow to-pistachio flex items-center justify-center text-rich-black font-bold">
+                        R
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">Restaurante Sabor</p>
+                        <p className="text-xs text-muted-foreground">1 Agente WhatsApp</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
+                      Pendente
+                    </Badge>
+                  </div>
+                </div>
+
+                {/* Add Client Button */}
+                <Button className="w-full mt-4 bg-caribbean-green hover:bg-mountain-meadow text-rich-black font-semibold">
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Adicionar Novo Cliente
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="order-1 lg:order-2">
+            <Badge className="mb-4">
+              <Briefcase className="h-3 w-3 mr-1" />
+              Para Agências
+            </Badge>
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">
+              Venda Agentes de IA aos Seus Clientes
+            </h2>
+            <p className="text-muted-foreground text-lg mb-8">
+              Crie soluções white-label e revenda agentes de IA e sites profissionais. 
+              Gerencie todos os seus clientes num só painel e escale o seu negócio.
+            </p>
+            
+            <div className="space-y-4">
+              {[
+                { icon: DollarSign, text: 'Defina os seus próprios preços e margens' },
+                { icon: Users, text: 'Painel de gestão multi-cliente' },
+                { icon: Repeat, text: 'Receita recorrente com assinaturas' },
+                { icon: Sparkles, text: 'Branding personalizado para cada cliente' },
+              ].map((item) => (
+                <div key={item.text} className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-caribbean-green/20 flex items-center justify-center flex-shrink-0">
+                    <item.icon className="h-5 w-5 text-caribbean-green" />
+                  </div>
+                  <span className="text-foreground">{item.text}</span>
+                </div>
+              ))}
+            </div>
+
+            <Button asChild size="lg" className="mt-8 bg-caribbean-green hover:bg-mountain-meadow text-rich-black font-semibold">
+              <Link to="/auth">
+                Começar a Revender
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
           </div>
         </div>
       </section>
