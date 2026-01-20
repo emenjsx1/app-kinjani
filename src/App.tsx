@@ -16,6 +16,7 @@ import DemoPage from "./pages/DemoPage";
 import CreditsPage from "./pages/CreditsPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import SettingsPage from "./pages/SettingsPage";
+import ProfilePage from "./pages/ProfilePage";
 import ClientConnectPage from "./pages/ClientConnectPage";
 import PublicWebsitePage from "./pages/PublicWebsitePage";
 import AuthPage from "./pages/AuthPage";
@@ -48,6 +49,7 @@ const App = () => (
             <Route path="/credits" element={<ProtectedRoute><CreditsPage /></ProtectedRoute>} />
             <Route path="/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
