@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useClients, Client } from "@/hooks/useClients";
 import { useProfile } from "@/hooks/useProfile";
@@ -20,6 +21,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ClientsPage() {
+  const navigate = useNavigate();
   const { profile } = useProfile();
   const { clientsWithStats, isLoading, stats, deleteClient } = useClients();
   const [searchQuery, setSearchQuery] = useState("");
@@ -34,13 +36,11 @@ export default function ClientsPage() {
   );
 
   const handleEdit = (client: Client) => {
-    // TODO: Open edit dialog
-    console.log("Edit client:", client);
+    navigate(`/clients/${client.id}`);
   };
 
   const handleViewDetails = (client: Client) => {
-    // TODO: Navigate to client details page
-    console.log("View client:", client);
+    navigate(`/clients/${client.id}`);
   };
 
   const handleDeleteConfirm = async () => {
