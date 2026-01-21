@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Users,
+  BarChart3,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ const mainNavItems = [
   { title: "Agentes", url: "/agents", icon: Bot },
   { title: "Sites", url: "/websites", icon: Globe },
   { title: "Clientes", url: "/clients", icon: Users },
+  { title: "Relatórios", url: "/reports", icon: BarChart3 },
   { title: "Demo", url: "/demo", icon: MessageSquare },
 ];
 

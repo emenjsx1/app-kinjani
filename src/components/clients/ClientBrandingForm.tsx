@@ -3,15 +3,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Palette, Upload, Eye } from "lucide-react";
+import { Palette, Upload, Eye, Save } from "lucide-react";
 import { useStorageUpload } from "@/hooks/useStorageUpload";
+import { Client } from "@/hooks/useClients";
 
-interface ClientBrandingFormProps {
+export interface ClientBrandingFormProps {
+  // Mode 1: Standalone with client object
+  client?: Client;
+  onSave?: (data: {
+    logo_url?: string;
+    primary_color?: string;
+    secondary_color?: string;
+    accent_color?: string;
+  }) => Promise<void>;
+  // Mode 2: Controlled with individual props
   logoUrl?: string | null;
   primaryColor?: string;
   secondaryColor?: string;
   accentColor?: string;
-  onChange: (branding: {
+  onChange?: (branding: {
     logo_url?: string;
     primary_color?: string;
     secondary_color?: string;
@@ -20,33 +30,49 @@ interface ClientBrandingFormProps {
 }
 
 export function ClientBrandingForm({
+  client,
+  onSave,
   logoUrl,
-  primaryColor = "#6366f1",
-  secondaryColor = "#8b5cf6",
-  accentColor = "#06b6d4",
+  primaryColor,
+  secondaryColor,
+  accentColor,
   onChange,
 }: ClientBrandingFormProps) {
+  // Determine initial values from client or props
+  const initialPrimary = client?.primary_color || primaryColor || "#6366f1";
+  const initialSecondary = client?.secondary_color || secondaryColor || "#8b5cf6";
+  const initialAccent = client?.accent_color || accentColor || "#06b6d4";
+  const initialLogo = client?.logo_url || logoUrl || "";
   const [colors, setColors] = useState({
-    primary: primaryColor,
-    secondary: secondaryColor,
-    accent: accentColor,
+    primary: initialPrimary,
+    secondary: initialSecondary,
+    accent: initialAccent,
   });
-  const [logo, setLogo] = useState(logoUrl || "");
+  const [logo, setLogo] = useState(initialLogo);
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
   const { uploadFile, isUploading } = useStorageUpload();
 
   useEffect(() => {
+    const newPrimary = client?.primary_color || primaryColor || "#6366f1";
+    const newSecondary = client?.secondary_color || secondaryColor || "#8b5cf6";
+    const newAccent = client?.accent_color || accentColor || "#06b6d4";
+    const newLogo = client?.logo_url || logoUrl || "";
+    
     setColors({
-      primary: primaryColor,
-      secondary: secondaryColor,
-      accent: accentColor,
+      primary: newPrimary,
+      secondary: newSecondary,
+      accent: newAccent,
     });
-    setLogo(logoUrl || "");
-  }, [primaryColor, secondaryColor, accentColor, logoUrl]);
+    setLogo(newLogo);
+    setHasChanges(false);
+  }, [client, primaryColor, secondaryColor, accentColor, logoUrl]);
 
   const handleColorChange = (key: "primary" | "secondary" | "accent", value: string) => {
     const newColors = { ...colors, [key]: value };
     setColors(newColors);
-    onChange({
+    setHasChanges(true);
+    onChange?.({
       primary_color: newColors.primary,
       secondary_color: newColors.secondary,
       accent_color: newColors.accent,
@@ -60,7 +86,24 @@ export function ClientBrandingForm({
     const url = await uploadFile(file, "website-assets");
     if (url) {
       setLogo(url);
-      onChange({ logo_url: url });
+      setHasChanges(true);
+      onChange?.({ logo_url: url });
+    }
+  };
+
+  const handleSave = async () => {
+    if (!onSave) return;
+    setIsSaving(true);
+    try {
+      await onSave({
+        logo_url: logo || undefined,
+        primary_color: colors.primary,
+        secondary_color: colors.secondary,
+        accent_color: colors.accent,
+      });
+      setHasChanges(false);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -205,6 +248,18 @@ export function ClientBrandingForm({
             </div>
           </div>
         </div>
+
+        {/* Save Button (only in standalone mode) */}
+        {onSave && (
+          <Button
+            onClick={handleSave}
+            disabled={isSaving || !hasChanges}
+            className="w-full"
+          >
+            <Save className="mr-2 h-4 w-4" />
+            {isSaving ? "A guardar..." : "Guardar Alterações"}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
