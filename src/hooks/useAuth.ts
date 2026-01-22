@@ -104,6 +104,46 @@ export function useAuth() {
     }
   }, []);
 
+  const resetPassword = useCallback(async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?mode=reset`,
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return { error };
+      }
+
+      toast.success("Email de recuperação enviado! Verifique a sua caixa de entrada.");
+      return { error: null };
+    } catch (err) {
+      const error = err as Error;
+      toast.error(error.message);
+      return { error };
+    }
+  }, []);
+
+  const updatePassword = useCallback(async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) {
+        toast.error(error.message);
+        return { error };
+      }
+
+      toast.success("Palavra-passe atualizada com sucesso!");
+      return { error: null };
+    } catch (err) {
+      const error = err as Error;
+      toast.error(error.message);
+      return { error };
+    }
+  }, []);
+
   const signInWithGoogle = useCallback(async () => {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -135,5 +175,7 @@ export function useAuth() {
     signIn,
     signOut,
     signInWithGoogle,
+    resetPassword,
+    updatePassword,
   };
 }
