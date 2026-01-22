@@ -31,6 +31,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { WebsiteTemplate, WebsiteSection } from "@/lib/website-templates";
 import { WebsitePreview } from "./WebsitePreview";
+import { EditorAIChat } from "./EditorAIChat";
 import { useSectionAI } from "@/hooks/useSectionAI";
 import { useStorageUpload } from "@/hooks/useStorageUpload";
 import { useAgents } from "@/hooks/useAgents";
@@ -93,15 +94,15 @@ const createDefaultSection = (type: WebsiteSection["type"], order: number): Webs
   const defaults: Record<string, Record<string, string>> = {
     hero: { headline: "Título Principal", subheadline: "Subtítulo descritivo", ctaText: "Começar", ctaSecondaryText: "Saber Mais" },
     about: { title: "Sobre Nós", description: "Descrição da empresa...", mission: "Nossa missão..." },
-    services: { title: "Serviços", subtitle: "O que fazemos", service1Title: "Serviço 1", service1Description: "Descrição", service2Title: "Serviço 2", service2Description: "Descrição", service3Title: "Serviço 3", service3Description: "Descrição" },
-    features: { title: "Porquê Escolher-nos", feature1Title: "Característica 1", feature1Description: "Descrição", feature2Title: "Característica 2", feature2Description: "Descrição", feature3Title: "Característica 3", feature3Description: "Descrição" },
-    testimonials: { title: "Testemunhos", testimonial1Text: "Testemunho do cliente", testimonial1Author: "Nome", testimonial1Role: "Cliente", testimonial2Text: "Outro testemunho", testimonial2Author: "Nome", testimonial2Role: "Cliente" },
-    team: { title: "A Nossa Equipa", subtitle: "Conheça-nos", member1Name: "Membro 1", member1Role: "Cargo", member2Name: "Membro 2", member2Role: "Cargo" },
-    gallery: { title: "Galeria", subtitle: "Os nossos trabalhos", image1: "/placeholder.svg", image2: "/placeholder.svg", image3: "/placeholder.svg", image4: "/placeholder.svg" },
-    faq: { title: "Perguntas Frequentes", faq1Question: "Pergunta 1?", faq1Answer: "Resposta 1", faq2Question: "Pergunta 2?", faq2Answer: "Resposta 2" },
-    pricing: { title: "Preços", plan1Name: "Básico", plan1Price: "€29/mês", plan1Features: "Recurso 1, Recurso 2", plan2Name: "Profissional", plan2Price: "€59/mês", plan2Features: "Tudo do Básico, Recurso 3" },
+    services: { title: "Serviços", subtitle: "O que fazemos", service1Title: "Serviço 1", service1Description: "Descrição", service1Image: "", service2Title: "Serviço 2", service2Description: "Descrição", service2Image: "", service3Title: "Serviço 3", service3Description: "Descrição", service3Image: "" },
+    features: { title: "Porquê Escolher-nos", feature1Title: "Característica 1", feature1Description: "Descrição", feature1Image: "", feature2Title: "Característica 2", feature2Description: "Descrição", feature2Image: "", feature3Title: "Característica 3", feature3Description: "Descrição", feature3Image: "" },
+    testimonials: { title: "Testemunhos", testimonial1Text: "Testemunho do cliente", testimonial1Author: "Nome", testimonial1Role: "Cliente", testimonial1Image: "", testimonial2Text: "Outro testemunho", testimonial2Author: "Nome", testimonial2Role: "Cliente", testimonial2Image: "" },
+    team: { title: "A Nossa Equipa", subtitle: "Conheça-nos", member1Name: "Membro 1", member1Role: "Cargo", member1Image: "", member1Bio: "", member2Name: "Membro 2", member2Role: "Cargo", member2Image: "", member2Bio: "", member3Name: "", member3Role: "", member3Image: "", member4Name: "", member4Role: "", member4Image: "" },
+    gallery: { title: "Galeria", subtitle: "Os nossos trabalhos", image1: "", image2: "", image3: "", image4: "", image5: "", image6: "" },
+    faq: { title: "Perguntas Frequentes", faq1Question: "Pergunta 1?", faq1Answer: "Resposta 1", faq2Question: "Pergunta 2?", faq2Answer: "Resposta 2", faq3Question: "", faq3Answer: "", faq4Question: "", faq4Answer: "" },
+    pricing: { title: "Preços", plan1Name: "Básico", plan1Price: "€29/mês", plan1Features: "Recurso 1, Recurso 2", plan2Name: "Profissional", plan2Price: "€59/mês", plan2Features: "Tudo do Básico, Recurso 3", plan3Name: "Empresarial", plan3Price: "€99/mês", plan3Features: "Tudo incluído" },
     cta: { title: "Pronto para Começar?", description: "Entre em contacto connosco", buttonText: "Fale Connosco" },
-    contact: { title: "Contacto", subtitle: "Fale Connosco", email: "email@exemplo.pt", phone: "+351 912 345 678", address: "Lisboa, Portugal" },
+    contact: { title: "Contacto", subtitle: "Fale Connosco", email: "email@exemplo.pt", phone: "+351 912 345 678", whatsappNumber: "", address: "Lisboa, Portugal" },
   };
 
   return {
