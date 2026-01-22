@@ -76,21 +76,101 @@ const PRESET_COLORS = [
   { name: "Cinza", primary: "220 15% 35%", secondary: "220 10% 45%" },
 ];
 
-const AVAILABLE_SECTIONS: { type: WebsiteSection["type"]; label: string; description: string }[] = [
-  { type: "hero", label: "Hero", description: "Secção principal com título e CTA" },
-  { type: "about", label: "Sobre Nós", description: "Informação sobre a empresa" },
-  { type: "services", label: "Serviços", description: "Lista de serviços oferecidos" },
-  { type: "features", label: "Características", description: "Pontos fortes do negócio" },
-  { type: "testimonials", label: "Testemunhos", description: "Opiniões de clientes" },
-  { type: "team", label: "Equipa", description: "Membros da equipa" },
-  { type: "gallery", label: "Galeria", description: "Galeria de imagens" },
-  { type: "faq", label: "FAQ", description: "Perguntas frequentes" },
-  { type: "pricing", label: "Preços", description: "Tabela de preços" },
-  { type: "cta", label: "Call to Action", description: "Apelo à ação" },
-  { type: "contact", label: "Contacto", description: "Informações de contacto" },
+// Extended section type for widgets
+type ExtendedSectionType = WebsiteSection["type"] | "counter" | "accordion" | "tabs" | "slider" | "pricing-table" | "video" | "divider" | "spacer" | "image-text" | "icon-box";
+
+interface AvailableSectionDef {
+  type: ExtendedSectionType;
+  label: string;
+  description: string;
+  category: "content" | "interactive" | "media" | "layout";
+}
+
+const AVAILABLE_SECTIONS: AvailableSectionDef[] = [
+  // Content
+  { type: "hero", label: "Hero", description: "Secção principal com título e CTA", category: "content" },
+  { type: "about", label: "Sobre Nós", description: "Informação sobre a empresa", category: "content" },
+  { type: "services", label: "Serviços", description: "Lista de serviços oferecidos", category: "content" },
+  { type: "features", label: "Características", description: "Pontos fortes do negócio", category: "content" },
+  { type: "testimonials", label: "Testemunhos", description: "Opiniões de clientes", category: "content" },
+  { type: "team", label: "Equipa", description: "Membros da equipa", category: "content" },
+  { type: "cta", label: "Call to Action", description: "Apelo à ação", category: "content" },
+  { type: "contact", label: "Contacto", description: "Informações de contacto", category: "content" },
+  
+  // Interactive
+  { type: "counter", label: "Contadores", description: "Números animados com estatísticas", category: "interactive" },
+  { type: "accordion", label: "Acordeão", description: "Conteúdo expansível", category: "interactive" },
+  { type: "tabs", label: "Tabs", description: "Conteúdo em abas", category: "interactive" },
+  { type: "faq", label: "FAQ", description: "Perguntas frequentes", category: "interactive" },
+  
+  // Media
+  { type: "gallery", label: "Galeria", description: "Galeria de imagens", category: "media" },
+  { type: "slider", label: "Slider", description: "Carrossel de imagens", category: "media" },
+  { type: "video", label: "Vídeo", description: "Embed de vídeo", category: "media" },
+  { type: "image-text", label: "Imagem + Texto", description: "Layout imagem com texto", category: "media" },
+  
+  // Layout
+  { type: "pricing", label: "Preços", description: "Tabela de preços simples", category: "layout" },
+  { type: "pricing-table", label: "Tabela Comparativa", description: "Comparativo de planos", category: "layout" },
+  { type: "icon-box", label: "Caixas de Ícones", description: "Grid de ícones", category: "layout" },
+  { type: "divider", label: "Divisor", description: "Linha separadora", category: "layout" },
+  { type: "spacer", label: "Espaçador", description: "Espaço em branco", category: "layout" },
 ];
 
-const createDefaultSection = (type: WebsiteSection["type"], order: number): WebsiteSection => {
+// Widget defaults for new types
+const WIDGET_DEFAULTS: Record<string, Record<string, string>> = {
+  counter: {
+    title: "Os Nossos Números",
+    counter1Value: "500", counter1Label: "Clientes", counter1Suffix: "+",
+    counter2Value: "150", counter2Label: "Projetos", counter2Suffix: "+",
+    counter3Value: "10", counter3Label: "Anos", counter3Suffix: "",
+    counter4Value: "24", counter4Label: "Suporte", counter4Suffix: "/7",
+  },
+  accordion: {
+    title: "Informações",
+    item1Title: "Primeiro Item", item1Content: "Conteúdo do primeiro item.",
+    item2Title: "Segundo Item", item2Content: "Conteúdo do segundo item.",
+    item3Title: "Terceiro Item", item3Content: "Conteúdo do terceiro item.",
+  },
+  tabs: {
+    title: "Descubra Mais",
+    tab1Title: "Visão Geral", tab1Content: "Conteúdo da primeira aba.",
+    tab2Title: "Características", tab2Content: "Características principais.",
+    tab3Title: "Especificações", tab3Content: "Detalhes técnicos.",
+  },
+  slider: {
+    title: "Galeria em Destaque",
+    slide1Image: "", slide1Title: "Slide 1", slide1Description: "Descrição",
+    slide2Image: "", slide2Title: "Slide 2", slide2Description: "Descrição",
+    slide3Image: "", slide3Title: "Slide 3", slide3Description: "Descrição",
+    autoplay: "true", interval: "5000",
+  },
+  "pricing-table": {
+    title: "Escolha o Seu Plano", subtitle: "Planos flexíveis",
+    plan1Name: "Starter", plan1Price: "€19", plan1Period: "/mês",
+    plan1Feature1: "5 Utilizadores", plan1Feature2: "10GB", plan1Feature3: "Suporte Email", plan1Highlight: "false",
+    plan2Name: "Pro", plan2Price: "€49", plan2Period: "/mês",
+    plan2Feature1: "25 Utilizadores", plan2Feature2: "100GB", plan2Feature3: "Suporte Prioritário", plan2Feature4: "API", plan2Highlight: "true",
+    plan3Name: "Empresarial", plan3Price: "€99", plan3Period: "/mês",
+    plan3Feature1: "Ilimitado", plan3Feature2: "1TB", plan3Feature3: "Suporte 24/7", plan3Feature4: "White Label", plan3Highlight: "false",
+  },
+  video: { title: "Veja em Ação", videoUrl: "", description: "Descubra o nosso serviço." },
+  divider: { style: "line", color: "primary", width: "50" },
+  spacer: { height: "64" },
+  "image-text": {
+    title: "Título da Secção", description: "Descrição detalhada.",
+    image: "", imagePosition: "left", ctaText: "Saber Mais", ctaUrl: "",
+  },
+  "icon-box": {
+    title: "Vantagens",
+    box1Icon: "shield", box1Title: "Segurança", box1Description: "Proteção total",
+    box2Icon: "zap", box2Title: "Rapidez", box2Description: "Resultados rápidos",
+    box3Icon: "heart", box3Title: "Dedicação", box3Description: "Compromisso",
+    box4Icon: "award", box4Title: "Qualidade", box4Description: "Padrões elevados",
+  },
+};
+
+const createDefaultSection = (type: ExtendedSectionType, order: number): WebsiteSection => {
   const defaults: Record<string, Record<string, string>> = {
     hero: { headline: "Título Principal", subheadline: "Subtítulo descritivo", ctaText: "Começar", ctaSecondaryText: "Saber Mais" },
     about: { title: "Sobre Nós", description: "Descrição da empresa...", mission: "Nossa missão..." },
@@ -103,11 +183,13 @@ const createDefaultSection = (type: WebsiteSection["type"], order: number): Webs
     pricing: { title: "Preços", plan1Name: "Básico", plan1Price: "€29/mês", plan1Features: "Recurso 1, Recurso 2", plan2Name: "Profissional", plan2Price: "€59/mês", plan2Features: "Tudo do Básico, Recurso 3", plan3Name: "Empresarial", plan3Price: "€99/mês", plan3Features: "Tudo incluído" },
     cta: { title: "Pronto para Começar?", description: "Entre em contacto connosco", buttonText: "Fale Connosco" },
     contact: { title: "Contacto", subtitle: "Fale Connosco", email: "email@exemplo.pt", phone: "+351 912 345 678", whatsappNumber: "", address: "Lisboa, Portugal" },
+    // New widget defaults
+    ...WIDGET_DEFAULTS,
   };
 
   return {
     id: `${type}-${Date.now()}`,
-    type,
+    type: type as WebsiteSection["type"],
     title: AVAILABLE_SECTIONS.find(s => s.type === type)?.label || type,
     enabled: true,
     order,
@@ -325,7 +407,7 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
   };
 
   const existingSectionTypes = editableTemplate.sections.map(s => s.type);
-  const availableToAdd = AVAILABLE_SECTIONS.filter(s => !existingSectionTypes.includes(s.type));
+  const availableToAdd = AVAILABLE_SECTIONS.filter(s => !existingSectionTypes.includes(s.type as WebsiteSection["type"]));
 
   if (previewMode) {
     return (
