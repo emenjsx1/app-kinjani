@@ -1001,7 +1001,7 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
                   <div
                     key={section.type}
                     className="p-3 border rounded-lg cursor-pointer hover:border-primary transition-colors"
-                    onClick={() => addSection(section.type)}
+                    onClick={() => addSection(section.type as WebsiteSection["type"])}
                   >
                     <div className="flex items-center justify-between">
                       <div>
