@@ -66,6 +66,7 @@ export default function IntegrationsPage() {
   const [isLoadingQR, setIsLoadingQR] = useState(false);
   const [isPolling, setIsPolling] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [refreshingStatus, setRefreshingStatus] = useState<string | null>(null);
   const stopPollingRef = useRef<(() => void) | null>(null);
 
   // API Keys state
@@ -160,11 +161,16 @@ export default function IntegrationsPage() {
   };
 
   const handleRefreshStatus = async (instanceKey: string) => {
-    const result = await getStatus(instanceKey);
-    if (result?.status === 'connected') {
-      toast.success("Instância conectada!");
-    } else {
-      toast.info(`Status: ${result?.status || 'desconhecido'}`);
+    setRefreshingStatus(instanceKey);
+    try {
+      const result = await getStatus(instanceKey);
+      if (result?.status === 'connected') {
+        toast.success("Instância conectada!");
+      } else {
+        toast.info(`Status: ${result?.status || 'desconhecido'}`);
+      }
+    } finally {
+      setRefreshingStatus(null);
     }
   };
 
@@ -425,8 +431,9 @@ export default function IntegrationsPage() {
                         size="icon"
                         onClick={() => handleRefreshStatus(instance.instance_key!)}
                         title="Atualizar status"
+                        disabled={refreshingStatus === instance.instance_key}
                       >
-                        <RefreshCw className="h-4 w-4" />
+                        <RefreshCw className={`h-4 w-4 ${refreshingStatus === instance.instance_key ? 'animate-spin' : ''}`} />
                       </Button>
                       <Button
                         variant="outline"
@@ -509,11 +516,19 @@ export default function IntegrationsPage() {
                 )}
               </div>
             ) : (
-              <div className="w-64 h-64 bg-muted rounded-lg flex items-center justify-center">
-                <p className="text-muted-foreground text-center">
+              <div className="w-64 h-64 bg-muted rounded-lg flex flex-col items-center justify-center gap-3">
+                <p className="text-muted-foreground text-center px-4">
                   QR code não disponível.<br />
                   Tente novamente.
                 </p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => currentInstanceKey && handleShowQRCode(currentInstanceKey, currentInstanceName)}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Tentar Novamente
+                </Button>
               </div>
             )}
             <p className="text-sm text-muted-foreground mt-4 text-center">
