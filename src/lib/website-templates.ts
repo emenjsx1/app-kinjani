@@ -563,8 +563,114 @@ const servicesTemplates: WebsiteTemplate[] = [
   },
 ];
 
+// 🚀 Templates em Branco (Modo Aberto - tipo Bolt/v0)
+const blankTemplates: WebsiteTemplate[] = [
+  {
+    id: "blank-landing",
+    name: "Landing Page em Branco",
+    description: "Comece do zero com uma estrutura básica",
+    category: "Em Branco",
+    categoryId: "blank",
+    type: "landing",
+    thumbnail: "/placeholder.svg",
+    colors: {
+      primary: "220 70% 50%",
+      secondary: "200 60% 45%",
+      accent: "340 80% 55%",
+      background: "0 0% 100%",
+      text: "220 30% 15%",
+    },
+    font: "Inter",
+    sections: [
+      createHeroSection({
+        headline: "O Título do Seu Projeto",
+        subheadline: "Descreva aqui a proposta de valor do seu negócio ou produto",
+        ctaText: "Começar Agora",
+        ctaSecondaryText: "Saber Mais",
+      }),
+      createFeaturesSection({
+        title: "Características Principais",
+        feature1Title: "Característica 1",
+        feature1Description: "Descreva a primeira característica.",
+        feature2Title: "Característica 2",
+        feature2Description: "Descreva a segunda característica.",
+        feature3Title: "Característica 3",
+        feature3Description: "Descreva a terceira característica.",
+      }),
+      createCtaSection({
+        title: "Pronto para Começar?",
+        description: "Entre em contacto e descubra como podemos ajudar.",
+        buttonText: "Contactar",
+      }),
+    ],
+  },
+  {
+    id: "blank-institutional",
+    name: "Site Institucional em Branco",
+    description: "Estrutura completa para personalizar como quiser",
+    category: "Em Branco",
+    categoryId: "blank",
+    type: "institutional",
+    thumbnail: "/placeholder.svg",
+    colors: {
+      primary: "220 70% 50%",
+      secondary: "200 60% 45%",
+      accent: "340 80% 55%",
+      background: "0 0% 100%",
+      text: "220 30% 15%",
+    },
+    font: "Inter",
+    sections: [
+      createHeroSection({
+        headline: "Bem-vindo à Nossa Empresa",
+        subheadline: "Soluções profissionais para o seu negócio",
+        ctaText: "Conhecer Mais",
+        ctaSecondaryText: "Fale Connosco",
+      }),
+      createAboutSection({
+        title: "Sobre Nós",
+        description: "Conte a história da sua empresa, os valores e a missão.",
+        mission: "A nossa missão é proporcionar excelência.",
+      }),
+      createServicesSection({
+        title: "Os Nossos Serviços",
+        subtitle: "O que oferecemos",
+        service1Title: "Serviço 1",
+        service1Description: "Descrição do serviço.",
+        service2Title: "Serviço 2",
+        service2Description: "Descrição do serviço.",
+        service3Title: "Serviço 3",
+        service3Description: "Descrição do serviço.",
+      }),
+      createTestimonialsSection({
+        title: "O Que Dizem Sobre Nós",
+        testimonial1Text: "Excelente serviço!",
+        testimonial1Author: "Cliente 1",
+        testimonial1Role: "Empresa",
+        testimonial2Text: "Recomendo a todos.",
+        testimonial2Author: "Cliente 2",
+        testimonial2Role: "Empresa",
+      }),
+      createContactSection({
+        title: "Entre em Contacto",
+        subtitle: "Estamos prontos para ajudar",
+        email: "email@empresa.pt",
+        phone: "+351 900 000 000",
+        address: "Lisboa, Portugal",
+      }),
+    ],
+  },
+];
+
 // Todas as categorias
 export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
+  {
+    id: "blank",
+    name: "Em Branco",
+    description: "Comece do zero e personalize como quiser",
+    icon: "Globe",
+    templates: blankTemplates,
+  },
   {
     id: "saude",
     name: "Clínica / Saúde",

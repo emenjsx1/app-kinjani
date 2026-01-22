@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { MessageCircle, Phone, Mail, MapPin, Star, Check, ChevronRight } from "lucide-react";
 import { WebsiteTemplate, WebsiteSection } from "@/lib/website-templates";
 import { Button } from "@/components/ui/button";
@@ -19,13 +20,13 @@ export interface WebsitePreviewProps {
   embedConfig?: EmbedConfig;
 }
 
-export function WebsitePreview({ 
+export const WebsitePreview = forwardRef<HTMLDivElement, WebsitePreviewProps>(function WebsitePreview({ 
   template, 
   websiteName, 
   showChatWidget = true,
   fullscreen = false,
   embedConfig,
-}: WebsitePreviewProps) {
+}, ref) {
   // Use website name from template if not provided
   const displayName = websiteName || template.name || "Meu Site";
   const enabledSections = template.sections
@@ -410,6 +411,7 @@ export function WebsitePreview({
 
   return (
     <div 
+      ref={ref}
       className={cn("relative", fullscreen ? "min-h-screen" : "min-h-[600px]")} 
       style={{ fontFamily: template.font }}
     >
@@ -478,4 +480,4 @@ export function WebsitePreview({
       )}
     </div>
   );
-}
+});
