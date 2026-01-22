@@ -13,11 +13,13 @@ import { toast } from "@/hooks/use-toast";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useWebsites, Website } from "@/hooks/useWebsites";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { getWebsite, updateWebsite, deleteWebsite } = useWebsites();
+  const { profile } = useProfile();
   const [website, setWebsite] = useState<Website | null>(null);
   const [template, setTemplate] = useState<WebsiteTemplate | null>(null);
   const [activeTab, setActiveTab] = useState("preview");
@@ -53,7 +55,7 @@ export default function WebsiteEditorPage() {
 
   if (isLoading) {
     return (
-      <AppLayout pageTitle="Carregando..." credits={1250}>
+      <AppLayout pageTitle="Carregando..." credits={profile?.credits_balance ?? 0}>
         <div className="flex items-center justify-center h-64">
           <LoadingSpinner size="lg" />
         </div>
@@ -63,7 +65,7 @@ export default function WebsiteEditorPage() {
 
   if (!website || !template) {
     return (
-      <AppLayout pageTitle="Site não encontrado" credits={1250}>
+      <AppLayout pageTitle="Site não encontrado" credits={profile?.credits_balance ?? 0}>
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Site não encontrado</p>
         </div>
@@ -161,7 +163,7 @@ export default function WebsiteEditorPage() {
   const websiteNiche = website.config?.niche;
 
   return (
-    <AppLayout pageTitle={website.name} credits={1250}>
+    <AppLayout pageTitle={website.name} credits={profile?.credits_balance ?? 0}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
