@@ -1,5 +1,5 @@
-import { Hono } from "hono";
-import { McpServer, StreamableHttpTransport } from "mcp-lite";
+import { Hono, type Context } from "https://deno.land/x/hono@v4.3.11/mod.ts";
+import { McpServer, StreamableHttpTransport } from "https://esm.sh/mcp-lite@0.10.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -73,12 +73,12 @@ const transport = new StreamableHttpTransport();
 const handler = transport.bind(mcpServer);
 
 // Handle CORS preflight
-app.options("/*", (c) => {
+app.options("/*", (c: Context) => {
   return new Response(null, { headers: corsHeaders });
 });
 
 // MCP endpoint - handles all MCP requests
-app.all("/mcp-server/mcp", async (c) => {
+app.all("/mcp-server/mcp", async (c: Context) => {
   console.log(`[MCP] Received ${c.req.method} request to /mcp`);
   
   try {
@@ -112,7 +112,7 @@ app.all("/mcp-server/mcp", async (c) => {
 });
 
 // Health check - root of the function
-app.get("/mcp-server", (c) => {
+app.get("/mcp-server", (c: Context) => {
   return new Response(
     JSON.stringify({ 
       status: "ok", 
