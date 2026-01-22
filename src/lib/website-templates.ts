@@ -614,6 +614,286 @@ const servicesTemplates: WebsiteTemplate[] = [
   },
 ];
 
+// 🍽️ Restaurante / Cardápio Digital
+const restaurantTemplates: WebsiteTemplate[] = [
+  {
+    id: "restaurant-menu",
+    name: "Cardápio Digital",
+    description: "Menu digital para restaurantes com lista de pratos",
+    category: "Restaurante",
+    categoryId: "restaurante",
+    type: "landing",
+    thumbnail: "/placeholder.svg",
+    colors: {
+      primary: "25 80% 50%",
+      secondary: "15 70% 45%",
+      accent: "45 100% 50%",
+      background: "30 10% 98%",
+      text: "25 40% 15%",
+    },
+    font: "Plus Jakarta Sans",
+    sections: [
+      createHeroSection({
+        headline: "Sabores Autênticos",
+        subheadline: "Descubra o nosso menu e faça já o seu pedido",
+        ctaText: "Ver Cardápio",
+        ctaSecondaryText: "Fazer Pedido",
+      }),
+      createServicesSection({
+        title: "O Nosso Menu",
+        subtitle: "Pratos preparados com ingredientes frescos",
+        service1Title: "Entradas",
+        service1Description: "Sopas, saladas e petiscos tradicionais",
+        service2Title: "Pratos Principais",
+        service2Description: "Carnes, peixes e especialidades da casa",
+        service3Title: "Sobremesas",
+        service3Description: "Doces caseiros e frutas da época",
+      }),
+      createFeaturesSection({
+        title: "Porquê Escolher-nos",
+        feature1Title: "Ingredientes Frescos",
+        feature1Description: "Produtos locais e sazonais",
+        feature2Title: "Receitas Tradicionais",
+        feature2Description: "Sabores autênticos portugueses",
+        feature3Title: "Entrega Rápida",
+        feature3Description: "Pedidos via WhatsApp",
+      }),
+      createGallerySection({
+        title: "Galeria de Pratos",
+        subtitle: "Veja os nossos pratos em detalhe",
+      }),
+      createTestimonialsSection({
+        title: "O Que Dizem os Clientes",
+      }),
+      createContactSection({
+        title: "Faça o Seu Pedido",
+        subtitle: "Ligue ou envie mensagem pelo WhatsApp",
+        phone: "+351 912 345 678",
+        whatsappNumber: "351912345678",
+      }),
+    ],
+  },
+  {
+    id: "restaurant-pizzeria",
+    name: "Pizzaria / Fast Food",
+    description: "Perfeito para pizzarias e fast food",
+    category: "Restaurante",
+    categoryId: "restaurante",
+    type: "landing",
+    thumbnail: "/placeholder.svg",
+    colors: {
+      primary: "0 75% 50%",
+      secondary: "30 80% 50%",
+      accent: "45 100% 55%",
+      background: "0 0% 100%",
+      text: "0 30% 15%",
+    },
+    font: "Inter",
+    sections: [
+      createHeroSection({
+        headline: "Pizza Artesanal",
+        subheadline: "Massa fresca, ingredientes premium, sabor único",
+        ctaText: "Ver Menu",
+        ctaSecondaryText: "Pedir Agora",
+      }),
+      createServicesSection({
+        title: "Nossas Pizzas",
+        subtitle: "Escolha a sua favorita",
+        service1Title: "Margherita",
+        service1Description: "Molho de tomate, mozzarella e manjericão",
+        service2Title: "Pepperoni",
+        service2Description: "Pepperoni italiano e queijo derretido",
+        service3Title: "Quatro Queijos",
+        service3Description: "Mozzarella, gorgonzola, parmesão e provolone",
+      }),
+      createCtaSection({
+        title: "Entregas ao Domicílio",
+        description: "Receba a sua pizza quente em casa",
+        buttonText: "Pedir pelo WhatsApp",
+      }),
+      createContactSection(),
+    ],
+  },
+];
+
+// 📸 Portfólio / Fotografia
+const portfolioTemplates: WebsiteTemplate[] = [
+  {
+    id: "portfolio-photographer",
+    name: "Fotógrafo",
+    description: "Portfolio elegante para fotógrafos",
+    category: "Portfólio",
+    categoryId: "portfolio",
+    type: "landing",
+    thumbnail: "/placeholder.svg",
+    colors: {
+      primary: "0 0% 15%",
+      secondary: "0 0% 30%",
+      accent: "45 100% 50%",
+      background: "0 0% 100%",
+      text: "0 0% 10%",
+    },
+    font: "Playfair Display",
+    sections: [
+      createHeroSection({
+        headline: "Capturando Momentos",
+        subheadline: "Fotografia profissional que conta a sua história",
+        ctaText: "Ver Portfólio",
+        ctaSecondaryText: "Contactar",
+      }),
+      createGallerySection({
+        title: "Portfólio",
+        subtitle: "Os meus melhores trabalhos",
+      }),
+      createServicesSection({
+        title: "Serviços",
+        subtitle: "Tipos de sessões disponíveis",
+        service1Title: "Casamentos",
+        service1Description: "Cobertura completa do seu dia especial",
+        service2Title: "Retratos",
+        service2Description: "Sessões individuais ou em família",
+        service3Title: "Eventos",
+        service3Description: "Festas, conferências e eventos corporativos",
+      }),
+      createTestimonialsSection({
+        title: "Testemunhos",
+      }),
+      createContactSection({
+        title: "Agende a Sua Sessão",
+        subtitle: "Entre em contacto para marcar",
+      }),
+    ],
+  },
+  {
+    id: "portfolio-designer",
+    name: "Designer / Criativo",
+    description: "Portfolio moderno para designers",
+    category: "Portfólio",
+    categoryId: "portfolio",
+    type: "landing",
+    thumbnail: "/placeholder.svg",
+    colors: {
+      primary: "260 70% 55%",
+      secondary: "200 60% 50%",
+      accent: "340 80% 55%",
+      background: "260 10% 98%",
+      text: "260 40% 15%",
+    },
+    font: "Inter",
+    sections: [
+      createHeroSection({
+        headline: "Design que Inspira",
+        subheadline: "Soluções criativas para marcas que querem destacar-se",
+        ctaText: "Ver Trabalhos",
+      }),
+      createGallerySection({
+        title: "Projetos Recentes",
+        subtitle: "Uma seleção dos meus trabalhos",
+      }),
+      createFeaturesSection({
+        title: "Como Trabalho",
+        feature1Title: "Pesquisa",
+        feature1Description: "Entendo o seu negócio e objetivos",
+        feature2Title: "Design",
+        feature2Description: "Crio soluções visuais impactantes",
+        feature3Title: "Entrega",
+        feature3Description: "Ficheiros prontos para usar",
+      }),
+      createCtaSection({
+        title: "Vamos Trabalhar Juntos?",
+        buttonText: "Iniciar Projeto",
+      }),
+      createContactSection(),
+    ],
+  },
+];
+
+// 📝 Formulário de Leads
+const leadFormTemplates: WebsiteTemplate[] = [
+  {
+    id: "leadform-simple",
+    name: "Formulário Simples",
+    description: "Landing page minimalista para captura de leads",
+    category: "Formulário de Leads",
+    categoryId: "leadform",
+    type: "landing",
+    thumbnail: "/placeholder.svg",
+    colors: {
+      primary: "220 70% 50%",
+      secondary: "200 60% 45%",
+      accent: "160 70% 45%",
+      background: "0 0% 100%",
+      text: "220 30% 15%",
+    },
+    font: "Inter",
+    sections: [
+      createHeroSection({
+        headline: "Receba Informações Grátis",
+        subheadline: "Preencha o formulário e entraremos em contacto em 24h",
+        ctaText: "Quero Saber Mais",
+      }),
+      createFeaturesSection({
+        title: "O Que Vai Receber",
+        feature1Title: "Consultoria Grátis",
+        feature1Description: "Análise personalizada do seu caso",
+        feature2Title: "Proposta Detalhada",
+        feature2Description: "Orçamento sem compromisso",
+        feature3Title: "Suporte Completo",
+        feature3Description: "Acompanhamento em todo o processo",
+      }),
+      createCtaSection({
+        title: "Não Perca Esta Oportunidade",
+        description: "Vagas limitadas - garanta já a sua",
+        buttonText: "Inscrever-me Agora",
+      }),
+      createContactSection({
+        title: "Contacte-nos",
+        subtitle: "Estamos disponíveis para ajudar",
+      }),
+    ],
+  },
+  {
+    id: "leadform-ebook",
+    name: "Download de eBook",
+    description: "Landing para download de material gratuito",
+    category: "Formulário de Leads",
+    categoryId: "leadform",
+    type: "landing",
+    thumbnail: "/placeholder.svg",
+    colors: {
+      primary: "160 70% 45%",
+      secondary: "180 60% 40%",
+      accent: "45 100% 50%",
+      background: "0 0% 100%",
+      text: "160 40% 15%",
+    },
+    font: "Plus Jakarta Sans",
+    sections: [
+      createHeroSection({
+        headline: "eBook Grátis: [Título]",
+        subheadline: "Aprenda [benefício] com este guia completo de [X] páginas",
+        ctaText: "Fazer Download Grátis",
+      }),
+      createFeaturesSection({
+        title: "O Que Vai Aprender",
+        feature1Title: "Capítulo 1",
+        feature1Description: "Fundamentos essenciais",
+        feature2Title: "Capítulo 2",
+        feature2Description: "Estratégias avançadas",
+        feature3Title: "Bónus",
+        feature3Description: "Checklist prática incluída",
+      }),
+      createTestimonialsSection({
+        title: "Quem Já Fez Download",
+      }),
+      createCtaSection({
+        title: "Download 100% Grátis",
+        buttonText: "Quero o Meu eBook",
+      }),
+    ],
+  },
+];
+
 // 🚀 Templates em Branco (Modo Aberto - tipo Bolt/v0)
 const blankTemplates: WebsiteTemplate[] = [
   {
@@ -756,6 +1036,27 @@ export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
     description: "Templates para prestadores de serviços e negócios locais",
     icon: "Briefcase",
     templates: servicesTemplates,
+  },
+  {
+    id: "restaurante",
+    name: "Restaurante / Cardápio",
+    description: "Templates para restaurantes e cardápios digitais",
+    icon: "Globe",
+    templates: restaurantTemplates,
+  },
+  {
+    id: "portfolio",
+    name: "Portfólio / Fotografia",
+    description: "Templates para fotógrafos e designers",
+    icon: "Globe",
+    templates: portfolioTemplates,
+  },
+  {
+    id: "leadform",
+    name: "Formulário de Leads",
+    description: "Landing pages para captura de contactos",
+    icon: "Globe",
+    templates: leadFormTemplates,
   },
 ];
 

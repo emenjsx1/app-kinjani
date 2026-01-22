@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Globe, Building2, CheckCircle2, Sparkles, Loader2, Eye, EyeOff, Wand2, LayoutTemplate, ShoppingBag, FileText, Rocket, Utensils, Calendar, Briefcase } from "lucide-react";
+import { 
+  Globe, Building2, CheckCircle2, Sparkles, Loader2, Eye, EyeOff, Wand2, LayoutTemplate, 
+  ShoppingBag, FileText, Rocket, Utensils, Calendar, Briefcase, Camera, Heart, 
+  Music, Dumbbell, GraduationCap, Plane, Car, Home, Scissors, Users
+} from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,9 +15,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Stepper, CardSelect } from "@/components/ui/stepper";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TEMPLATE_CATEGORIES, WebsiteTemplate, getCategoryIcon } from "@/lib/website-templates";
 import { WebsitePreview } from "@/components/websites/WebsitePreview";
 import { useWebsiteAI } from "@/hooks/useWebsiteAI";
+import { useClients } from "@/hooks/useClients";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +35,7 @@ interface Website {
   url: string;
   createdAt: string;
   customTemplate?: WebsiteTemplate;
+  clientId?: string;
 }
 
 interface CreateWebsiteWizardProps {
@@ -44,6 +47,7 @@ interface CreateWebsiteWizardProps {
 const STEPS_GUIDED = ["Modo", "Tipo", "Categoria", "Template", "Prompt", "Nome", "A Gerar...", "Concluído"];
 const STEPS_OPEN = ["Modo", "Descreva Tudo", "Nome", "A Gerar...", "Concluído"];
 
+// Expanded website types
 const WEBSITE_TYPES = [
   { id: "landing", title: "Landing Page", description: "Página única focada em conversão", icon: <Globe className="h-5 w-5" /> },
   { id: "institutional", title: "Site Institucional", description: "Site completo multi-página", icon: <Building2 className="h-5 w-5" /> },
@@ -51,63 +55,69 @@ const WEBSITE_TYPES = [
   { id: "ecommerce", title: "E-commerce", description: "Loja online para produtos", icon: <ShoppingBag className="h-5 w-5" /> },
   { id: "blog", title: "Blog / Conteúdo", description: "Blog ou site de conteúdo", icon: <FileText className="h-5 w-5" /> },
   { id: "saas", title: "SaaS / App", description: "Apresentação de software", icon: <Rocket className="h-5 w-5" /> },
-  { id: "restaurant", title: "Restaurante / Café", description: "Menu, reservas e mais", icon: <Utensils className="h-5 w-5" /> },
+  { id: "restaurant", title: "Restaurante / Menu", description: "Cardápio digital e reservas", icon: <Utensils className="h-5 w-5" /> },
   { id: "event", title: "Evento / Casamento", description: "Página para eventos", icon: <Calendar className="h-5 w-5" /> },
+  { id: "leadform", title: "Formulário de Leads", description: "Captura de contactos simples", icon: <Users className="h-5 w-5" /> },
+  { id: "photography", title: "Fotógrafo", description: "Galeria e portfólio visual", icon: <Camera className="h-5 w-5" /> },
+  { id: "beauty", title: "Beleza / Estética", description: "Salão, spa ou clínica", icon: <Scissors className="h-5 w-5" /> },
+  { id: "fitness", title: "Fitness / Gym", description: "Academia ou personal trainer", icon: <Dumbbell className="h-5 w-5" /> },
+  { id: "education", title: "Educação / Curso", description: "Escola ou curso online", icon: <GraduationCap className="h-5 w-5" /> },
+  { id: "travel", title: "Turismo / Viagens", description: "Agência ou destino", icon: <Plane className="h-5 w-5" /> },
+  { id: "automotive", title: "Automóvel", description: "Stand ou oficina", icon: <Car className="h-5 w-5" /> },
+  { id: "realestate", title: "Imobiliária", description: "Imóveis e propriedades", icon: <Home className="h-5 w-5" /> },
+  { id: "music", title: "Música / DJ", description: "Artista ou banda", icon: <Music className="h-5 w-5" /> },
+  { id: "wedding", title: "Casamento", description: "Site de casamento", icon: <Heart className="h-5 w-5" /> },
 ];
 
 const BUILD_MODES = [
-  {
-    id: "open",
-    title: "Open Build ✨",
-    description: "Descreva tudo e a IA cria automaticamente (tipo Bolt/v0)",
-    icon: <Wand2 className="h-5 w-5" />,
-  },
-  {
-    id: "guided",
-    title: "Modo Assistido",
-    description: "Escolha template e categoria, IA preenche conteúdo",
-    icon: <LayoutTemplate className="h-5 w-5" />,
-  },
+  { id: "open", title: "Open Build ✨", description: "Descreva tudo e a IA cria automaticamente", icon: <Wand2 className="h-5 w-5" /> },
+  { id: "guided", title: "Modo Assistido", description: "Escolha template, IA preenche conteúdo", icon: <LayoutTemplate className="h-5 w-5" /> },
 ];
 
-// Helper to get all templates for a type
 const getAllTemplatesForType = (type: string) => {
   return TEMPLATE_CATEGORIES.flatMap(cat => cat.templates).filter(t => t.type === type || t.type === "landing");
 };
 
-// Default blank template for Open Build
-const getBlankTemplate = (): WebsiteTemplate => ({
-  id: "open-build-generated",
-  name: "Site Gerado por IA",
-  description: "Template gerado automaticamente",
-  category: "Em Branco",
-  categoryId: "blank",
-  type: "landing",
-  thumbnail: "/placeholder.svg",
-  colors: {
-    primary: "220 70% 50%",
-    secondary: "200 60% 45%",
-    accent: "340 80% 55%",
-    background: "0 0% 100%",
-    text: "220 30% 15%",
-  },
-  font: "Inter",
-  sections: [
-    { id: "hero", type: "hero", title: "Hero", enabled: true, order: 0, content: { headline: "", subheadline: "", ctaText: "", ctaSecondaryText: "" } },
-    { id: "about", type: "about", title: "Sobre", enabled: true, order: 1, content: { title: "", description: "", mission: "" } },
-    { id: "services", type: "services", title: "Serviços", enabled: true, order: 2, content: { title: "", subtitle: "", service1Title: "", service1Description: "", service2Title: "", service2Description: "", service3Title: "", service3Description: "" } },
-    { id: "features", type: "features", title: "Características", enabled: true, order: 3, content: { title: "", feature1Title: "", feature1Description: "", feature2Title: "", feature2Description: "", feature3Title: "", feature3Description: "" } },
-    { id: "testimonials", type: "testimonials", title: "Testemunhos", enabled: true, order: 4, content: { title: "", testimonial1Text: "", testimonial1Author: "", testimonial1Role: "", testimonial2Text: "", testimonial2Author: "", testimonial2Role: "" } },
-    { id: "cta", type: "cta", title: "CTA", enabled: true, order: 5, content: { title: "", description: "", buttonText: "" } },
-    { id: "contact", type: "contact", title: "Contacto", enabled: true, order: 6, content: { title: "", subtitle: "", email: "", phone: "", address: "" } },
-  ],
-});
+const getBlankTemplate = (siteType: string): WebsiteTemplate => {
+  // Different section configurations based on site type
+  const sectionConfigs: Record<string, string[]> = {
+    restaurant: ["hero", "about", "services", "gallery", "testimonials", "contact"],
+    leadform: ["hero", "features", "cta", "contact"],
+    portfolio: ["hero", "about", "gallery", "testimonials", "contact"],
+    photography: ["hero", "gallery", "about", "testimonials", "contact"],
+    wedding: ["hero", "about", "gallery", "contact"],
+    ecommerce: ["hero", "features", "services", "testimonials", "cta", "contact"],
+    default: ["hero", "about", "services", "features", "testimonials", "cta", "contact"],
+  };
+
+  const sections = (sectionConfigs[siteType] || sectionConfigs.default).map((type, idx) => ({
+    id: type,
+    type: type as any,
+    title: type.charAt(0).toUpperCase() + type.slice(1),
+    enabled: true,
+    order: idx,
+    content: {},
+  }));
+
+  return {
+    id: "open-build-generated",
+    name: "Site Gerado por IA",
+    description: "Template gerado automaticamente",
+    category: "Gerado",
+    categoryId: "generated",
+    type: "landing",
+    thumbnail: "/placeholder.svg",
+    colors: { primary: "220 70% 50%", secondary: "200 60% 45%", accent: "340 80% 55%", background: "0 0% 100%", text: "220 30% 15%" },
+    font: "Inter",
+    sections,
+  };
+};
 
 export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: CreateWebsiteWizardProps) {
   const navigate = useNavigate();
   const { generateContent, applySectionsContent, isGenerating } = useWebsiteAI();
+  const { clients } = useClients();
   
-  // State
   const [currentStep, setCurrentStep] = useState(0);
   const [buildMode, setBuildMode] = useState<"open" | "guided" | null>(null);
   const [websiteType, setWebsiteType] = useState<string | null>(null);
@@ -116,6 +126,7 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
   const [prompt, setPrompt] = useState("");
   const [openBuildPrompt, setOpenBuildPrompt] = useState("");
   const [websiteName, setWebsiteName] = useState("");
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [createdWebsiteId, setCreatedWebsiteId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
 
@@ -133,152 +144,107 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
     setPrompt("");
     setOpenBuildPrompt("");
     setWebsiteName("");
+    setSelectedClientId(null);
     setCreatedWebsiteId(null);
     setShowPreview(false);
   };
 
-  const handleClose = () => {
-    resetWizard();
-    onOpenChange(false);
-  };
+  const handleClose = () => { resetWizard(); onOpenChange(false); };
+  const handleNext = () => { if (currentStep < STEPS.length - 1) setCurrentStep(currentStep + 1); };
+  const handleBack = () => { if (currentStep > 0) setCurrentStep(currentStep - 1); };
 
-  const handleNext = () => {
-    if (currentStep < STEPS.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const handleBack = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  // Guided mode creation
   const handleCreateGuided = async () => {
     if (!selectedTemplate || !websiteType) return;
-
-    const category = selectedCategory 
-      ? TEMPLATE_CATEGORIES.find((c) => c.id === selectedCategory)
-      : TEMPLATE_CATEGORIES.find((c) => c.id === "blank");
-    
+    const category = selectedCategory ? TEMPLATE_CATEGORIES.find((c) => c.id === selectedCategory) : null;
     setCurrentStep(generatingStepIndex);
-    const sectionTypes = selectedTemplate.sections.map((s) => s.type);
 
     try {
       const generatedContent = await generateContent({
         websiteType: (websiteType === "landing" || websiteType === "institutional") ? websiteType : "landing",
-        niche: category?.name || "Outro",
+        niche: category?.name || websiteType || "Outro",
         templateName: selectedTemplate.name,
         prompt,
         websiteName,
-        sections: sectionTypes,
+        sections: selectedTemplate.sections.map((s) => s.type),
       });
 
       let customTemplate = { ...selectedTemplate };
-
       if (generatedContent) {
-        customTemplate = {
-          ...selectedTemplate,
-          sections: applySectionsContent(selectedTemplate.sections, generatedContent),
-        };
+        customTemplate = { ...selectedTemplate, sections: applySectionsContent(selectedTemplate.sections, generatedContent) };
         toast({ title: "Conteúdo gerado com IA!", description: "O conteúdo do seu site foi personalizado." });
-      } else {
-        toast({ title: "Site criado", description: "A usar conteúdo padrão.", variant: "default" });
       }
 
       const newWebsite: Website = {
         id: Date.now().toString(),
         name: websiteName,
         type: (websiteType === "landing" || websiteType === "institutional") ? websiteType : "landing",
-        niche: category?.name || "Outro",
-        nicheId: selectedCategory || "outro",
+        niche: category?.name || websiteType || "Outro",
+        nicheId: selectedCategory || websiteType || "outro",
         templateId: selectedTemplate.id,
-        prompt: prompt,
+        prompt,
         status: "draft",
         url: "",
         createdAt: new Date().toISOString().split("T")[0],
         customTemplate,
+        clientId: selectedClientId || undefined,
       };
 
       setCreatedWebsiteId(newWebsite.id);
       onWebsiteCreated(newWebsite);
       setCurrentStep(successStepIndex);
     } catch (error) {
-      console.error("Error creating website:", error);
       toast({ title: "Erro", description: "Ocorreu um erro. Tente novamente.", variant: "destructive" });
       setCurrentStep(nameStepIndex);
     }
   };
 
-  // Open Build mode creation
   const handleCreateOpenBuild = async () => {
     if (!openBuildPrompt.trim() || !websiteName.trim()) return;
-
     setCurrentStep(generatingStepIndex);
-    const blankTemplate = getBlankTemplate();
-    const sectionTypes = blankTemplate.sections.map((s) => s.type);
+    const blankTemplate = getBlankTemplate(websiteType || "default");
 
     try {
       const generatedContent = await generateContent({
         websiteType: "landing",
-        niche: "Open Build",
+        niche: websiteType || "Open Build",
         templateName: "Gerado por IA",
         prompt: openBuildPrompt,
         websiteName,
-        sections: sectionTypes,
+        sections: blankTemplate.sections.map((s) => s.type),
       });
 
       let customTemplate = { ...blankTemplate };
-
       if (generatedContent) {
-        customTemplate = {
-          ...blankTemplate,
-          sections: applySectionsContent(blankTemplate.sections, generatedContent),
-        };
+        customTemplate = { ...blankTemplate, sections: applySectionsContent(blankTemplate.sections, generatedContent) };
         toast({ title: "Site criado com IA! ✨", description: "O seu site foi gerado automaticamente." });
-      } else {
-        toast({ title: "Site criado", description: "A usar conteúdo padrão.", variant: "default" });
       }
 
       const newWebsite: Website = {
         id: Date.now().toString(),
         name: websiteName,
         type: "landing",
-        niche: "Open Build",
-        nicheId: "open-build",
+        niche: websiteType || "Open Build",
+        nicheId: websiteType || "open-build",
         templateId: "open-build-generated",
         prompt: openBuildPrompt,
         status: "draft",
         url: "",
         createdAt: new Date().toISOString().split("T")[0],
         customTemplate,
+        clientId: selectedClientId || undefined,
       };
 
       setCreatedWebsiteId(newWebsite.id);
       onWebsiteCreated(newWebsite);
       setCurrentStep(successStepIndex);
     } catch (error) {
-      console.error("Error creating website:", error);
       toast({ title: "Erro", description: "Ocorreu um erro. Tente novamente.", variant: "destructive" });
       setCurrentStep(nameStepIndex);
     }
   };
 
-  const handleCreate = () => {
-    if (buildMode === "open") {
-      handleCreateOpenBuild();
-    } else {
-      handleCreateGuided();
-    }
-  };
-
-  const handleOpenEditor = () => {
-    handleClose();
-    if (createdWebsiteId) {
-      navigate(`/websites/${createdWebsiteId}/edit`);
-    }
-  };
+  const handleCreate = () => { buildMode === "open" ? handleCreateOpenBuild() : handleCreateGuided(); };
+  const handleOpenEditor = () => { handleClose(); if (createdWebsiteId) navigate(`/websites/${createdWebsiteId}/edit`); };
 
   const canProceed = () => {
     if (buildMode === "open") {
@@ -292,7 +258,7 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
       switch (currentStep) {
         case 0: return buildMode !== null;
         case 1: return websiteType !== null;
-        case 2: return true; // Category optional
+        case 2: return true;
         case 3: return selectedTemplate !== null;
         case 4: return prompt.trim().length > 10;
         case 5: return websiteName.trim().length > 2;
@@ -314,17 +280,12 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
             <h3 className="text-lg font-semibold">Como quer criar o site?</h3>
             <p className="text-sm text-muted-foreground">Escolha o modo de criação</p>
           </div>
-          <CardSelect 
-            options={BUILD_MODES} 
-            value={buildMode} 
-            onChange={(val) => setBuildMode(val as "open" | "guided")} 
-            className="grid-cols-2" 
-          />
+          <CardSelect options={BUILD_MODES} value={buildMode} onChange={(val) => setBuildMode(val as "open" | "guided")} className="grid-cols-2" />
         </div>
       );
     }
 
-    // Open Build mode steps
+    // Open Build mode
     if (buildMode === "open") {
       switch (currentStep) {
         case 1:
@@ -335,44 +296,62 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
                   <Wand2 className="h-5 w-5 text-primary" />
                   Descreva o que quer criar
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  Seja detalhado: tipo de negócio, serviços, tom, cores preferidas, tudo!
-                </p>
+                <p className="text-sm text-muted-foreground">Seja detalhado: negócio, serviços, cores, estilo, tudo!</p>
               </div>
+              
+              {/* Optional: Select site type for better generation */}
+              <div className="space-y-2">
+                <Label>Tipo de site (opcional)</Label>
+                <Select value={websiteType || ""} onValueChange={(v) => setWebsiteType(v || null)}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar tipo..." /></SelectTrigger>
+                  <SelectContent>
+                    {WEBSITE_TYPES.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
               <Textarea
-                placeholder={`Exemplo: Quero um site para a minha clínica de estética chamada "BeautyLab". 
+                placeholder={`Exemplo: Quero um cardápio digital para o restaurante "Sabores de Lisboa".
 
-Oferecemos tratamentos faciais, massagens e depilação a laser. 
+Pratos: entradas (caldo verde, salada), pratos principais (bacalhau, francesinha, polvo), sobremesas (pastel de nata, pudim).
 
-Quero um design moderno e elegante, com cores rosa suave e dourado. 
-
-O site deve ter: página inicial com hero impactante, secção de serviços com preços, testemunhos de clientes, galeria de fotos e formulário de contacto.
-
-Tom: sofisticado mas acolhedor.`}
+Design moderno, cores quentes (laranja e castanho). Incluir fotos, preços e botão WhatsApp para pedidos.`}
                 value={openBuildPrompt}
                 onChange={(e) => setOpenBuildPrompt(e.target.value)}
-                className="min-h-[250px]"
+                className="min-h-[200px]"
               />
-              <p className="text-xs text-muted-foreground">
-                💡 Dica: Quanto mais detalhes, melhor o resultado. Inclua: nome, serviços, cores, estilo, secções desejadas.
-              </p>
+              <p className="text-xs text-muted-foreground">💡 Quanto mais detalhes, melhor o resultado!</p>
             </div>
           );
         case 2:
           return (
             <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-semibold">Nome do Site</h3>
-                <p className="text-sm text-muted-foreground">Este será o nome visível no seu site</p>
+                <h3 className="text-lg font-semibold">Nome e Cliente</h3>
+                <p className="text-sm text-muted-foreground">Informações finais do site</p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
-                <Input 
-                  id="name" 
-                  placeholder="ex: BeautyLab, Clínica Saúde Total, etc." 
-                  value={websiteName} 
-                  onChange={(e) => setWebsiteName(e.target.value)} 
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome do Site *</Label>
+                  <Input id="name" placeholder="ex: Sabores de Lisboa" value={websiteName} onChange={(e) => setWebsiteName(e.target.value)} />
+                </div>
+                {clients && clients.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Associar a Cliente (opcional)</Label>
+                    <Select value={selectedClientId || ""} onValueChange={(v) => setSelectedClientId(v || null)}>
+                      <SelectTrigger><SelectValue placeholder="Sem cliente (site próprio)" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Sem cliente</SelectItem>
+                        {clients.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.name} {c.company && `(${c.company})`}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Vincule o site a um cliente para gestão centralizada</p>
+                  </div>
+                )}
               </div>
             </div>
           );
@@ -387,9 +366,7 @@ Tom: sofisticado mas acolhedor.`}
               </div>
               <div className="text-center space-y-2">
                 <h3 className="text-xl font-semibold">A Gerar o Seu Site com IA...</h3>
-                <p className="text-muted-foreground max-w-sm">
-                  Estamos a criar estrutura, conteúdo e design personalizados. Isto pode demorar alguns segundos.
-                </p>
+                <p className="text-muted-foreground max-w-sm">Estamos a criar estrutura, conteúdo e design personalizados.</p>
               </div>
             </div>
           );
@@ -404,43 +381,34 @@ Tom: sofisticado mas acolhedor.`}
                 <p className="text-muted-foreground">
                   O seu site <span className="font-medium text-foreground">{websiteName}</span> foi gerado.
                 </p>
-                <p className="text-sm text-muted-foreground">
-                  Pode editar tudo no editor visual.
-                </p>
               </div>
             </div>
           );
       }
     }
 
-    // Guided mode steps
+    // Guided mode
     switch (currentStep) {
       case 1:
         return (
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold">Tipo de Site</h3>
-              <p className="text-sm text-muted-foreground">Escolha o tipo de site</p>
+              <p className="text-sm text-muted-foreground">Escolha o tipo que melhor descreve o seu projeto</p>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {WEBSITE_TYPES.map((type) => (
                 <Card
                   key={type.id}
-                  className={cn(
-                    "cursor-pointer transition-all hover:border-primary/50",
-                    websiteType === type.id && "border-primary ring-2 ring-primary/20"
-                  )}
+                  className={cn("cursor-pointer transition-all hover:border-primary/50 hover:shadow-sm", websiteType === type.id && "border-primary ring-2 ring-primary/20")}
                   onClick={() => setWebsiteType(type.id)}
                 >
-                  <CardHeader className="p-4">
-                    <div className={cn(
-                      "w-10 h-10 rounded-lg flex items-center justify-center mb-2",
-                      websiteType === type.id ? "bg-primary/10 text-primary" : "bg-muted"
-                    )}>
+                  <CardHeader className="p-3">
+                    <div className={cn("w-9 h-9 rounded-lg flex items-center justify-center mb-2", websiteType === type.id ? "bg-primary/10 text-primary" : "bg-muted")}>
                       {type.icon}
                     </div>
-                    <CardTitle className="text-sm">{type.title}</CardTitle>
-                    <CardDescription className="text-xs">{type.description}</CardDescription>
+                    <CardTitle className="text-xs">{type.title}</CardTitle>
+                    <CardDescription className="text-[10px]">{type.description}</CardDescription>
                   </CardHeader>
                 </Card>
               ))}
@@ -453,22 +421,16 @@ Tom: sofisticado mas acolhedor.`}
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold">Categoria (Opcional)</h3>
-              <p className="text-sm text-muted-foreground">Selecione o nicho ou avance sem selecionar</p>
+              <p className="text-sm text-muted-foreground">Selecione o nicho ou avance</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {TEMPLATE_CATEGORIES.map((cat) => {
                 const Icon = getCategoryIcon(cat.icon);
                 const isSelected = selectedCategory === cat.id;
                 return (
-                  <Card
-                    key={cat.id}
-                    className={cn("cursor-pointer transition-all hover:border-primary/50", isSelected && "border-primary ring-2 ring-primary/20")}
-                    onClick={() => setSelectedCategory(isSelected ? null : cat.id)}
-                  >
+                  <Card key={cat.id} className={cn("cursor-pointer transition-all hover:border-primary/50", isSelected && "border-primary ring-2 ring-primary/20")} onClick={() => setSelectedCategory(isSelected ? null : cat.id)}>
                     <CardHeader className="p-4">
-                      <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center mb-2", isSelected ? "bg-primary/10 text-primary" : "bg-muted")}>
-                        <Icon className="h-5 w-5" />
-                      </div>
+                      <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center mb-2", isSelected ? "bg-primary/10 text-primary" : "bg-muted")}><Icon className="h-5 w-5" /></div>
                       <CardTitle className="text-sm">{cat.name}</CardTitle>
                       <CardDescription className="text-xs">{cat.description}</CardDescription>
                     </CardHeader>
@@ -493,15 +455,10 @@ Tom: sofisticado mas acolhedor.`}
                 </Button>
               )}
             </div>
-            
             {showPreview && selectedTemplate && (
               <div className="border rounded-lg overflow-hidden bg-white">
                 <div className="flex items-center gap-2 p-2 border-b bg-muted/50">
-                  <div className="flex gap-1">
-                    <div className="w-2.5 h-2.5 rounded-full bg-destructive" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
-                    <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                  </div>
+                  <div className="flex gap-1"><div className="w-2.5 h-2.5 rounded-full bg-destructive" /><div className="w-2.5 h-2.5 rounded-full bg-yellow-500" /><div className="w-2.5 h-2.5 rounded-full bg-green-500" /></div>
                   <span className="text-xs text-muted-foreground flex-1 text-center">{selectedTemplate.name}</span>
                 </div>
                 <div className="max-h-[250px] overflow-y-auto">
@@ -511,17 +468,12 @@ Tom: sofisticado mas acolhedor.`}
                 </div>
               </div>
             )}
-            
             {filteredTemplates.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">Nenhum template disponível.</p>
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 {filteredTemplates.map((tmpl) => (
-                  <Card
-                    key={tmpl.id}
-                    className={cn("cursor-pointer transition-all hover:border-primary/50", selectedTemplate?.id === tmpl.id && "border-primary ring-2 ring-primary/20")}
-                    onClick={() => { setSelectedTemplate(tmpl); setShowPreview(true); }}
-                  >
+                  <Card key={tmpl.id} className={cn("cursor-pointer transition-all hover:border-primary/50", selectedTemplate?.id === tmpl.id && "border-primary ring-2 ring-primary/20")} onClick={() => { setSelectedTemplate(tmpl); setShowPreview(true); }}>
                     <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-t-lg" />
                     <CardHeader className="p-3">
                       <CardTitle className="text-sm">{tmpl.name}</CardTitle>
@@ -538,18 +490,10 @@ Tom: sofisticado mas acolhedor.`}
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">Descreva o Seu Site</h3>
-              <p className="text-sm text-muted-foreground">
-                <Sparkles className="inline-block h-4 w-4 mr-1 text-primary" />
-                A IA irá gerar conteúdo personalizado
-              </p>
+              <h3 className="text-lg font-semibold">Descreva o Seu Negócio</h3>
+              <p className="text-sm text-muted-foreground"><Sparkles className="inline-block h-4 w-4 mr-1 text-primary" />A IA irá gerar conteúdo personalizado</p>
             </div>
-            <Textarea
-              placeholder="Descreva o seu negócio, serviços, tom desejado..."
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="min-h-[150px]"
-            />
+            <Textarea placeholder="Descreva o seu negócio, serviços, tom desejado..." value={prompt} onChange={(e) => setPrompt(e.target.value)} className="min-h-[120px]" />
           </div>
         );
 
@@ -557,90 +501,77 @@ Tom: sofisticado mas acolhedor.`}
         return (
           <div className="space-y-4">
             <div>
-              <h3 className="text-lg font-semibold">Nome do Site</h3>
-              <p className="text-sm text-muted-foreground">Este será o nome visível no seu site</p>
+              <h3 className="text-lg font-semibold">Nome e Cliente</h3>
+              <p className="text-sm text-muted-foreground">Informações finais</p>
             </div>
-            <Input placeholder="ex: Clínica Saúde Total" value={websiteName} onChange={(e) => setWebsiteName(e.target.value)} />
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Nome do Site *</Label>
+                <Input id="name" placeholder="ex: Clínica Saúde Total" value={websiteName} onChange={(e) => setWebsiteName(e.target.value)} />
+              </div>
+              {clients && clients.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Associar a Cliente (opcional)</Label>
+                  <Select value={selectedClientId || ""} onValueChange={(v) => setSelectedClientId(v || null)}>
+                    <SelectTrigger><SelectValue placeholder="Sem cliente (site próprio)" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Sem cliente</SelectItem>
+                      {clients.map((c) => (<SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </div>
         );
 
       case 6:
         return (
           <div className="flex flex-col items-center justify-center py-12 space-y-6">
-            <div className="relative">
-              <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
-                <Loader2 className="h-10 w-10 text-primary animate-spin" />
-              </div>
-              <Sparkles className="absolute -top-1 -right-1 h-6 w-6 text-primary animate-pulse" />
-            </div>
-            <div className="text-center space-y-2">
-              <h3 className="text-xl font-semibold">A Gerar Conteúdo com IA...</h3>
-              <p className="text-muted-foreground max-w-sm">Estamos a criar textos personalizados.</p>
-            </div>
+            <div className="relative"><div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center"><Loader2 className="h-10 w-10 text-primary animate-spin" /></div><Sparkles className="absolute -top-1 -right-1 h-6 w-6 text-primary animate-pulse" /></div>
+            <div className="text-center space-y-2"><h3 className="text-xl font-semibold">A Gerar o Seu Site...</h3><p className="text-muted-foreground">Isto pode demorar alguns segundos.</p></div>
           </div>
         );
 
       case 7:
         return (
           <div className="flex flex-col items-center justify-center py-8 space-y-4">
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
-              <CheckCircle2 className="h-8 w-8 text-primary" />
-            </div>
-            <div className="text-center space-y-2">
-              <h3 className="text-xl font-semibold">Site Criado com Sucesso!</h3>
-              <p className="text-muted-foreground">O seu site <span className="font-medium text-foreground">{websiteName}</span> está pronto.</p>
-            </div>
+            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center"><CheckCircle2 className="h-8 w-8 text-primary" /></div>
+            <div className="text-center space-y-2"><h3 className="text-xl font-semibold">Site Criado! ✨</h3><p className="text-muted-foreground">O seu site <span className="font-medium text-foreground">{websiteName}</span> está pronto.</p></div>
           </div>
         );
-
-      default:
-        return null;
     }
   };
 
   const isGeneratingStep = currentStep === generatingStepIndex;
   const isSuccessStep = currentStep === successStepIndex;
-  const isLastInputStep = currentStep === nameStepIndex;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className={cn(
-        "max-h-[90vh] flex flex-col transition-all duration-300",
-        showPreview && buildMode === "guided" && currentStep === 3 ? "max-w-4xl" : "max-w-2xl"
-      )}>
+    <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Criar Novo Site</DialogTitle>
-          <DialogDescription>
-            <Sparkles className="inline-block h-4 w-4 mr-1" />
-            {buildMode === "open" ? "Descreva tudo e a IA cria automaticamente" : "Gere o seu site com IA"}
-          </DialogDescription>
+          <DialogDescription>Crie um site profissional com IA</DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 flex-1 overflow-hidden flex flex-col">
-          <Stepper steps={STEPS} currentStep={currentStep} className="mb-6" />
-          <ScrollArea className="flex-1 pr-4">{renderStep()}</ScrollArea>
-        </div>
+        <div className="px-2 py-4"><Stepper steps={STEPS} currentStep={currentStep} /></div>
+
+        <ScrollArea className="flex-1 px-2">{renderStep()}</ScrollArea>
 
         <div className="flex justify-between pt-4 border-t">
-          {!isGeneratingStep && !isSuccessStep ? (
-            <>
-              <Button variant="outline" onClick={handleBack} disabled={currentStep === 0}>Voltar</Button>
-              {isLastInputStep ? (
-                <Button onClick={handleCreate} disabled={!canProceed() || isGenerating}>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  {buildMode === "open" ? "Gerar Site ✨" : "Gerar com IA"}
-                </Button>
-              ) : (
-                <Button onClick={handleNext} disabled={!canProceed()}>Continuar</Button>
-              )}
-            </>
-          ) : isGeneratingStep ? (
-            <div className="w-full text-center text-sm text-muted-foreground">Por favor aguarde...</div>
-          ) : (
-            <>
-              <Button variant="outline" onClick={handleClose}>Ver Sites</Button>
+          {currentStep > 0 && !isGeneratingStep && !isSuccessStep ? (
+            <Button variant="outline" onClick={handleBack}>Voltar</Button>
+          ) : (<div />)}
+          
+          {isSuccessStep ? (
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={handleClose}>Fechar</Button>
               <Button onClick={handleOpenEditor}>Editar Site</Button>
-            </>
+            </div>
+          ) : isGeneratingStep ? null : currentStep === nameStepIndex ? (
+            <Button onClick={handleCreate} disabled={!canProceed() || isGenerating}>{isGenerating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />A Gerar...</> : <><Sparkles className="h-4 w-4 mr-2" />Gerar Site</>}</Button>
+          ) : (
+            <Button onClick={handleNext} disabled={!canProceed()}>Seguinte</Button>
           )}
         </div>
       </DialogContent>

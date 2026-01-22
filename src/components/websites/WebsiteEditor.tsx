@@ -125,6 +125,7 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
   const [showAIEdit, setShowAIEdit] = useState(false);
   const [aiInstruction, setAiInstruction] = useState("");
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
+  const [showAIChat, setShowAIChat] = useState(false);
   
   // Embed config state
   const [embedConfig, setEmbedConfig] = useState<EmbedConfig>(
@@ -142,6 +143,13 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingFor, setUploadingFor] = useState<{ sectionId: string; field: string } | null>(null);
+
+  // Handle AI chat template updates
+  const handleAIChatUpdate = (newTemplate: WebsiteTemplate) => {
+    setEditableTemplate(newTemplate);
+    setHasChanges(true);
+  };
+
 
   const updateTemplate = (updates: Partial<WebsiteTemplate>) => {
     setEditableTemplate((prev) => ({ ...prev, ...updates }));
@@ -990,6 +998,26 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* AI Chat */}
+      <EditorAIChat
+        template={editableTemplate}
+        websiteName={websiteName}
+        onTemplateUpdate={handleAIChatUpdate}
+        isOpen={showAIChat}
+        onClose={() => setShowAIChat(false)}
+      />
+
+      {/* AI Chat Toggle Button */}
+      {!showAIChat && (
+        <button
+          onClick={() => setShowAIChat(true)}
+          className="fixed bottom-4 left-4 z-40 w-14 h-14 rounded-full bg-gradient-to-r from-primary to-primary/80 text-white shadow-lg flex items-center justify-center hover:scale-110 transition-transform"
+          title="Editar com IA"
+        >
+          <Sparkles className="w-6 h-6" />
+        </button>
+      )}
     </div>
   );
 }
