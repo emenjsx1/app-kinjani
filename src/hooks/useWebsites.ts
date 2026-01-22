@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { WebsiteTemplate } from '@/lib/website-templates';
 import { EmbedConfig } from '@/components/websites/WebsiteEditor';
@@ -37,7 +37,7 @@ export function useWebsites() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchWebsites = async () => {
+  const fetchWebsites = useCallback(async () => {
     try {
       setIsLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
@@ -68,9 +68,9 @@ export function useWebsites() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const createWebsite = async (website: {
+  const createWebsite = useCallback(async (website: {
     name: string;
     template?: string;
     status?: 'active' | 'draft' | 'inactive';
@@ -106,9 +106,12 @@ export function useWebsites() {
       setError(err instanceof Error ? err.message : 'Failed to create website');
       return null;
     }
-  };
+  }, []);
 
-  const updateWebsite = async (id: string, updates: Partial<Omit<Website, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
+  const updateWebsite = useCallback(async (
+    id: string,
+    updates: Partial<Omit<Website, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
+  ) => {
     try {
       const updateData: Record<string, unknown> = { ...updates };
       if (updates.config !== undefined) {
@@ -136,9 +139,9 @@ export function useWebsites() {
       setError(err instanceof Error ? err.message : 'Failed to update website');
       return null;
     }
-  };
+  }, []);
 
-  const deleteWebsite = async (id: string) => {
+  const deleteWebsite = useCallback(async (id: string) => {
     try {
       const { error } = await supabase
         .from('websites')
@@ -153,9 +156,9 @@ export function useWebsites() {
       setError(err instanceof Error ? err.message : 'Failed to delete website');
       return false;
     }
-  };
+  }, []);
 
-  const getWebsite = async (id: string) => {
+  const getWebsite = useCallback(async (id: string) => {
     try {
       const { data, error } = await supabase
         .from('websites')
@@ -174,9 +177,9 @@ export function useWebsites() {
     } catch (err) {
       return null;
     }
-  };
+  }, []);
 
-  const duplicateWebsite = async (website: Website) => {
+  const duplicateWebsite = useCallback(async (website: Website) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
@@ -207,7 +210,7 @@ export function useWebsites() {
       setError(err instanceof Error ? err.message : 'Failed to duplicate website');
       return null;
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchWebsites();
@@ -217,7 +220,7 @@ export function useWebsites() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchWebsites]);
 
   return {
     websites,
