@@ -1,0 +1,11 @@
+export { CounterWidget } from "./CounterWidget";
+export { AccordionWidget } from "./AccordionWidget";
+export { TabsWidget } from "./TabsWidget";
+export { SliderWidget } from "./SliderWidget";
+export { PricingTableWidget } from "./PricingTableWidget";
+export { VideoWidget } from "./VideoWidget";
+export { ImageTextWidget } from "./ImageTextWidget";
+export { IconBoxWidget } from "./IconBoxWidget";
+export { DividerWidget } from "./DividerWidget";
+export { SpacerWidget } from "./SpacerWidget";
+export * from "./WidgetTypes";
