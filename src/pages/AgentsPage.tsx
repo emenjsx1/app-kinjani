@@ -29,12 +29,14 @@ import { toast } from "sonner";
 import { useAgents, Agent } from "@/hooks/useAgents";
 import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useProfile } from "@/hooks/useProfile";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function AgentsPage() {
   const navigate = useNavigate();
   const { agents, isLoading, createAgent, deleteAgent } = useAgents();
   const { instances } = useWhatsAppInstances();
+  const { profile } = useProfile();
   const [search, setSearch] = useState("");
   const [wizardOpen, setWizardOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -116,7 +118,7 @@ export default function AgentsPage() {
 
   if (isLoading) {
     return (
-      <AppLayout pageTitle="Agentes" credits={1250}>
+      <AppLayout pageTitle="Agentes" credits={profile?.credits_balance ?? 0}>
         <div className="flex items-center justify-center h-64">
           <LoadingSpinner size="lg" />
         </div>
@@ -125,7 +127,7 @@ export default function AgentsPage() {
   }
 
   return (
-    <AppLayout pageTitle="Agentes" credits={1250}>
+    <AppLayout pageTitle="Agentes" credits={profile?.credits_balance ?? 0}>
       <div className="space-y-6">
         {/* Ações do Cabeçalho */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

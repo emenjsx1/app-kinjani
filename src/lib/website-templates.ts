@@ -32,7 +32,7 @@ export interface WebsiteTemplate {
 
 export interface WebsiteSection {
   id: string;
-  type: "hero" | "about" | "services" | "testimonials" | "contact" | "cta" | "features" | "gallery" | "team" | "faq" | "pricing";
+  type: "hero" | "about" | "services" | "testimonials" | "contact" | "cta" | "features" | "gallery" | "team" | "faq" | "pricing" | "counter" | "accordion" | "tabs" | "slider" | "pricing-table" | "video" | "divider" | "spacer" | "image-text" | "icon-box";
   title: string;
   content: Record<string, string>;
   enabled: boolean;

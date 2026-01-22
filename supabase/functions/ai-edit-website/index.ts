@@ -35,27 +35,44 @@ Instrução do utilizador: "${instruction}"
 
 Devolve o JSON com a alteração aplicada.`;
 
+    console.log("Calling AI gateway with instruction:", instruction);
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      headers: { 
+        "Authorization": `Bearer ${apiKey}`, 
+        "Content-Type": "application/json" 
+      },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
         ],
         max_tokens: 8000,
+        temperature: 0.7,
       }),
     });
 
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
+    console.log("AI response status:", response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("AI API error:", errorText);
+      throw new Error(`API error: ${response.status} - ${errorText}`);
+    }
 
     const data = await response.json();
+    console.log("AI response received");
+    
     const content = data.choices?.[0]?.message?.content || "";
 
     // Extract JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No valid JSON in response");
+    if (!jsonMatch) {
+      console.error("No valid JSON in response:", content);
+      throw new Error("No valid JSON in response");
+    }
 
     const result = JSON.parse(jsonMatch[0]);
 
@@ -63,6 +80,7 @@ Devolve o JSON com a alteração aplicada.`;
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
+    console.error("Edge function error:", error);
     return new Response(JSON.stringify({ success: false, error: error.message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

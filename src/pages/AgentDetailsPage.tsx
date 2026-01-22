@@ -18,6 +18,7 @@ import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function AgentDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +26,7 @@ export default function AgentDetailsPage() {
   const navigate = useNavigate();
   const { getAgent, updateAgent } = useAgents();
   const { instances, isLoading: isLoadingInstances, refetch: fetchInstances } = useWhatsAppInstances();
+  const { profile } = useProfile();
   
   const [agent, setAgent] = useState<Agent | null>(null);
   const [isActive, setIsActive] = useState(true);
@@ -155,7 +157,7 @@ export default function AgentDetailsPage() {
 
   if (isLoading) {
     return (
-      <AppLayout pageTitle="Carregando..." credits={1250}>
+      <AppLayout pageTitle="Carregando..." credits={profile?.credits_balance ?? 0}>
         <div className="flex items-center justify-center h-64">
           <LoadingSpinner size="lg" />
         </div>
@@ -165,7 +167,7 @@ export default function AgentDetailsPage() {
 
   if (!agent) {
     return (
-      <AppLayout pageTitle="Agente Não Encontrado" credits={1250}>
+      <AppLayout pageTitle="Agente Não Encontrado" credits={profile?.credits_balance ?? 0}>
         <div className="flex flex-col items-center justify-center py-12">
           <p className="text-muted-foreground mb-4">Agente não encontrado</p>
           <Button onClick={() => navigate("/agents")}>Voltar aos Agentes</Button>
@@ -175,7 +177,7 @@ export default function AgentDetailsPage() {
   }
 
   return (
-    <AppLayout pageTitle={agent.name} credits={1250}>
+    <AppLayout pageTitle={agent.name} credits={profile?.credits_balance ?? 0}>
       <div className="space-y-6">
         {/* Cabeçalho */}
         <div className="flex items-center gap-4">

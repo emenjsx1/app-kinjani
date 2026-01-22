@@ -20,10 +20,12 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 import { useWebsites, Website } from "@/hooks/useWebsites";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { useProfile } from "@/hooks/useProfile";
 
 export default function WebsitesPage() {
   const navigate = useNavigate();
   const { websites, isLoading, createWebsite, deleteWebsite, duplicateWebsite } = useWebsites();
+  const { profile } = useProfile();
   const [search, setSearch] = useState("");
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -123,7 +125,7 @@ export default function WebsitesPage() {
 
   if (isLoading) {
     return (
-      <AppLayout pageTitle="Sites" credits={1250}>
+      <AppLayout pageTitle="Sites" credits={profile?.credits_balance ?? 0}>
         <div className="flex items-center justify-center h-64">
           <LoadingSpinner size="lg" />
         </div>
@@ -132,7 +134,7 @@ export default function WebsitesPage() {
   }
 
   return (
-    <AppLayout pageTitle="Sites" credits={1250}>
+    <AppLayout pageTitle="Sites" credits={profile?.credits_balance ?? 0}>
       <div className="space-y-6">
         {/* Ações do Cabeçalho */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

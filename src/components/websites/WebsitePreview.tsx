@@ -1,11 +1,23 @@
 import { forwardRef, useState } from "react";
-import { MessageCircle, Phone, Mail, MapPin, Star, Check, ChevronRight, Send, User, ArrowRight, X, ZoomIn } from "lucide-react";
+import { MessageCircle, Phone, Mail, MapPin, Star, Check, ChevronRight, Send, User, ArrowRight, X, ZoomIn, Play } from "lucide-react";
 import { WebsiteTemplate, WebsiteSection } from "@/lib/website-templates";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { 
+  CounterWidget, 
+  AccordionWidget, 
+  TabsWidget, 
+  SliderWidget, 
+  PricingTableWidget,
+  VideoWidget,
+  ImageTextWidget,
+  IconBoxWidget,
+  DividerWidget,
+  SpacerWidget
+} from "./widgets";
 
 interface EmbedConfig {
   enabled: boolean;
@@ -750,6 +762,106 @@ export const WebsitePreview = forwardRef<HTMLDivElement, WebsitePreviewProps>(fu
               </div>
             </div>
           </section>
+        );
+
+      // New Widget Types
+      case "counter":
+        return (
+          <CounterWidget
+            key={section.id}
+            content={section.content}
+            primaryColor={primaryColor}
+            font={template.font}
+          />
+        );
+
+      case "accordion":
+        return (
+          <AccordionWidget
+            key={section.id}
+            content={section.content}
+            primaryColor={primaryColor}
+            font={template.font}
+          />
+        );
+
+      case "tabs":
+        return (
+          <TabsWidget
+            key={section.id}
+            content={section.content}
+            primaryColor={primaryColor}
+            font={template.font}
+          />
+        );
+
+      case "slider":
+        return (
+          <SliderWidget
+            key={section.id}
+            content={section.content}
+            primaryColor={primaryColor}
+            font={template.font}
+          />
+        );
+
+      case "pricing-table":
+        return (
+          <PricingTableWidget
+            key={section.id}
+            content={section.content}
+            primaryColor={primaryColor}
+            font={template.font}
+            onCtaClick={() => handleCtaClick()}
+          />
+        );
+
+      case "video":
+        return (
+          <VideoWidget
+            key={section.id}
+            content={section.content}
+            primaryColor={primaryColor}
+            font={template.font}
+          />
+        );
+
+      case "image-text":
+        return (
+          <ImageTextWidget
+            key={section.id}
+            content={section.content}
+            primaryColor={primaryColor}
+            font={template.font}
+            onCtaClick={() => handleCtaClick()}
+          />
+        );
+
+      case "icon-box":
+        return (
+          <IconBoxWidget
+            key={section.id}
+            content={section.content}
+            primaryColor={primaryColor}
+            font={template.font}
+          />
+        );
+
+      case "divider":
+        return (
+          <DividerWidget
+            key={section.id}
+            content={section.content}
+            primaryColor={primaryColor}
+          />
+        );
+
+      case "spacer":
+        return (
+          <SpacerWidget
+            key={section.id}
+            content={section.content}
+          />
         );
 
       default:
