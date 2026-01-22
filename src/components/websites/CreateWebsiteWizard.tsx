@@ -57,6 +57,11 @@ const WEBSITE_TYPES = [
   },
 ];
 
+// Helper to get all templates for a type (used when no category is selected)
+const getAllTemplatesForType = (type: string) => {
+  return TEMPLATE_CATEGORIES.flatMap(cat => cat.templates).filter(t => t.type === type);
+};
+
 export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: CreateWebsiteWizardProps) {
   const navigate = useNavigate();
   const { generateContent, applySectionsContent, isGenerating } = useWebsiteAI();
@@ -96,9 +101,11 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
   };
 
   const handleCreate = async () => {
-    if (!selectedTemplate || !selectedCategory || !websiteType) return;
+    if (!selectedTemplate || !websiteType) return;
 
-    const category = TEMPLATE_CATEGORIES.find((c) => c.id === selectedCategory);
+    const category = selectedCategory 
+      ? TEMPLATE_CATEGORIES.find((c) => c.id === selectedCategory)
+      : TEMPLATE_CATEGORIES.find((c) => c.id === "blank");
     
     // Move to generating step
     setCurrentStep(5);
@@ -185,11 +192,12 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
     }
   };
 
+  // When category is selected, filter templates. Otherwise show all for the type.
   const filteredTemplates = selectedCategory
     ? TEMPLATE_CATEGORIES.find((c) => c.id === selectedCategory)?.templates.filter(
         (t) => t.type === websiteType
       ) || []
-    : [];
+    : getAllTemplatesForType(websiteType || "landing");
 
   const renderStep = () => {
     switch (currentStep) {
@@ -240,25 +248,39 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold">Template</h3>
-              <p className="text-sm text-muted-foreground">Escolha um template para começar</p>
+              <p className="text-sm text-muted-foreground">
+                {selectedCategory 
+                  ? "Escolha um template para começar" 
+                  : "Escolha um template (ou volte para selecionar uma categoria)"}
+              </p>
             </div>
             {filteredTemplates.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">Nenhum template disponível para esta combinação.</p>
+              <p className="text-center text-muted-foreground py-8">
+                Nenhum template disponível para esta combinação.
+              </p>
             ) : (
               <div className="grid grid-cols-2 gap-4">
-                {filteredTemplates.map((tmpl) => (
-                  <Card
-                    key={tmpl.id}
-                    className={cn("cursor-pointer transition-all hover:border-primary/50", selectedTemplate?.id === tmpl.id && "border-primary ring-2 ring-primary/20")}
-                    onClick={() => setSelectedTemplate(tmpl)}
-                  >
-                    <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-t-lg" />
-                    <CardHeader className="p-3">
-                      <CardTitle className="text-sm">{tmpl.name}</CardTitle>
-                      <CardDescription className="text-xs">{tmpl.description}</CardDescription>
-                    </CardHeader>
-                  </Card>
-                ))}
+                {filteredTemplates.map((tmpl) => {
+                  const categoryInfo = TEMPLATE_CATEGORIES.find(c => c.id === tmpl.categoryId);
+                  return (
+                    <Card
+                      key={tmpl.id}
+                      className={cn("cursor-pointer transition-all hover:border-primary/50", selectedTemplate?.id === tmpl.id && "border-primary ring-2 ring-primary/20")}
+                      onClick={() => setSelectedTemplate(tmpl)}
+                    >
+                      <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-t-lg" />
+                      <CardHeader className="p-3">
+                        <CardTitle className="text-sm">{tmpl.name}</CardTitle>
+                        <CardDescription className="text-xs">
+                          {tmpl.description}
+                          {!selectedCategory && categoryInfo && (
+                            <span className="block mt-1 text-primary/70">{categoryInfo.name}</span>
+                          )}
+                        </CardDescription>
+                      </CardHeader>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </div>
