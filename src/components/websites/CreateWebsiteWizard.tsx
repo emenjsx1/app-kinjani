@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Globe, Building2, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
+import { Globe, Building2, CheckCircle2, Sparkles, Loader2, Eye, EyeOff } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,7 @@ import { Stepper, CardSelect } from "@/components/ui/stepper";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TEMPLATE_CATEGORIES, WebsiteTemplate, getCategoryIcon } from "@/lib/website-templates";
+import { WebsitePreview } from "@/components/websites/WebsitePreview";
 import { useWebsiteAI } from "@/hooks/useWebsiteAI";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,7 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
   const [prompt, setPrompt] = useState("");
   const [websiteName, setWebsiteName] = useState("");
   const [createdWebsiteId, setCreatedWebsiteId] = useState<string | null>(null);
+  const [showPreview, setShowPreview] = useState(false);
 
   const resetWizard = () => {
     setCurrentStep(0);
@@ -81,6 +83,7 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
     setPrompt("");
     setWebsiteName("");
     setCreatedWebsiteId(null);
+    setShowPreview(false);
   };
 
   const handleClose = () => {
@@ -246,14 +249,61 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
       case 2:
         return (
           <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold">Template</h3>
-              <p className="text-sm text-muted-foreground">
-                {selectedCategory 
-                  ? "Escolha um template para começar" 
-                  : "Escolha um template (ou volte para selecionar uma categoria)"}
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold">Template</h3>
+                <p className="text-sm text-muted-foreground">
+                  {selectedCategory 
+                    ? "Escolha um template para começar" 
+                    : "Escolha um template (ou volte para selecionar uma categoria)"}
+                </p>
+              </div>
+              {selectedTemplate && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPreview(!showPreview)}
+                >
+                  {showPreview ? (
+                    <>
+                      <EyeOff className="h-4 w-4 mr-2" />
+                      Ocultar Preview
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="h-4 w-4 mr-2" />
+                      Ver Preview
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
+            
+            {/* Live Preview */}
+            {showPreview && selectedTemplate && (
+              <div className="border rounded-lg overflow-hidden bg-white">
+                <div className="flex items-center gap-2 p-2 border-b bg-muted/50">
+                  <div className="flex gap-1">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
+                  </div>
+                  <span className="text-xs text-muted-foreground flex-1 text-center">
+                    Pré-visualização: {selectedTemplate.name}
+                  </span>
+                </div>
+                <div className="max-h-[300px] overflow-y-auto">
+                  <div className="transform scale-[0.5] origin-top-left w-[200%]">
+                    <WebsitePreview 
+                      template={selectedTemplate} 
+                      websiteName={websiteName || "O Seu Site"}
+                      showChatWidget={false}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {filteredTemplates.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">
                 Nenhum template disponível para esta combinação.
@@ -266,7 +316,10 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
                     <Card
                       key={tmpl.id}
                       className={cn("cursor-pointer transition-all hover:border-primary/50", selectedTemplate?.id === tmpl.id && "border-primary ring-2 ring-primary/20")}
-                      onClick={() => setSelectedTemplate(tmpl)}
+                      onClick={() => {
+                        setSelectedTemplate(tmpl);
+                        setShowPreview(true);
+                      }}
                     >
                       <div className="aspect-video bg-gradient-to-br from-primary/20 to-secondary/20 rounded-t-lg" />
                       <CardHeader className="p-3">
@@ -375,7 +428,10 @@ Queremos transmitir confiança e expertise.`}
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className={cn(
+        "max-h-[90vh] flex flex-col transition-all duration-300",
+        showPreview && currentStep === 2 ? "max-w-4xl" : "max-w-2xl"
+      )}>
         <DialogHeader>
           <DialogTitle>Criar Novo Site</DialogTitle>
           <DialogDescription>
