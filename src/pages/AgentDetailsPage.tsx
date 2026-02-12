@@ -120,7 +120,30 @@ export default function AgentDetailsPage() {
     
     if (result) {
       setAgent(result);
-      toast.success("Instância WhatsApp atualizada com sucesso");
+      
+      // Also reconfigure webhook on Evolution API
+      if (selectedInstanceId) {
+        const selectedInstance = instances.find(i => i.id === selectedInstanceId);
+        if (selectedInstance?.instance_key) {
+          try {
+            const res = await fetch(
+              `https://mpxsivfiltwvnvqtixuo.supabase.co/functions/v1/whatsapp-agent?action=setup-webhook&instance=${selectedInstance.instance_key}`
+            );
+            const webhookResult = await res.json();
+            console.log('Webhook reconfigured:', webhookResult);
+            if (webhookResult.success) {
+              toast.success("Instância WhatsApp e webhook configurados com sucesso");
+            } else {
+              toast.warning("Instância salva, mas houve um problema ao configurar o webhook");
+            }
+          } catch (e) {
+            console.error('Error setting up webhook:', e);
+            toast.warning("Instância salva, mas não foi possível configurar o webhook");
+          }
+        }
+      } else {
+        toast.success("Instância WhatsApp atualizada com sucesso");
+      }
     } else {
       toast.error("Erro ao atualizar instância");
     }
