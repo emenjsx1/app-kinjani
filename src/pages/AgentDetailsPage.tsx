@@ -12,6 +12,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { CodeBlock } from "@/components/ui/code-block";
 import { ChatContainer } from "@/components/chat";
 import { AgentFlowVisual } from "@/components/agents/AgentFlowVisual";
+import { AutomationPanel } from "@/components/agents/AutomationPanel";
 import { useAgentChat } from "@/hooks/useAgentChat";
 import { useAgents, Agent } from "@/hooks/useAgents";
 import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
@@ -210,10 +211,17 @@ export default function AgentDetailsPage() {
         <Tabs defaultValue={defaultTab} className="space-y-4">
           <TabsList>
             <TabsTrigger value="settings">Definições</TabsTrigger>
+            {["disparo-email", "disparo-whatsapp", "scrapper-leads"].includes(agent.type_id || "") && (
+              <TabsTrigger value="automation">Executar</TabsTrigger>
+            )}
             <TabsTrigger value="flow">Fluxo</TabsTrigger>
             <TabsTrigger value="embed">Código Embed</TabsTrigger>
             <TabsTrigger value="test">Testar Agente</TabsTrigger>
           </TabsList>
+
+          <TabsContent value="automation" className="space-y-4">
+            <AutomationPanel agentTypeId={agent.type_id || ""} agentName={agent.name} />
+          </TabsContent>
 
           <TabsContent value="settings" className="space-y-4">
             {/* Instância WhatsApp */}
