@@ -23,3 +23,15 @@ verify_jwt = false
 
 [functions.user-api-keys]
 verify_jwt = false
+
+[functions.automation-email-blast]
+verify_jwt = false
+
+[functions.automation-whatsapp-blast]
+verify_jwt = false
+
+[functions.automation-scrape-leads]
+verify_jwt = false
+
+[functions.ai-edit-website]
+verify_jwt = false
