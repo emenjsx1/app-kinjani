@@ -75,8 +75,26 @@ const BUILD_MODES = [
 ];
 
 const getAllTemplatesForType = (type: string) => {
-  return TEMPLATE_CATEGORIES.flatMap(cat => cat.templates).filter(t => t.type === type || t.type === "landing");
+  // Map extended types to base template types - all non-standard types show all templates
+  const baseType = (type === "landing" || type === "institutional") ? type : null;
+  const allTemplates = TEMPLATE_CATEGORIES.flatMap(cat => cat.templates);
+  if (!baseType) return allTemplates; // Show all templates for non-standard types
+  return allTemplates.filter(t => t.type === baseType);
 };
+
+// Color palettes for variety
+const COLOR_PALETTES = [
+  { primary: "220 70% 50%", secondary: "200 60% 45%", accent: "340 80% 55%", background: "0 0% 100%", text: "220 30% 15%" },
+  { primary: "160 70% 40%", secondary: "140 60% 35%", accent: "45 100% 50%", background: "160 10% 98%", text: "160 40% 15%" },
+  { primary: "260 65% 55%", secondary: "240 55% 50%", accent: "30 90% 55%", background: "260 10% 98%", text: "260 40% 15%" },
+  { primary: "0 75% 50%", secondary: "20 70% 45%", accent: "45 100% 55%", background: "0 0% 100%", text: "0 30% 15%" },
+  { primary: "30 80% 50%", secondary: "15 70% 45%", accent: "200 60% 45%", background: "30 10% 98%", text: "30 30% 15%" },
+  { primary: "340 75% 50%", secondary: "320 65% 45%", accent: "200 70% 50%", background: "0 0% 100%", text: "340 30% 15%" },
+  { primary: "180 60% 40%", secondary: "200 50% 45%", accent: "340 80% 55%", background: "180 10% 98%", text: "180 40% 15%" },
+  { primary: "45 85% 50%", secondary: "30 75% 45%", accent: "220 70% 50%", background: "45 10% 98%", text: "45 40% 15%" },
+];
+
+const FONT_CHOICES = ["Inter", "Plus Jakarta Sans", "Playfair Display", "Montserrat", "Lato", "Open Sans"];
 
 const getBlankTemplate = (siteType: string): WebsiteTemplate => {
   // Different section configurations based on site type
@@ -99,6 +117,10 @@ const getBlankTemplate = (siteType: string): WebsiteTemplate => {
     content: {},
   }));
 
+  // Pick random colors and font for variety
+  const randomColors = COLOR_PALETTES[Math.floor(Math.random() * COLOR_PALETTES.length)];
+  const randomFont = FONT_CHOICES[Math.floor(Math.random() * FONT_CHOICES.length)];
+
   return {
     id: "open-build-generated",
     name: "Site Gerado por IA",
@@ -107,8 +129,8 @@ const getBlankTemplate = (siteType: string): WebsiteTemplate => {
     categoryId: "generated",
     type: "landing",
     thumbnail: "/placeholder.svg",
-    colors: { primary: "220 70% 50%", secondary: "200 60% 45%", accent: "340 80% 55%", background: "0 0% 100%", text: "220 30% 15%" },
-    font: "Inter",
+    colors: randomColors,
+    font: randomFont,
     sections,
   };
 };
@@ -267,8 +289,8 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
     }
   };
 
-  const filteredTemplates = selectedCategory
-    ? TEMPLATE_CATEGORIES.find((c) => c.id === selectedCategory)?.templates.filter((t) => t.type === websiteType) || []
+const filteredTemplates = selectedCategory
+    ? TEMPLATE_CATEGORIES.find((c) => c.id === selectedCategory)?.templates || []
     : getAllTemplatesForType(websiteType || "landing");
 
   const renderStep = () => {

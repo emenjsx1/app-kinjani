@@ -24,7 +24,7 @@ export default function WebsiteEditorPage() {
   const [template, setTemplate] = useState<WebsiteTemplate | null>(null);
   const [activeTab, setActiveTab] = useState("preview");
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
