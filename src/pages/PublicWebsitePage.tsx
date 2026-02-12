@@ -25,6 +25,60 @@ const parseConfig = (config: Json | null): WebsiteConfig | null => {
   return config as WebsiteConfig;
 };
 
+// Update document head with dynamic meta tags
+function useDocumentHead(template: WebsiteTemplate | null, websiteName: string) {
+  useEffect(() => {
+    if (!template) return;
+
+    // Title
+    document.title = websiteName || template.name || "Site";
+
+    // Favicon
+    if (template.faviconUrl) {
+      let link = document.querySelector("link[rel='icon']") as HTMLLinkElement;
+      if (!link) {
+        link = document.createElement("link");
+        link.rel = "icon";
+        document.head.appendChild(link);
+      }
+      link.href = template.faviconUrl;
+      link.type = "image/png";
+    }
+
+    // OG Image
+    if (template.ogImageUrl) {
+      const setMeta = (property: string, content: string) => {
+        let meta = document.querySelector(`meta[property='${property}']`) as HTMLMetaElement;
+        if (!meta) {
+          meta = document.createElement("meta");
+          meta.setAttribute("property", property);
+          document.head.appendChild(meta);
+        }
+        meta.content = content;
+      };
+      setMeta("og:image", template.ogImageUrl);
+      setMeta("og:title", websiteName || template.name || "");
+      setMeta("og:type", "website");
+
+      // Twitter
+      let twitterMeta = document.querySelector("meta[name='twitter:image']") as HTMLMetaElement;
+      if (!twitterMeta) {
+        twitterMeta = document.createElement("meta");
+        twitterMeta.name = "twitter:image";
+        document.head.appendChild(twitterMeta);
+      }
+      twitterMeta.content = template.ogImageUrl;
+    }
+
+    return () => {
+      // Restore defaults on unmount
+      document.title = "Kinjani AI";
+      const defaultFavicon = document.querySelector("link[rel='icon']") as HTMLLinkElement;
+      if (defaultFavicon) defaultFavicon.href = "/favicon.png";
+    };
+  }, [template, websiteName]);
+}
+
 export default function PublicWebsitePage() {
   const { siteId } = useParams();
   const [websiteName, setWebsiteName] = useState<string>("");
@@ -32,6 +86,8 @@ export default function PublicWebsitePage() {
   const [embedConfig, setEmbedConfig] = useState<EmbedConfig | undefined>();
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  useDocumentHead(template, websiteName);
 
   useEffect(() => {
     const loadWebsite = async () => {
@@ -58,7 +114,6 @@ export default function PublicWebsitePage() {
         
         const config = parseConfig(data.config);
         
-        // Use customTemplate if it exists, otherwise fall back to catalog template
         if (config?.customTemplate) {
           setTemplate(config.customTemplate);
         } else if (config?.templateId) {
@@ -68,7 +123,6 @@ export default function PublicWebsitePage() {
           }
         }
 
-        // Set embed config if available
         if (config?.embedConfig) {
           setEmbedConfig(config.embedConfig);
         }

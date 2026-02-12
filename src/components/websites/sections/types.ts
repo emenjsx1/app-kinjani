@@ -6,6 +6,7 @@ export interface SectionProps {
   secondaryColor: string;
   font: string;
   variant?: number;
+  bannerUrl?: string;
   onCtaClick?: (action?: string) => void;
   scrollToSection?: (id: string) => void;
 }

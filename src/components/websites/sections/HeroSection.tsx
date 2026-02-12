@@ -1,14 +1,17 @@
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { SectionProps } from "./types";
 
-export function HeroSection({ section, primaryColor, secondaryColor, font, variant = 1, onCtaClick, scrollToSection }: SectionProps) {
+export function HeroSection({ section, primaryColor, secondaryColor, font, variant = 1, bannerUrl, onCtaClick, scrollToSection }: SectionProps) {
   const c = section.content;
+
+  const bgStyle = bannerUrl
+    ? { backgroundImage: `linear-gradient(135deg, ${primaryColor}cc 0%, ${secondaryColor}cc 100%), url(${bannerUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+    : { background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` };
 
   // Variant 1: Classic centered gradient
   if (variant === 1) {
     return (
-      <section id={`section-${section.id}`} className="relative py-20 px-6 text-center"
-        style={{ background: `linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%)` }}>
+      <section id={`section-${section.id}`} className="relative py-20 px-6 text-center" style={bgStyle}>
         <div className="max-w-3xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4" style={{ fontFamily: font }}>{c.headline}</h1>
           <p className="text-lg text-white/90 mb-8" style={{ fontFamily: font }}>{c.subheadline}</p>
@@ -30,9 +33,12 @@ export function HeroSection({ section, primaryColor, secondaryColor, font, varia
 
   // Variant 2: Left-aligned with decorative shapes
   if (variant === 2) {
+    const bg2Style = bannerUrl
+      ? { backgroundImage: `linear-gradient(160deg, ${primaryColor}cc 0%, ${secondaryColor}cc 60%, ${primaryColor}cc 100%), url(${bannerUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+      : { background: `linear-gradient(160deg, ${primaryColor} 0%, ${secondaryColor} 60%, ${primaryColor} 100%)` };
+
     return (
-      <section id={`section-${section.id}`} className="relative py-24 px-6 overflow-hidden"
-        style={{ background: `linear-gradient(160deg, ${primaryColor} 0%, ${secondaryColor} 60%, ${primaryColor} 100%)` }}>
+      <section id={`section-${section.id}`} className="relative py-24 px-6 overflow-hidden" style={bg2Style}>
         {/* Decorative circles */}
         <div className="absolute top-10 right-10 w-64 h-64 rounded-full opacity-10" style={{ backgroundColor: "white" }} />
         <div className="absolute bottom-10 left-20 w-40 h-40 rounded-full opacity-10" style={{ backgroundColor: "white" }} />
@@ -62,12 +68,18 @@ export function HeroSection({ section, primaryColor, secondaryColor, font, varia
   }
 
   // Variant 3: Split layout with pattern
+  const bg3Style = bannerUrl
+    ? { backgroundImage: `linear-gradient(135deg, ${primaryColor}ee 0%, ${primaryColor}dd 100%), url(${bannerUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
+    : { backgroundColor: primaryColor };
+
   return (
-    <section id={`section-${section.id}`} className="relative min-h-[70vh] flex items-center overflow-hidden" style={{ backgroundColor: primaryColor }}>
+    <section id={`section-${section.id}`} className="relative min-h-[70vh] flex items-center overflow-hidden" style={bg3Style}>
       {/* Diagonal pattern bg */}
-      <div className="absolute inset-0 opacity-[0.07]" style={{
-        backgroundImage: `repeating-linear-gradient(45deg, white 0px, white 2px, transparent 2px, transparent 40px)`,
-      }} />
+      {!bannerUrl && (
+        <div className="absolute inset-0 opacity-[0.07]" style={{
+          backgroundImage: `repeating-linear-gradient(45deg, white 0px, white 2px, transparent 2px, transparent 40px)`,
+        }} />
+      )}
       <div className="max-w-6xl mx-auto px-6 py-20 relative z-10 grid md:grid-cols-2 gap-12 items-center w-full">
         <div>
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight" style={{ fontFamily: font }}>{c.headline}</h1>
