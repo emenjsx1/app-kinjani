@@ -621,7 +621,7 @@ export default function Index() {
             </Link>
             
             <p className="text-sm text-muted-foreground">
-              © 2024 KINJA AI. Todos os direitos reservados.
+              © 2025 KINJA AI. Todos os direitos reservados.
             </p>
             
             <div className="flex gap-6">

@@ -1,8 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { 
   Palette, Type, Layers, Image, Eye, Save, ChevronLeft, 
   Plus, GripVertical, Sparkles, Upload, Trash2, ImagePlus,
-  Coins, CheckCircle2, AlertCircle, Loader2, MessageCircle, Copy, Code
+  Coins, CheckCircle2, AlertCircle, Loader2, MessageCircle, Copy, Code,
+  Undo2, Redo2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -197,6 +198,8 @@ const createDefaultSection = (type: ExtendedSectionType, order: number): Website
   };
 };
 
+const MAX_HISTORY = 30;
+
 export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, niche = "", initialEmbedConfig }: WebsiteEditorProps) {
   const [editableTemplate, setEditableTemplate] = useState<WebsiteTemplate>({ ...template });
   const [activeTab, setActiveTab] = useState("sections");
@@ -208,6 +211,68 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
   const [aiInstruction, setAiInstruction] = useState("");
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
   const [showAIChat, setShowAIChat] = useState(false);
+
+  // Undo/Redo history
+  const [history, setHistory] = useState<WebsiteTemplate[]>([{ ...template }]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+  const isUndoRedoRef = useRef(false);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  // Push to history whenever editableTemplate changes (except during undo/redo)
+  useEffect(() => {
+    if (isUndoRedoRef.current) {
+      isUndoRedoRef.current = false;
+      return;
+    }
+    // Skip the initial render
+    if (JSON.stringify(editableTemplate) === JSON.stringify(history[historyIndex])) return;
+    
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push({ ...editableTemplate });
+    if (newHistory.length > MAX_HISTORY) newHistory.shift();
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  }, [editableTemplate]);
+
+  const handleUndo = useCallback(() => {
+    if (!canUndo) return;
+    isUndoRedoRef.current = true;
+    const newIndex = historyIndex - 1;
+    setHistoryIndex(newIndex);
+    setEditableTemplate({ ...history[newIndex] });
+    setHasChanges(true);
+  }, [canUndo, historyIndex, history]);
+
+  const handleRedo = useCallback(() => {
+    if (!canRedo) return;
+    isUndoRedoRef.current = true;
+    const newIndex = historyIndex + 1;
+    setHistoryIndex(newIndex);
+    setEditableTemplate({ ...history[newIndex] });
+    setHasChanges(true);
+  }, [canRedo, historyIndex, history]);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleUndo, handleRedo]);
   
   // Embed config state
   const [embedConfig, setEmbedConfig] = useState<EmbedConfig>(
@@ -454,10 +519,18 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
               <ChevronLeft className="h-4 w-4 mr-1" />
               Voltar
             </Button>
-            <Button size="sm" onClick={handleSave} disabled={!hasChanges}>
-              <Save className="h-4 w-4 mr-1" />
-              Guardar
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleUndo} disabled={!canUndo} title="Desfazer (Ctrl+Z)">
+                <Undo2 className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleRedo} disabled={!canRedo} title="Refazer (Ctrl+Shift+Z)">
+                <Redo2 className="h-4 w-4" />
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={!hasChanges}>
+                <Save className="h-4 w-4 mr-1" />
+                Guardar
+              </Button>
+            </div>
           </div>
           <h2 className="font-semibold truncate">{websiteName}</h2>
           <p className="text-xs text-muted-foreground">{template.name}</p>
