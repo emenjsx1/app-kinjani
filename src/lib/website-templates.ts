@@ -37,6 +37,7 @@ export interface WebsiteSection {
   content: Record<string, string>;
   enabled: boolean;
   order: number;
+  variant?: number;
 }
 
 export interface TemplateCategory {

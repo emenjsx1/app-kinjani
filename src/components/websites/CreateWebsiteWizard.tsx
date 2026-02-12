@@ -108,6 +108,12 @@ const getBlankTemplate = (siteType: string): WebsiteTemplate => {
     default: ["hero", "about", "services", "features", "testimonials", "cta", "contact"],
   };
 
+  // Max variants per section type
+  const VARIANT_COUNTS: Record<string, number> = {
+    hero: 3, about: 3, services: 3, features: 3, testimonials: 3,
+    cta: 3, contact: 3, team: 2, gallery: 2, pricing: 1, faq: 1,
+  };
+
   const sections = (sectionConfigs[siteType] || sectionConfigs.default).map((type, idx) => ({
     id: type,
     type: type as any,
@@ -115,6 +121,7 @@ const getBlankTemplate = (siteType: string): WebsiteTemplate => {
     enabled: true,
     order: idx,
     content: {},
+    variant: Math.floor(Math.random() * (VARIANT_COUNTS[type] || 1)) + 1,
   }));
 
   // Pick random colors and font for variety
@@ -190,9 +197,19 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
         sections: selectedTemplate.sections.map((s) => s.type),
       });
 
-      let customTemplate = { ...selectedTemplate };
+      // Add random variants to sections that don't have one
+      const VARIANT_COUNTS: Record<string, number> = {
+        hero: 3, about: 3, services: 3, features: 3, testimonials: 3,
+        cta: 3, contact: 3, team: 2, gallery: 2, pricing: 1, faq: 1,
+      };
+      const sectionsWithVariants = selectedTemplate.sections.map(s => ({
+        ...s,
+        variant: s.variant || Math.floor(Math.random() * (VARIANT_COUNTS[s.type] || 1)) + 1,
+      }));
+
+      let customTemplate = { ...selectedTemplate, sections: sectionsWithVariants };
       if (generatedContent) {
-        customTemplate = { ...selectedTemplate, sections: applySectionsContent(selectedTemplate.sections, generatedContent) };
+        customTemplate = { ...customTemplate, sections: applySectionsContent(sectionsWithVariants, generatedContent).map((s, i) => ({ ...s, variant: sectionsWithVariants[i]?.variant || s.variant })) };
         toast({ title: "Conteúdo gerado com IA!", description: "O conteúdo do seu site foi personalizado." });
       }
 
