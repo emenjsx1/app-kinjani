@@ -1,49 +1,33 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface WhatsAppMessage {
-  phone: string;
-  message: string;
-  agentPrompt?: string;
+function getServiceClient() {
+  return createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  );
 }
 
-interface EvolutionWebhookPayload {
-  event: string;
-  instance: string;
-  data: {
-    key: {
-      remoteJid: string;
-      fromMe: boolean;
-    };
-    message?: {
-      conversation?: string;
-      extendedTextMessage?: {
-        text: string;
-      };
-    };
-  };
-}
-
-// Função para enviar mensagem via Evolution API
-async function sendWhatsAppMessage(phone: string, message: string): Promise<boolean> {
+// Send message via Evolution API using the correct instance name
+async function sendWhatsAppMessage(instanceKey: string, phone: string, message: string): Promise<boolean> {
   const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
   const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
 
   if (!evolutionApiUrl || !evolutionApiKey) {
     console.error('Evolution API credentials not configured');
-    throw new Error('Evolution API credentials not configured');
+    return false;
   }
 
-  // Normalizar número de telefone
   const normalizedPhone = phone.replace(/\D/g, '');
   
   try {
-    const response = await fetch(`${evolutionApiUrl}/message/sendText/default`, {
+    const response = await fetch(`${evolutionApiUrl}/message/sendText/${instanceKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -57,11 +41,11 @@ async function sendWhatsAppMessage(phone: string, message: string): Promise<bool
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Evolution API error:', errorText);
+      console.error('Evolution API send error:', errorText);
       return false;
     }
 
-    console.log(`Message sent successfully to ${normalizedPhone}`);
+    console.log(`Message sent to ${normalizedPhone} via instance ${instanceKey}`);
     return true;
   } catch (error) {
     console.error('Error sending WhatsApp message:', error);
@@ -69,33 +53,27 @@ async function sendWhatsAppMessage(phone: string, message: string): Promise<bool
   }
 }
 
-// Função para gerar resposta do agente IA
+// Generate AI response using the agent's prompt
 async function generateAgentResponse(userMessage: string, agentPrompt: string): Promise<string> {
-  const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+  const openaiKey = Deno.env.get('OPENAI_API_KEY');
   
-  if (!lovableApiKey) {
-    console.error('LOVABLE_API_KEY not configured');
-    return 'Desculpe, não consigo processar sua mensagem no momento. Tente novamente mais tarde.';
+  if (!openaiKey) {
+    console.error('OPENAI_API_KEY not configured');
+    return 'Desculpe, não consigo processar sua mensagem no momento.';
   }
 
   try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${lovableApiKey}`,
+        'Authorization': `Bearer ${openaiKey}`,
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          {
-            role: 'system',
-            content: agentPrompt || 'Você é um assistente virtual amigável e profissional. Responda de forma clara e concisa.',
-          },
-          {
-            role: 'user',
-            content: userMessage,
-          },
+          { role: 'system', content: agentPrompt },
+          { role: 'user', content: userMessage },
         ],
         max_tokens: 500,
         temperature: 0.7,
@@ -104,7 +82,7 @@ async function generateAgentResponse(userMessage: string, agentPrompt: string): 
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI API error:', errorText);
+      console.error('OpenAI API error:', errorText);
       return 'Desculpe, ocorreu um erro ao processar sua mensagem.';
     }
 
@@ -117,7 +95,6 @@ async function generateAgentResponse(userMessage: string, agentPrompt: string): 
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -126,124 +103,160 @@ serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
 
-    // Webhook para receber mensagens do WhatsApp
+    // Webhook from Evolution API
     if (action === 'webhook') {
-      const payload: EvolutionWebhookPayload = await req.json();
-      console.log('Webhook received:', JSON.stringify(payload));
+      const instanceKey = url.searchParams.get('instance');
+      const payload = await req.json();
+      console.log('Webhook received for instance:', instanceKey, 'event:', payload.event);
 
-      // Ignorar mensagens enviadas por nós
-      if (payload.data?.key?.fromMe) {
+      // Only process incoming messages
+      if (payload.event !== 'messages.upsert' && payload.event !== 'MESSAGES_UPSERT') {
+        // Handle connection updates
+        if (payload.event === 'connection.update' || payload.event === 'CONNECTION_UPDATE') {
+          const state = payload.data?.state || payload.data?.status;
+          console.log('Connection update:', state);
+          
+          if (instanceKey && state) {
+            const supabase = getServiceClient();
+            const status = state === 'open' ? 'connected' : 'disconnected';
+            await supabase
+              .from('whatsapp_instances')
+              .update({ 
+                status,
+                ...(status === 'connected' ? { connected_at: new Date().toISOString() } : {})
+              })
+              .eq('instance_key', instanceKey);
+          }
+        }
+        
         return new Response(JSON.stringify({ status: 'ignored' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      // Extrair mensagem do usuário
+      // Ignore messages sent by us
+      if (payload.data?.key?.fromMe) {
+        return new Response(JSON.stringify({ status: 'ignored_own' }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      // Extract user message
       const userMessage = payload.data?.message?.conversation || 
                          payload.data?.message?.extendedTextMessage?.text;
 
       if (!userMessage) {
-        return new Response(JSON.stringify({ status: 'no_message' }), {
+        console.log('No text message in payload');
+        return new Response(JSON.stringify({ status: 'no_text' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       const senderPhone = payload.data.key.remoteJid.replace('@s.whatsapp.net', '');
+      console.log(`Message from ${senderPhone}: "${userMessage}"`);
+
+      // Look up the instance and linked agent in the database
+      const supabase = getServiceClient();
       
-      // Gerar resposta do agente
-      const agentResponse = await generateAgentResponse(
-        userMessage,
-        'Você é um assistente virtual profissional. Responda de forma amigável e útil em português.'
-      );
+      const { data: instance } = await supabase
+        .from('whatsapp_instances')
+        .select('id, agent_id, user_id')
+        .eq('instance_key', instanceKey)
+        .single();
 
-      // Enviar resposta
-      await sendWhatsAppMessage(senderPhone, agentResponse);
+      let agentPrompt = 'Você é um assistente virtual profissional. Responda de forma amigável e útil em português.';
 
-      return new Response(JSON.stringify({ 
-        status: 'success',
-        message: 'Response sent' 
-      }), {
+      if (instance?.agent_id) {
+        const { data: agent } = await supabase
+          .from('agents')
+          .select('prompt, name')
+          .eq('id', instance.agent_id)
+          .single();
+
+        if (agent?.prompt) {
+          agentPrompt = agent.prompt;
+          console.log(`Using agent "${agent.name}" prompt`);
+        }
+      } else {
+        console.log('No agent linked to this instance, using default prompt');
+      }
+
+      // Generate AI response
+      const agentResponse = await generateAgentResponse(userMessage, agentPrompt);
+      console.log(`AI response generated (${agentResponse.length} chars)`);
+
+      // Send response back via WhatsApp
+      const sent = await sendWhatsAppMessage(instanceKey!, senderPhone, agentResponse);
+
+      // Update agent message count
+      if (sent && instance?.agent_id) {
+        await supabase.rpc('increment_trial_usage', { user_uuid: instance.user_id, usage_type: 'messages' }).catch(() => {});
+        await supabase
+          .from('agents')
+          .update({ messages_handled: instance.agent_id ? 1 : 0 })
+          .eq('id', instance.agent_id);
+      }
+
+      return new Response(JSON.stringify({ status: 'success', sent }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Endpoint para enviar mensagem manual
+    // Manual send endpoint
     if (action === 'send') {
-      const { phone, message }: WhatsAppMessage = await req.json();
+      const { phone, message, instanceKey } = await req.json();
 
       if (!phone || !message) {
-        return new Response(JSON.stringify({ 
-          error: 'Phone and message are required' 
-        }), {
+        return new Response(JSON.stringify({ error: 'Phone and message are required' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
-      const success = await sendWhatsAppMessage(phone, message);
+      const key = instanceKey || 'default';
+      const success = await sendWhatsAppMessage(key, phone, message);
 
-      return new Response(JSON.stringify({ 
-        success,
-        message: success ? 'Message sent' : 'Failed to send message'
-      }), {
+      return new Response(JSON.stringify({ success }), {
         status: success ? 200 : 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Endpoint para testar conexão
+    // Test connection endpoint
     if (action === 'test') {
       const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
       const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
 
       if (!evolutionApiUrl || !evolutionApiKey) {
-        return new Response(JSON.stringify({ 
-          connected: false,
-          error: 'Evolution API credentials not configured'
-        }), {
+        return new Response(JSON.stringify({ connected: false, error: 'Not configured' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       try {
         const response = await fetch(`${evolutionApiUrl}/instance/fetchInstances`, {
-          headers: {
-            'apikey': evolutionApiKey,
-          },
+          headers: { 'apikey': evolutionApiKey },
         });
-
         const instances = await response.json();
         
-        return new Response(JSON.stringify({ 
-          connected: true,
-          instances: instances
-        }), {
+        return new Response(JSON.stringify({ connected: true, instances }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        return new Response(JSON.stringify({ 
-          connected: false,
-          error: errorMessage
-        }), {
+        return new Response(JSON.stringify({ connected: false, error: String(error) }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
     }
 
-    return new Response(JSON.stringify({ 
-      error: 'Invalid action. Use: webhook, send, or test'
-    }), {
+    return new Response(JSON.stringify({ error: 'Invalid action' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
     console.error('Error in whatsapp-agent:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ 
-      error: errorMessage 
-    }), {
+    return new Response(JSON.stringify({ error: String(error) }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
