@@ -165,19 +165,48 @@ serve(async (req) => {
         .single();
 
       let agentPrompt = 'Você é um assistente virtual profissional. Responda de forma amigável e útil em português.';
+      let resolvedAgentId = instance?.agent_id || null;
 
-      if (instance?.agent_id) {
+      // First try: agent_id from whatsapp_instances
+      // Second try: find agent where instance_id matches this whatsapp instance
+      if (!resolvedAgentId && instance?.id) {
+        const { data: linkedAgent } = await supabase
+          .from('agents')
+          .select('id, prompt, name')
+          .eq('instance_id', instance.id)
+          .eq('status', 'active')
+          .limit(1)
+          .single();
+
+        if (linkedAgent) {
+          resolvedAgentId = linkedAgent.id;
+          if (linkedAgent.prompt) {
+            agentPrompt = linkedAgent.prompt;
+          }
+          console.log(`Using agent "${linkedAgent.name}" (found via agents.instance_id)`);
+          
+          // Sync agent_id back to whatsapp_instances for future lookups
+          await supabase
+            .from('whatsapp_instances')
+            .update({ agent_id: linkedAgent.id })
+            .eq('id', instance.id);
+        }
+      }
+
+      if (resolvedAgentId && agentPrompt === 'Você é um assistente virtual profissional. Responda de forma amigável e útil em português.') {
         const { data: agent } = await supabase
           .from('agents')
           .select('prompt, name')
-          .eq('id', instance.agent_id)
+          .eq('id', resolvedAgentId)
           .single();
 
         if (agent?.prompt) {
           agentPrompt = agent.prompt;
           console.log(`Using agent "${agent.name}" prompt`);
         }
-      } else {
+      }
+      
+      if (!resolvedAgentId) {
         console.log('No agent linked to this instance, using default prompt');
       }
 
@@ -189,12 +218,12 @@ serve(async (req) => {
       const sent = await sendWhatsAppMessage(instanceKey!, senderPhone, agentResponse);
 
       // Update agent message count
-      if (sent && instance?.agent_id) {
+      if (sent && resolvedAgentId) {
         await supabase.rpc('increment_trial_usage', { user_uuid: instance.user_id, usage_type: 'messages' }).catch(() => {});
         await supabase
           .from('agents')
-          .update({ messages_handled: instance.agent_id ? 1 : 0 })
-          .eq('id', instance.agent_id);
+          .update({ messages_handled: 1 })
+          .eq('id', resolvedAgentId);
       }
 
       return new Response(JSON.stringify({ status: 'success', sent }), {
