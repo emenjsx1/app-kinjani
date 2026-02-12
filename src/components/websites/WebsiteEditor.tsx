@@ -337,14 +337,23 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
       return;
     }
     
-    // Check if this is a logo upload
+    // Check if this is a special asset upload
     if (uploadingFor?.sectionId === 'logo' && uploadingFor?.field === 'logoUrl') {
-      setEditableTemplate(prev => ({
-        ...prev,
-        logoUrl: publicUrl,
-      }));
+      setEditableTemplate(prev => ({ ...prev, logoUrl: publicUrl }));
       setHasChanges(true);
       toast.success("Logo carregado com sucesso");
+    } else if (uploadingFor?.sectionId === 'favicon' && uploadingFor?.field === 'faviconUrl') {
+      setEditableTemplate(prev => ({ ...prev, faviconUrl: publicUrl }));
+      setHasChanges(true);
+      toast.success("Favicon carregado com sucesso");
+    } else if (uploadingFor?.sectionId === 'banner' && uploadingFor?.field === 'bannerUrl') {
+      setEditableTemplate(prev => ({ ...prev, bannerUrl: publicUrl }));
+      setHasChanges(true);
+      toast.success("Banner carregado com sucesso");
+    } else if (uploadingFor?.sectionId === 'ogImage' && uploadingFor?.field === 'ogImageUrl') {
+      setEditableTemplate(prev => ({ ...prev, ogImageUrl: publicUrl }));
+      setHasChanges(true);
+      toast.success("Imagem de partilha carregada com sucesso");
     } else if (uploadingFor) {
       updateSectionContent(uploadingFor.sectionId, uploadingFor.field, publicUrl);
       toast.success("Imagem adicionada");
@@ -653,6 +662,100 @@ export function WebsiteEditor({ template, websiteName, prompt, onBack, onSave, n
               </div>
 
               <Separator />
+
+              {/* Favicon */}
+              <div>
+                <h3 className="text-sm font-medium mb-3">Favicon</h3>
+                <div className="p-4 border rounded-lg bg-muted/50 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-12 h-12 rounded-lg border-2 border-dashed flex items-center justify-center bg-background cursor-pointer hover:border-primary transition-colors overflow-hidden"
+                      onClick={() => {
+                        setUploadingFor({ sectionId: 'favicon', field: 'faviconUrl' });
+                        fileInputRef.current?.click();
+                      }}
+                    >
+                      {editableTemplate.faviconUrl ? (
+                        <img src={editableTemplate.faviconUrl} alt="Favicon" className="w-full h-full object-contain" />
+                      ) : (
+                        <ImagePlus className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{editableTemplate.faviconUrl ? "Alterar Favicon" : "Carregar Favicon"}</p>
+                      <p className="text-xs text-muted-foreground">ICO, PNG ou SVG (32x32px)</p>
+                    </div>
+                    {editableTemplate.faviconUrl && (
+                      <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setEditableTemplate(prev => ({ ...prev, faviconUrl: undefined })); setHasChanges(true); }}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Banner / Hero Background */}
+              <div>
+                <h3 className="text-sm font-medium mb-3">Banner / Capa</h3>
+                <div className="p-4 border rounded-lg bg-muted/50 space-y-3">
+                  <div 
+                    className="w-full h-24 rounded-lg border-2 border-dashed flex items-center justify-center bg-background cursor-pointer hover:border-primary transition-colors overflow-hidden"
+                    onClick={() => {
+                      setUploadingFor({ sectionId: 'banner', field: 'bannerUrl' });
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    {editableTemplate.bannerUrl ? (
+                      <img src={editableTemplate.bannerUrl} alt="Banner" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center">
+                        <ImagePlus className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
+                        <p className="text-xs text-muted-foreground">Imagem de fundo do Hero</p>
+                      </div>
+                    )}
+                  </div>
+                  {editableTemplate.bannerUrl && (
+                    <Button size="sm" variant="ghost" className="w-full" onClick={() => { setEditableTemplate(prev => ({ ...prev, bannerUrl: undefined })); setHasChanges(true); }}>
+                      <Trash2 className="h-3 w-3 mr-1 text-destructive" />
+                      Remover Banner
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* OG Image */}
+              <div>
+                <h3 className="text-sm font-medium mb-3">Imagem de Partilha (OG Image)</h3>
+                <div className="p-4 border rounded-lg bg-muted/50 space-y-3">
+                  <div 
+                    className="w-full h-20 rounded-lg border-2 border-dashed flex items-center justify-center bg-background cursor-pointer hover:border-primary transition-colors overflow-hidden"
+                    onClick={() => {
+                      setUploadingFor({ sectionId: 'ogImage', field: 'ogImageUrl' });
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    {editableTemplate.ogImageUrl ? (
+                      <img src={editableTemplate.ogImageUrl} alt="OG Image" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-center">
+                        <ImagePlus className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+                        <p className="text-xs text-muted-foreground">1200×630px recomendado</p>
+                      </div>
+                    )}
+                  </div>
+                  {editableTemplate.ogImageUrl && (
+                    <Button size="sm" variant="ghost" className="w-full" onClick={() => { setEditableTemplate(prev => ({ ...prev, ogImageUrl: undefined })); setHasChanges(true); }}>
+                      <Trash2 className="h-3 w-3 mr-1 text-destructive" />
+                      Remover
+                    </Button>
+                  )}
+                  <p className="text-xs text-muted-foreground">Aparece ao partilhar o link nas redes sociais</p>
+                </div>
+              </div>
 
               <div>
                 <h3 className="text-sm font-medium mb-3">Esquema de Cores</h3>
