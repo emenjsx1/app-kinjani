@@ -135,7 +135,7 @@ export default function CreditsPage() {
                 <CardContent className="pt-6 text-center">
                   <p className="text-3xl font-bold">500</p>
                   <p className="text-muted-foreground mb-4">créditos</p>
-                  <p className="text-xl font-semibold text-primary">9,99€</p>
+                  <p className="text-xl font-semibold text-primary">499 MT</p>
                   <Button className="w-full mt-4" variant="outline">
                     Comprar
                   </Button>
@@ -148,7 +148,7 @@ export default function CreditsPage() {
                 <CardContent className="pt-6 text-center">
                   <p className="text-3xl font-bold">1.500</p>
                   <p className="text-muted-foreground mb-4">créditos</p>
-                  <p className="text-xl font-semibold text-primary">24,99€</p>
+                  <p className="text-xl font-semibold text-primary">1.299 MT</p>
                   <Button className="w-full mt-4">
                     Comprar
                   </Button>
@@ -158,7 +158,7 @@ export default function CreditsPage() {
                 <CardContent className="pt-6 text-center">
                   <p className="text-3xl font-bold">5.000</p>
                   <p className="text-muted-foreground mb-4">créditos</p>
-                  <p className="text-xl font-semibold text-primary">69,99€</p>
+                  <p className="text-xl font-semibold text-primary">3.999 MT</p>
                   <Button className="w-full mt-4" variant="outline">
                     Comprar
                   </Button>
