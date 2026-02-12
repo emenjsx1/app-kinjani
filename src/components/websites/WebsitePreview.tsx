@@ -95,6 +95,7 @@ export const WebsitePreview = forwardRef<HTMLDivElement, WebsitePreviewProps>(fu
     secondaryColor,
     font: template.font,
     variant: section.variant || 1,
+    bannerUrl: section.type === "hero" ? template.bannerUrl : undefined,
     onCtaClick: handleCtaClick,
     scrollToSection,
   });
