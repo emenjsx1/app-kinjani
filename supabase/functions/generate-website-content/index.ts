@@ -16,7 +16,7 @@ interface WebsiteGenerationRequest {
 
 const SYSTEM_PROMPT = `Tu és um especialista em copywriting e criação de conteúdo para websites em Português de Portugal.
 
-A tua tarefa é gerar conteúdo persuasivo e profissional para um website baseado nas informações fornecidas.
+A tua tarefa é gerar conteúdo ÚNICO e personalizado para cada website. Cada site DEVE ter textos completamente diferentes.
 
 REGRAS IMPORTANTES:
 1. Todo o conteúdo DEVE estar em Português de Portugal
@@ -25,6 +25,10 @@ REGRAS IMPORTANTES:
 4. Adapta o tom ao nicho do negócio
 5. Inclui CTAs claros e persuasivos
 6. Os textos devem ser realistas e credíveis
+7. NUNCA repitas o mesmo conteúdo entre sites diferentes
+8. Usa vocabulário variado e criativo
+9. Adapta o estilo de escrita ao tipo de negócio (formal para advocacia, casual para restaurantes, etc.)
+10. Inventa nomes de pessoas, empresas e detalhes realistas para testemunhos
 
 FORMATO DE RESPOSTA:
 Responde APENAS com JSON válido, sem markdown ou texto adicional.
@@ -44,8 +48,9 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    const uniqueSeed = Math.random().toString(36).substring(2, 8);
     const userPrompt = `
-Gera conteúdo para um website com as seguintes características:
+[ID ÚNICO: ${uniqueSeed}] - Gera conteúdo ORIGINAL e ÚNICO para este website:
 
 TIPO: ${websiteType === "landing" ? "Landing Page" : "Site Institucional"}
 NICHO: ${niche}
