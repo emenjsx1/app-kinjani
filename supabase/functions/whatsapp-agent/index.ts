@@ -278,6 +278,61 @@ serve(async (req) => {
       }
     }
 
+    // Reconfigure webhook for an instance
+    if (action === 'setup-webhook') {
+      const instanceKey = url.searchParams.get('instance');
+      if (!instanceKey) {
+        return new Response(JSON.stringify({ error: 'Instance key required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+      const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-agent?action=webhook&instance=${instanceKey}`;
+
+      // First check current webhook config
+      let currentWebhook = null;
+      try {
+        const findRes = await fetch(`${evolutionApiUrl}/webhook/find/${instanceKey}`, {
+          headers: { 'apikey': evolutionApiKey! },
+        });
+        if (findRes.ok) {
+          currentWebhook = await findRes.json();
+        }
+      } catch (e) {
+        console.log('Could not fetch current webhook:', e);
+      }
+
+      // Set webhook
+      const webhookResponse = await fetch(`${evolutionApiUrl}/webhook/set/${instanceKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': evolutionApiKey!,
+        },
+        body: JSON.stringify({
+          enabled: true,
+          url: webhookUrl,
+          webhookByEvents: false,
+          events: ['MESSAGES_UPSERT', 'CONNECTION_UPDATE'],
+        }),
+      });
+
+      const webhookResult = webhookResponse.ok ? await webhookResponse.json() : await webhookResponse.text();
+
+      return new Response(JSON.stringify({ 
+        success: webhookResponse.ok,
+        webhookUrl,
+        currentWebhook,
+        result: webhookResult,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     return new Response(JSON.stringify({ error: 'Invalid action' }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
