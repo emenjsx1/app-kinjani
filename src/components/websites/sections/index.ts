@@ -1,0 +1,12 @@
+export { HeroSection } from "./HeroSection";
+export { AboutSection } from "./AboutSection";
+export { ServicesSection } from "./ServicesSection";
+export { FeaturesSection } from "./FeaturesSection";
+export { TestimonialsSection } from "./TestimonialsSection";
+export { CtaSection } from "./CtaSection";
+export { ContactSection } from "./ContactSection";
+export { TeamSection } from "./TeamSection";
+export { GallerySection } from "./GallerySection";
+export { PricingSection } from "./PricingSection";
+export { FaqSection } from "./FaqSection";
+export type { SectionProps } from "./types";
