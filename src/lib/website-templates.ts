@@ -19,6 +19,9 @@ export interface WebsiteTemplate {
   sections: WebsiteSection[];
   pages?: WebsitePage[];
   logoUrl?: string;
+  faviconUrl?: string;
+  bannerUrl?: string;
+  ogImageUrl?: string;
   navItems?: { label: string; href: string }[];
   colors: {
     primary: string;

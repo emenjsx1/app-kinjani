@@ -44,8 +44,8 @@ interface CreateWebsiteWizardProps {
   onWebsiteCreated: (website: Website) => void;
 }
 
-const STEPS_GUIDED = ["Modo", "Tipo", "Categoria", "Template", "Prompt", "Nome", "A Gerar...", "Concluído"];
-const STEPS_OPEN = ["Modo", "Descreva Tudo", "Nome", "A Gerar...", "Concluído"];
+const STEPS_GUIDED = ["Modo", "Tipo", "Categoria", "Template", "Prompt", "Nome", "Geração IA", "A Gerar...", "Concluído"];
+const STEPS_OPEN = ["Modo", "Descreva Tudo", "Nome", "Geração IA", "A Gerar...", "Concluído"];
 
 // Expanded website types
 const WEBSITE_TYPES = [
@@ -158,10 +158,12 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [createdWebsiteId, setCreatedWebsiteId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [useAIGeneration, setUseAIGeneration] = useState(true);
 
   const STEPS = buildMode === "open" ? STEPS_OPEN : STEPS_GUIDED;
-  const generatingStepIndex = buildMode === "open" ? 3 : 6;
-  const successStepIndex = buildMode === "open" ? 4 : 7;
+  const aiQuestionStepIndex = buildMode === "open" ? 3 : 6;
+  const generatingStepIndex = buildMode === "open" ? 4 : 7;
+  const successStepIndex = buildMode === "open" ? 5 : 8;
   const nameStepIndex = buildMode === "open" ? 2 : 5;
 
   const resetWizard = () => {
@@ -176,6 +178,7 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
     setSelectedClientId(null);
     setCreatedWebsiteId(null);
     setShowPreview(false);
+    setUseAIGeneration(true);
   };
 
   const handleClose = () => { resetWizard(); onOpenChange(false); };
@@ -184,6 +187,42 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
 
   const handleCreateGuided = async () => {
     if (!selectedTemplate || !websiteType) return;
+    
+    // Add random variants to sections
+    const VARIANT_COUNTS: Record<string, number> = {
+      hero: 3, about: 3, services: 3, features: 3, testimonials: 3,
+      cta: 3, contact: 3, team: 2, gallery: 2, pricing: 1, faq: 1,
+    };
+    const sectionsWithVariants = selectedTemplate.sections.map(s => ({
+      ...s,
+      variant: s.variant || Math.floor(Math.random() * (VARIANT_COUNTS[s.type] || 1)) + 1,
+    }));
+
+    if (!useAIGeneration) {
+      // Skip AI, create with default/template content
+      const customTemplate = { ...selectedTemplate, sections: sectionsWithVariants };
+      const category = selectedCategory ? TEMPLATE_CATEGORIES.find((c) => c.id === selectedCategory) : null;
+      const newWebsite: Website = {
+        id: Date.now().toString(),
+        name: websiteName,
+        type: (websiteType === "landing" || websiteType === "institutional") ? websiteType : "landing",
+        niche: category?.name || websiteType || "Outro",
+        nicheId: selectedCategory || websiteType || "outro",
+        templateId: selectedTemplate.id,
+        prompt,
+        status: "draft",
+        url: "",
+        createdAt: new Date().toISOString().split("T")[0],
+        customTemplate,
+        clientId: selectedClientId || undefined,
+      };
+      setCreatedWebsiteId(newWebsite.id);
+      onWebsiteCreated(newWebsite);
+      setCurrentStep(successStepIndex);
+      toast({ title: "Site criado!", description: "Pode editá-lo manualmente no editor." });
+      return;
+    }
+
     const category = selectedCategory ? TEMPLATE_CATEGORIES.find((c) => c.id === selectedCategory) : null;
     setCurrentStep(generatingStepIndex);
 
@@ -196,16 +235,6 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
         websiteName,
         sections: selectedTemplate.sections.map((s) => s.type),
       });
-
-      // Add random variants to sections that don't have one
-      const VARIANT_COUNTS: Record<string, number> = {
-        hero: 3, about: 3, services: 3, features: 3, testimonials: 3,
-        cta: 3, contact: 3, team: 2, gallery: 2, pricing: 1, faq: 1,
-      };
-      const sectionsWithVariants = selectedTemplate.sections.map(s => ({
-        ...s,
-        variant: s.variant || Math.floor(Math.random() * (VARIANT_COUNTS[s.type] || 1)) + 1,
-      }));
 
       let customTemplate = { ...selectedTemplate, sections: sectionsWithVariants };
       if (generatedContent) {
@@ -233,14 +262,37 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
       setCurrentStep(successStepIndex);
     } catch (error) {
       toast({ title: "Erro", description: "Ocorreu um erro. Tente novamente.", variant: "destructive" });
-      setCurrentStep(nameStepIndex);
+      setCurrentStep(aiQuestionStepIndex);
     }
   };
 
   const handleCreateOpenBuild = async () => {
     if (!openBuildPrompt.trim() || !websiteName.trim()) return;
-    setCurrentStep(generatingStepIndex);
     const blankTemplate = getBlankTemplate(websiteType || "default");
+
+    if (!useAIGeneration) {
+      const newWebsite: Website = {
+        id: Date.now().toString(),
+        name: websiteName,
+        type: "landing",
+        niche: websiteType || "Open Build",
+        nicheId: websiteType || "open-build",
+        templateId: "open-build-generated",
+        prompt: openBuildPrompt,
+        status: "draft",
+        url: "",
+        createdAt: new Date().toISOString().split("T")[0],
+        customTemplate: blankTemplate,
+        clientId: selectedClientId || undefined,
+      };
+      setCreatedWebsiteId(newWebsite.id);
+      onWebsiteCreated(newWebsite);
+      setCurrentStep(successStepIndex);
+      toast({ title: "Site criado!", description: "Pode editá-lo manualmente no editor." });
+      return;
+    }
+
+    setCurrentStep(generatingStepIndex);
 
     try {
       const generatedContent = await generateContent({
@@ -278,7 +330,7 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
       setCurrentStep(successStepIndex);
     } catch (error) {
       toast({ title: "Erro", description: "Ocorreu um erro. Tente novamente.", variant: "destructive" });
-      setCurrentStep(nameStepIndex);
+      setCurrentStep(aiQuestionStepIndex);
     }
   };
 
@@ -291,6 +343,7 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
         case 0: return buildMode !== null;
         case 1: return openBuildPrompt.trim().length > 20;
         case 2: return websiteName.trim().length > 2;
+        case 3: return true; // AI question step
         default: return true;
       }
     } else {
@@ -301,6 +354,7 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
         case 3: return selectedTemplate !== null;
         case 4: return prompt.trim().length > 10;
         case 5: return websiteName.trim().length > 2;
+        case 6: return true; // AI question step
         default: return true;
       }
     }
@@ -396,6 +450,24 @@ Design moderno, cores quentes (laranja e castanho). Incluir fotos, preços e bot
           );
         case 3:
           return (
+            <div className="space-y-6">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold">Gerar conteúdo com IA?</h3>
+                <p className="text-sm text-muted-foreground">A IA pode criar textos personalizados para o seu site</p>
+              </div>
+              <CardSelect
+                options={[
+                  { id: "yes", title: "Sim, gerar com IA ✨", description: "A IA cria textos únicos baseados na sua descrição", icon: <Sparkles className="h-5 w-5" /> },
+                  { id: "no", title: "Não, criar manualmente", description: "Usar conteúdo padrão e editar depois", icon: <LayoutTemplate className="h-5 w-5" /> },
+                ]}
+                value={useAIGeneration ? "yes" : "no"}
+                onChange={(val) => setUseAIGeneration(val === "yes")}
+                className="grid-cols-2"
+              />
+            </div>
+          );
+        case 4:
+          return (
             <div className="flex flex-col items-center justify-center py-12 space-y-6">
               <div className="relative">
                 <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center">
@@ -409,7 +481,7 @@ Design moderno, cores quentes (laranja e castanho). Incluir fotos, preços e bot
               </div>
             </div>
           );
-        case 4:
+        case 5:
           return (
             <div className="flex flex-col items-center justify-center py-8 space-y-4">
               <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -566,13 +638,32 @@ Design moderno, cores quentes (laranja e castanho). Incluir fotos, preços e bot
 
       case 6:
         return (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold">Gerar conteúdo com IA?</h3>
+              <p className="text-sm text-muted-foreground">A IA pode criar textos personalizados para o seu site</p>
+            </div>
+            <CardSelect
+              options={[
+                { id: "yes", title: "Sim, gerar com IA ✨", description: "A IA cria textos únicos baseados na sua descrição", icon: <Sparkles className="h-5 w-5" /> },
+                { id: "no", title: "Não, criar manualmente", description: "Usar conteúdo padrão e editar depois", icon: <LayoutTemplate className="h-5 w-5" /> },
+              ]}
+              value={useAIGeneration ? "yes" : "no"}
+              onChange={(val) => setUseAIGeneration(val === "yes")}
+              className="grid-cols-2"
+            />
+          </div>
+        );
+
+      case 7:
+        return (
           <div className="flex flex-col items-center justify-center py-12 space-y-6">
             <div className="relative"><div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center"><Loader2 className="h-10 w-10 text-primary animate-spin" /></div><Sparkles className="absolute -top-1 -right-1 h-6 w-6 text-primary animate-pulse" /></div>
             <div className="text-center space-y-2"><h3 className="text-xl font-semibold">A Gerar o Seu Site...</h3><p className="text-muted-foreground">Isto pode demorar alguns segundos.</p></div>
           </div>
         );
 
-      case 7:
+      case 8:
         return (
           <div className="flex flex-col items-center justify-center py-8 space-y-4">
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center"><CheckCircle2 className="h-8 w-8 text-primary" /></div>
@@ -607,8 +698,8 @@ Design moderno, cores quentes (laranja e castanho). Incluir fotos, preços e bot
               <Button variant="outline" onClick={handleClose}>Fechar</Button>
               <Button onClick={handleOpenEditor}>Editar Site</Button>
             </div>
-          ) : isGeneratingStep ? null : currentStep === nameStepIndex ? (
-            <Button onClick={handleCreate} disabled={!canProceed() || isGenerating}>{isGenerating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />A Gerar...</> : <><Sparkles className="h-4 w-4 mr-2" />Gerar Site</>}</Button>
+          ) : isGeneratingStep ? null : currentStep === aiQuestionStepIndex ? (
+            <Button onClick={handleCreate} disabled={!canProceed() || isGenerating}>{isGenerating ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />A Gerar...</> : useAIGeneration ? <><Sparkles className="h-4 w-4 mr-2" />Gerar com IA</> : <>Criar Site</>}</Button>
           ) : (
             <Button onClick={handleNext} disabled={!canProceed()}>Seguinte</Button>
           )}
