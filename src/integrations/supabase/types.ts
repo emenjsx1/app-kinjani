@@ -219,6 +219,51 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_templates: {
+        Row: {
+          agent_type: string
+          config: Json | null
+          created_at: string
+          description: string | null
+          id: string
+          is_public: boolean
+          name: string
+          niche: string | null
+          prompt: string
+          updated_at: string
+          usage_count: number
+          user_id: string
+        }
+        Insert: {
+          agent_type: string
+          config?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          name: string
+          niche?: string | null
+          prompt: string
+          updated_at?: string
+          usage_count?: number
+          user_id: string
+        }
+        Update: {
+          agent_type?: string
+          config?: Json | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_public?: boolean
+          name?: string
+          niche?: string | null
+          prompt?: string
+          updated_at?: string
+          usage_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       agents: {
         Row: {
           channel: string
