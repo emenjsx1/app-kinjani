@@ -40,7 +40,7 @@ import {
   AIExecutionTraceRecorder,
   aiExecutionTraceStore,
 } from "../observability";
-import { operationLineageStore } from "../operations";
+import { operationLineageStore } from "../lineage";
 import {
   AIRetryCoordinator,
   type RetryDirective,
