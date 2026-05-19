@@ -120,7 +120,13 @@ export class AIOrchestrator {
     emit?.emit({ type: "stage", stage: "analyzing-context" });
     const budgeted = TokenAwareContextBuilder.buildWithinBudget({
       project: input.project,
-      selection: input.selection,
+      selection: input.selection
+        ? {
+            pageId: input.selection.pageId,
+            sectionIds: input.selection.sectionIds ?? [],
+            nodeIds: input.selection.nodeIds ?? [],
+          }
+        : undefined,
       recentHistory: input.recentHistory,
       editFrequency: input.editFrequency,
       maxTokens: input.maxContextTokens ?? 4000,
