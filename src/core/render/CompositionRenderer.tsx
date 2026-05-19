@@ -50,6 +50,8 @@ export interface RendererContext {
   /** Optional: notify selection on node click (editor mode) */
   onNodeClick?: (id: string) => void;
   selectedId?: string | null;
+  /** Escape-hatch renderer for legacy-section nodes */
+  legacyRenderer?: (sectionType: string, content: Record<string, unknown>, variant?: number) => ReactNode;
 }
 
 interface NodeProps {
