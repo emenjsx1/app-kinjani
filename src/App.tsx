@@ -24,6 +24,7 @@ import ClientDetailsPage from "./pages/ClientDetailsPage";
 import ReportsPage from "./pages/ReportsPage";
 import AuthPage from "./pages/AuthPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import Phase6ShowcasePage from "./pages/Phase6ShowcasePage";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/demo" element={<DemoPage />} />
             <Route path="/styleguide" element={<StyleguidePage />} />
+            <Route path="/phase6" element={<Phase6ShowcasePage />} />
             <Route path="/connect/:token" element={<ClientConnectPage />} />
             <Route path="/site/:siteId" element={<PublicWebsitePage />} />
             
