@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, MoreHorizontal, Globe, Eye, Pencil, Copy, Trash2 } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Globe, Eye, Pencil, Copy, Trash2, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { CreateWebsiteWizard } from "@/components/websites/CreateWebsiteWizard";
+import { OpenCreator } from "@/components/websites/OpenCreator";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 import { useWebsites, Website } from "@/hooks/useWebsites";
@@ -28,6 +29,7 @@ export default function WebsitesPage() {
   const { profile } = useProfile();
   const [search, setSearch] = useState("");
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [isOpenCreatorOpen, setIsOpenCreatorOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [websiteToDelete, setWebsiteToDelete] = useState<string | null>(null);
 
@@ -149,8 +151,8 @@ export default function WebsitesPage() {
               className="pl-10"
             />
           </div>
-          <Button onClick={() => setIsWizardOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button onClick={() => setIsOpenCreatorOpen(true)} className="gap-2">
+            <Sparkles className="h-4 w-4" />
             Criar Site
           </Button>
         </div>
@@ -165,7 +167,7 @@ export default function WebsitesPage() {
                 description="Gere o seu primeiro site com IA"
                 action={{
                   label: "Criar Site",
-                  onClick: () => setIsWizardOpen(true),
+                  onClick: () => setIsOpenCreatorOpen(true),
                 }}
               />
             </CardContent>
@@ -272,6 +274,13 @@ export default function WebsitesPage() {
           </div>
         )}
       </div>
+
+      <OpenCreator
+        open={isOpenCreatorOpen}
+        onOpenChange={setIsOpenCreatorOpen}
+        onWebsiteCreated={handleWebsiteCreated}
+        onOpenAdvanced={() => setIsWizardOpen(true)}
+      />
 
       <CreateWebsiteWizard
         open={isWizardOpen}
