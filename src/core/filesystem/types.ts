@@ -1,6 +1,16 @@
 /**
- * Virtual filesystem types for the future code-generation runtime.
- * Phase 1 ships only types + an in-memory adapter.
+ * Virtual filesystem types for the code-generation runtime.
+ *
+ * Phase 1 shipped only core types + an in-memory adapter.
+ * Phase 2 extends the surface to prepare for:
+ *  - file dependency graph (FileDependency)
+ *  - import tracking (ImportReference)
+ *  - generated artifact mapping (GeneratedArtifact)
+ *  - versioned files (FileVersion)
+ *  - future AST editing
+ *
+ * Adapters expose these via optional methods so existing consumers stay
+ * unaffected.
  */
 
 export interface ProjectFile {
@@ -8,6 +18,8 @@ export interface ProjectFile {
   content: string;
   lang: string;
   hash: string;
+  /** Optional pointer back to the generator/agent that produced the file. */
+  generatedBy?: string;
 }
 
 export interface ProjectFolder {
@@ -17,6 +29,41 @@ export interface ProjectFolder {
 
 export interface FileTree {
   root: ProjectFolder;
+}
+
+export type FileDependencyKind = "import" | "asset" | "style" | "component";
+
+export interface FileDependency {
+  from: string;
+  to: string;
+  kind: FileDependencyKind;
+}
+
+export interface ImportReference {
+  /** The file containing the import statement. */
+  file: string;
+  /** Module specifier, e.g. "react" or "./Button". */
+  module: string;
+  specifiers: string[];
+  isDefault?: boolean;
+  isTypeOnly?: boolean;
+}
+
+export interface GeneratedArtifact {
+  id: string;
+  sourcePath: string;
+  generator: string;
+  componentId?: string;
+  checksum: string;
+  createdAt: string;
+}
+
+export interface FileVersion {
+  path: string;
+  versionId: string;
+  hash: string;
+  createdAt: string;
+  authorAgent?: string;
 }
 
 export type FileOperation =
@@ -31,4 +78,10 @@ export interface FileSystem {
   read(path: string): ProjectFile | null;
   apply(op: FileOperation): void;
   snapshot(): FileTree;
+
+  /** Optional capability surface. Adapters may implement none of these. */
+  dependencies?(): FileDependency[];
+  imports?(path?: string): ImportReference[];
+  versions?(path: string): FileVersion[];
+  artifacts?(): GeneratedArtifact[];
 }

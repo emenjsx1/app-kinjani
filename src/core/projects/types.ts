@@ -1,14 +1,20 @@
 /**
  * Core Project domain model.
  *
- * This is the canonical shape used by the new builder engine. The legacy
- * WebsiteTemplate continues to exist; adapters in `core/projects/adapters.ts`
- * convert between the two during the migration.
+ * Phase-2 universal builder entity. Extended to host:
+ *  - multiple pages, layouts, routing
+ *  - assets graph
+ *  - SEO metadata
+ *  - deployment metadata
+ *  - environment configuration
+ *
+ * The legacy WebsiteTemplate continues to exist; the adapters below convert
+ * between the two during the migration.
  */
 import type { WebsiteSection, WebsiteTemplate } from "@/lib/website-templates";
 import type { FileTree } from "@/core/filesystem/types";
 
-export type ProjectKind = "website" | "agent" | "hybrid";
+export type ProjectKind = "website" | "agent" | "hybrid" | "app";
 
 export interface ProjectTheme {
   primary: string;
@@ -30,9 +36,41 @@ export interface ProjectSettings {
 
 export interface ProjectAsset {
   id: string;
-  kind: "image" | "video" | "file";
+  kind: "image" | "video" | "file" | "icon" | "font";
+  path?: string;
   url: string;
+  /** Component / file ids that reference this asset. */
+  refs?: string[];
   meta?: Record<string, unknown>;
+}
+
+export interface ProjectLayout {
+  id: string;
+  name: string;
+  /** Section ids placed in this layout (e.g. header, footer wrappers). */
+  sections: WebsiteSection[];
+}
+
+export interface ProjectRoute {
+  path: string;
+  pageId: string;
+  layoutId?: string;
+}
+
+export interface ProjectSEO {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  canonical?: string;
+  keywords?: string[];
+  jsonLd?: unknown;
+}
+
+export interface ProjectDeployment {
+  target?: "vercel" | "netlify" | "lovable" | "static";
+  lastDeployedAt?: string;
+  url?: string;
+  status?: "idle" | "queued" | "building" | "deployed" | "failed";
 }
 
 export interface ProjectPage {
@@ -41,6 +79,8 @@ export interface ProjectPage {
   slug: string;
   isHomepage?: boolean;
   sections: WebsiteSection[];
+  layoutId?: string;
+  seo?: ProjectSEO;
 }
 
 export interface Project {
@@ -49,11 +89,16 @@ export interface Project {
   kind: ProjectKind;
   template?: string;
   pages: ProjectPage[];
+  layouts?: ProjectLayout[];
+  routes?: ProjectRoute[];
   assets: ProjectAsset[];
   theme: ProjectTheme;
   settings: ProjectSettings;
+  seo?: ProjectSEO;
+  deployment?: ProjectDeployment;
+  env?: Record<string, string>;
   metadata: Record<string, unknown>;
-  /** Reserved for future code-generation runtime. Not used by template engine. */
+  /** Reserved for the code-generation runtime. Not used by template engine. */
   files?: FileTree;
 }
 
@@ -91,6 +136,8 @@ export function templateToProject(
     kind: "website",
     template: template.id,
     pages,
+    layouts: [],
+    routes: pages.map((p) => ({ path: p.slug, pageId: p.id })),
     assets: [],
     theme: {
       primary: template.colors.primary,
@@ -106,6 +153,11 @@ export function templateToProject(
       bannerUrl: template.bannerUrl,
       ogImageUrl: template.ogImageUrl,
       navItems: template.navItems,
+    },
+    seo: {
+      title: name,
+      description: template.description,
+      ogImage: template.ogImageUrl,
     },
     metadata: {
       category: template.category,

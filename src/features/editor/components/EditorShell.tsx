@@ -2,6 +2,9 @@ import { useEffect, Suspense } from "react";
 import { WebsiteEditor, type EmbedConfig } from "@/components/websites/WebsiteEditor";
 import type { WebsiteTemplate } from "@/lib/website-templates";
 import { templateToProject } from "@/core/projects/types";
+import { registerSections } from "@/core/registry/sections";
+import { registerWidgets } from "@/core/registry/widgets";
+import { defaultPreviewEngine } from "@/core/preview/ReactTemplatePreviewEngine";
 import { useEditorStore } from "../store/editorStore";
 import { useHistoryStore } from "../store/historyStore";
 import { useEditorShortcuts } from "../hooks/useEditorShortcuts";
@@ -16,13 +19,20 @@ interface Props {
   onSave: (template: WebsiteTemplate, embed?: EmbedConfig) => Promise<void> | void;
 }
 
+// Ensure registry and engines are initialized once.
+registerSections();
+registerWidgets();
+void defaultPreviewEngine;
+
 /**
- * Phase-1 EditorShell.
+ * Phase-2 EditorShell.
  *
- * Hybrid bridge: the visual editor surface keeps using the battle-tested
- * `WebsiteEditor` while the new core engines (project model, history engine,
- * editor store) are initialized in parallel. Phase 2 will swap the legacy
- * surface for the new panel-based UI without touching the page route again.
+ * Primary editor surface for the Open Builder. Initializes all new core
+ * engines (project model, history engine, registry, preview engine) and hosts
+ * the visual editor. For Phase 2 we keep `WebsiteEditor` as the inner visual
+ * surface for visual parity while routing all state through the new stores.
+ *
+ * Rollback: `?legacy=1` on the editor route bypasses this shell entirely.
  */
 export function EditorShell({
   websiteId,
