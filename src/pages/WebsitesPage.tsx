@@ -275,6 +275,13 @@ export default function WebsitesPage() {
         )}
       </div>
 
+      <OpenCreator
+        open={isOpenCreatorOpen}
+        onOpenChange={setIsOpenCreatorOpen}
+        onWebsiteCreated={handleWebsiteCreated}
+        onOpenAdvanced={() => setIsWizardOpen(true)}
+      />
+
       <CreateWebsiteWizard
         open={isWizardOpen}
         onOpenChange={setIsWizardOpen}
