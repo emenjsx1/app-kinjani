@@ -143,7 +143,7 @@ export default function PublicWebsitePage() {
     );
   }
 
-  if (notFound || !template) {
+  if (notFound || (!template && !graph)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -154,10 +154,25 @@ export default function PublicWebsitePage() {
     );
   }
 
+  if (graph) {
+    return (
+      <div className="min-h-screen">
+        <CompositionRenderer
+          graph={graph}
+          onCtaClick={(action, target) => {
+            if (action === "whatsapp" && target) window.open(`https://wa.me/${target}`, "_blank");
+            else if (action === "url" && target) window.open(target, "_blank");
+            else if (target) document.getElementById(`n-${target}`)?.scrollIntoView({ behavior: "smooth" });
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
-      <WebsitePreview 
-        template={template} 
+      <WebsitePreview
+        template={template!}
         websiteName={websiteName}
         fullscreen={true}
         embedConfig={embedConfig}
