@@ -77,8 +77,10 @@ export {
   type AttachedHandlers,
   type CompiledInteraction,
   type InteractionRuntime,
-  type AuthorDraft,
-  type ParseOptions,
-  type RenderSandboxOptions,
-  type RenderSandboxResult,
 } from "./composition";
+export type {
+  AuthorDraft,
+  ParseOptions,
+  RenderSandboxOptions,
+  RenderSandboxResult,
+} from "./freeform";
