@@ -15,8 +15,8 @@ import { LoadingScreen } from "../shell";
 /*  Lazy route                                                                */
 /* -------------------------------------------------------------------------- */
 
-export function lazyRoute<T extends ComponentType<Record<string, unknown>>>(
-  loader: () => Promise<{ default: T }>,
+export function lazyRoute(
+  loader: () => Promise<{ default: ComponentType<Record<string, unknown>> }>,
   fallback?: ReactElement,
 ): ComponentType<Record<string, unknown>> {
   const Lazy = lazy(loader);
