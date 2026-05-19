@@ -1,6 +1,6 @@
-import type { Agent } from "./types";
+import type { AIAgent } from "./types";
 
-export const seoAgent: Agent = {
+export const seoAgent: AIAgent = {
   id: "seo-agent",
   description: "Improves title/meta/OG/JSON-LD.",
   canHandle({ prompt }) {

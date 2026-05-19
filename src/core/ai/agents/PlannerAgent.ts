@@ -1,14 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 import { AIContextBuilder } from "../context/AIContextBuilder";
 import { validator } from "../pipeline/validator";
-import type { Agent, AgentRunResult } from "./types";
+import type { AIAgent, AgentRunResult } from "./types";
 
 /**
  * PlannerAgent — server-side strategist. Calls the `ai-edit-website` edge
  * function (now structured-output enabled) and returns a validated plan.
  * Falls back to a routing decision (`nextAgent`) when the plan is empty.
  */
-export const plannerAgent: Agent = {
+export const plannerAgent: AIAgent = {
   id: "planner",
   description: "Plans an OperationPlan from the user's intent and project context.",
   async run({ prompt, context, emitter }): Promise<AgentRunResult> {

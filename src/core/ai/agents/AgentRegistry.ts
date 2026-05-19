@@ -1,9 +1,9 @@
-import type { Agent, AgentId, AgentRunInput, AgentRunResult } from "./types";
+import type { AIAgent, AgentId, AgentRunInput, AgentRunResult } from "./types";
 
 class AgentRegistry {
-  private agents = new Map<AgentId, Agent>();
+  private agents = new Map<AgentId, AIAgent>();
 
-  register(agent: Agent) {
+  register(agent: AIAgent) {
     this.agents.set(agent.id, agent);
   }
   get(id: AgentId) {
@@ -14,7 +14,7 @@ class AgentRegistry {
   }
 
   /** Route a prompt to the first agent whose canHandle returns true. */
-  route(input: AgentRunInput): Agent | undefined {
+  route(input: AgentRunInput): AIAgent | undefined {
     for (const a of this.agents.values()) {
       if (a.canHandle?.(input)) return a;
     }

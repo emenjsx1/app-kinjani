@@ -1,6 +1,6 @@
-import type { Agent } from "./types";
+import type { AIAgent } from "./types";
 
-export const responsiveAgent: Agent = {
+export const responsiveAgent: AIAgent = {
   id: "responsive-agent",
   description: "Applies breakpoint-specific overrides.",
   canHandle({ prompt }) {

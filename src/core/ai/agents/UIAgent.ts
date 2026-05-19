@@ -1,6 +1,6 @@
-import type { Agent } from "./types";
+import type { AIAgent } from "./types";
 
-export const uiAgent: Agent = {
+export const uiAgent: AIAgent = {
   id: "ui-agent",
   description: "Adjusts visual properties of components (spacing, color, size).",
   canHandle({ prompt }) {

@@ -1,11 +1,11 @@
-import type { Agent } from "./types";
+import type { AIAgent } from "./types";
 
 /**
  * LayoutAgent — specializes in structure: ordering, adding, removing
  * sections. Phase 3 keeps it as a contract; concrete implementation will
  * proxy to the planner with a constrained schema in a later phase.
  */
-export const layoutAgent: Agent = {
+export const layoutAgent: AIAgent = {
   id: "layout-agent",
   description: "Handles structural changes (add/remove/reorder sections).",
   canHandle({ prompt }) {

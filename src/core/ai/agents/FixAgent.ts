@@ -1,6 +1,6 @@
-import type { Agent } from "./types";
+import type { AIAgent } from "./types";
 
-export const fixAgent: Agent = {
+export const fixAgent: AIAgent = {
   id: "fix-agent",
   description: "Diagnoses failed operations and proposes corrective envelopes.",
   async run() {

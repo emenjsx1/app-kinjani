@@ -1,6 +1,6 @@
-import type { Agent } from "./types";
+import type { AIAgent } from "./types";
 
-export const copyAgent: Agent = {
+export const copyAgent: AIAgent = {
   id: "copy-agent",
   description: "Rewrites textual content with tone/length constraints.",
   canHandle({ prompt }) {
