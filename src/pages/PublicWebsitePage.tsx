@@ -6,6 +6,8 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { EmbedConfig } from "@/components/websites/WebsiteEditor";
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types";
+import { CompositionRenderer } from "@/core/render/CompositionRenderer";
+import type { CompositionGraph } from "@/core/render/composition-graph";
 
 interface WebsiteConfig {
   type?: "landing" | "institutional";
@@ -15,13 +17,11 @@ interface WebsiteConfig {
   prompt?: string;
   customTemplate?: WebsiteTemplate;
   embedConfig?: EmbedConfig;
+  compositionGraph?: CompositionGraph;
 }
 
-// Helper to parse config from JSON
 const parseConfig = (config: Json | null): WebsiteConfig | null => {
-  if (!config || typeof config !== "object" || Array.isArray(config)) {
-    return null;
-  }
+  if (!config || typeof config !== "object" || Array.isArray(config)) return null;
   return config as WebsiteConfig;
 };
 
