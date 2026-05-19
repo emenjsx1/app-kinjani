@@ -9,9 +9,13 @@ export class AIStreamEmitter {
     return () => this.listeners.delete(fn);
   }
   emit(event: AIStreamEvent) {
+    const enriched: AIStreamEvent =
+      event.timestamp === undefined
+        ? ({ ...event, timestamp: Date.now() } as AIStreamEvent)
+        : event;
     for (const l of this.listeners) {
       try {
-        l(event);
+        l(enriched);
       } catch {
         /* swallow listener errors */
       }
