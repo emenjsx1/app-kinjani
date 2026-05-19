@@ -1,39 +1,151 @@
-import { memo, useState } from "react";
-import { Sparkles, Send } from "lucide-react";
+import { memo, useEffect, useRef, useState } from "react";
+import { Sparkles, Send, User, Bot, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Project } from "@/core/projects/types";
-import { useEditorAI } from "../hooks/useEditorAI";
+import { projectToTemplate } from "@/core/projects/types";
+import { supabase } from "@/integrations/supabase/client";
+import { useProfile } from "@/hooks/useProfile";
+import { useTemplateBridge } from "../hooks/useTemplateBridge";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
+interface Msg {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
+/**
+ * AI chat panel. Reads current template via the template bridge, sends
+ * instructions to the `ai-edit-website` edge function, and applies the
+ * returned template through the bridge (which records a history snapshot
+ * automatically). Future Phase 3 will switch this to AIOperationEnvelope.
+ */
 export const AIChatPanel = memo(function AIChatPanel({ project }: { project: Project | null }) {
-  const { sendPrompt, loading } = useEditorAI(project);
-  const [prompt, setPrompt] = useState("");
+  const bridge = useTemplateBridge();
+  const { profile, deductCredits } = useProfile();
+  const [messages, setMessages] = useState<Msg[]>([
+    {
+      id: "welcome",
+      role: "assistant",
+      content:
+        "Olá! Descreve uma alteração — por exemplo \"muda a cor principal para verde\" ou \"reescreve o herói com tom mais profissional\".",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages]);
+
+  const send = async () => {
+    if (!input.trim() || loading || !project || !bridge) return;
+    const userMsg: Msg = { id: `u_${Date.now()}`, role: "user", content: input.trim() };
+    setMessages((m) => [...m, userMsg]);
+    setInput("");
+    setLoading(true);
+
+    if (!profile || profile.credits_balance < 1) {
+      setMessages((m) => [
+        ...m,
+        { id: `e_${Date.now()}`, role: "assistant", content: "Sem créditos suficientes." },
+      ]);
+      setLoading(false);
+      return;
+    }
+    await deductCredits(1, "ai_website_edit", "Edição com IA");
+
+    try {
+      const tmpl = projectToTemplate(project);
+      const { data, error } = await supabase.functions.invoke("ai-edit-website", {
+        body: { instruction: userMsg.content, template: tmpl, websiteName: project.name },
+      });
+      if (error || !data?.success) throw new Error(data?.error || error?.message || "Erro");
+      if (data.template) {
+        bridge.setTemplate(data.template, "ai edit");
+        toast.success("Alteração aplicada");
+      }
+      setMessages((m) => [
+        ...m,
+        {
+          id: `a_${Date.now()}`,
+          role: "assistant",
+          content: data.message || "Pronto! Alteração aplicada.",
+        },
+      ]);
+    } catch (err) {
+      setMessages((m) => [
+        ...m,
+        {
+          id: `e_${Date.now()}`,
+          role: "assistant",
+          content: err instanceof Error ? err.message : "Erro ao processar.",
+        },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="p-3 space-y-2">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2 px-3 py-2 border-b">
         <Sparkles className="h-3.5 w-3.5 text-primary" />
-        <h3 className="text-xs font-semibold uppercase">Assistente IA</h3>
+        <h3 className="text-[10px] font-semibold uppercase tracking-wider">Assistente IA</h3>
       </div>
-      <Textarea
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Descreve a alteração que pretendes..."
-        rows={4}
-        className="text-xs"
-      />
-      <Button
-        size="sm"
-        className="w-full"
-        disabled={loading || !prompt.trim()}
-        onClick={async () => {
-          await sendPrompt(prompt);
-          setPrompt("");
-        }}
-      >
-        <Send className="h-3.5 w-3.5 mr-2" />
-        {loading ? "A processar..." : "Enviar"}
-      </Button>
+      <ScrollArea className="flex-1 px-3 py-2">
+        <div className="space-y-2.5">
+          {messages.map((m) => (
+            <div key={m.id} className={cn("flex gap-2", m.role === "user" && "flex-row-reverse")}>
+              <div
+                className={cn(
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                  m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted",
+                )}
+              >
+                {m.role === "user" ? <User className="h-3 w-3" /> : <Bot className="h-3 w-3" />}
+              </div>
+              <div
+                className={cn(
+                  "rounded-lg px-2.5 py-1.5 text-xs max-w-[85%] whitespace-pre-wrap",
+                  m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted",
+                )}
+              >
+                {m.content}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex gap-2 items-center text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" /> a pensar...
+            </div>
+          )}
+          <div ref={endRef} />
+        </div>
+      </ScrollArea>
+      <div className="border-t p-2 space-y-1.5">
+        <Textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              send();
+            }
+          }}
+          placeholder="Descreve a alteração..."
+          rows={2}
+          className="text-xs resize-none"
+        />
+        <Button size="sm" className="w-full h-7" disabled={loading || !input.trim()} onClick={send}>
+          <Send className="h-3 w-3 mr-1.5" />
+          Enviar
+        </Button>
+      </div>
     </div>
   );
 });
