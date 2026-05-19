@@ -151,8 +151,8 @@ export default function WebsitesPage() {
               className="pl-10"
             />
           </div>
-          <Button onClick={() => setIsWizardOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button onClick={() => setIsOpenCreatorOpen(true)} className="gap-2">
+            <Sparkles className="h-4 w-4" />
             Criar Site
           </Button>
         </div>
