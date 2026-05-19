@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types";
 import { CompositionRenderer } from "@/core/render/CompositionRenderer";
 import type { CompositionGraph } from "@/core/render/composition-graph";
+import { templateToGraph } from "@/core/render/templateToGraph";
 
 interface WebsiteConfig {
   type?: "landing" | "institutional";
