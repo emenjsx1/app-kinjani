@@ -29,6 +29,7 @@ export default function WebsitesPage() {
   const { profile } = useProfile();
   const [search, setSearch] = useState("");
   const [isWizardOpen, setIsWizardOpen] = useState(false);
+  const [isOpenCreatorOpen, setIsOpenCreatorOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [websiteToDelete, setWebsiteToDelete] = useState<string | null>(null);
 
