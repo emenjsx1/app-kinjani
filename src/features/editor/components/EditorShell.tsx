@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, Suspense } from "react";
 import { WebsiteEditor, type EmbedConfig } from "@/components/websites/WebsiteEditor";
 import type { WebsiteTemplate } from "@/lib/website-templates";
 import { templateToProject } from "@/core/projects/types";
