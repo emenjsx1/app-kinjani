@@ -57,8 +57,10 @@ export default function WebsitesPage() {
     if (result) {
       toast.success(`Site "${result.name}" criado com sucesso!`);
       navigate(`/websites/${result.id}/edit`);
+      return { id: result.id };
     } else {
       toast.error("Erro ao criar site");
+      return null;
     }
   };
 
