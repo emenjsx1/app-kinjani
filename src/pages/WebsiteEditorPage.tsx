@@ -149,15 +149,26 @@ export default function WebsiteEditorPage() {
   if (isEditing) {
     return (
       <div className="h-screen">
-        <EditorShell
-          websiteId={website.id}
-          websiteName={website.name}
-          template={template}
-          prompt={website.config?.prompt || ""}
-          onBack={() => setIsEditing(false)}
-          onSave={handleSaveTemplate}
-          initialEmbedConfig={website.config?.embedConfig}
-        />
+        {useLegacyEditor ? (
+          <WebsiteEditor
+            template={template}
+            websiteName={website.name}
+            prompt={website.config?.prompt || ""}
+            onBack={() => setIsEditing(false)}
+            onSave={handleSaveTemplate}
+            initialEmbedConfig={website.config?.embedConfig}
+          />
+        ) : (
+          <EditorShell
+            websiteId={website.id}
+            websiteName={website.name}
+            template={template}
+            prompt={website.config?.prompt || ""}
+            onBack={() => setIsEditing(false)}
+            onSave={handleSaveTemplate}
+            initialEmbedConfig={website.config?.embedConfig}
+          />
+        )}
       </div>
     );
   }
