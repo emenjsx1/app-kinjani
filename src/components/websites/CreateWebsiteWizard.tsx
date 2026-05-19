@@ -20,6 +20,7 @@ import { TEMPLATE_CATEGORIES, WebsiteTemplate, getCategoryIcon } from "@/lib/web
 import { WebsitePreview } from "@/components/websites/WebsitePreview";
 import { useWebsiteAI } from "@/hooks/useWebsiteAI";
 import { useClients } from "@/hooks/useClients";
+import { getCreativeComposition } from "@/lib/creative-composition";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -148,7 +149,7 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
   const { clients } = useClients();
   
   const [currentStep, setCurrentStep] = useState(0);
-  const [buildMode, setBuildMode] = useState<"open" | "guided" | null>(null);
+  const [buildMode, setBuildMode] = useState<"open" | "guided" | null>("open");
   const [websiteType, setWebsiteType] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<WebsiteTemplate | null>(null);
@@ -168,7 +169,7 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
 
   const resetWizard = () => {
     setCurrentStep(0);
-    setBuildMode(null);
+    setBuildMode("open");
     setWebsiteType(null);
     setSelectedCategory(null);
     setSelectedTemplate(null);
@@ -268,7 +269,14 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
 
   const handleCreateOpenBuild = async () => {
     if (!openBuildPrompt.trim() || !websiteName.trim()) return;
-    const blankTemplate = getBlankTemplate(websiteType || "default");
+
+    // Creative composition replaces the deterministic stacked template.
+    // Each generation is uniquely seeded → no two sites look alike.
+    const creativeTemplate = getCreativeComposition({
+      prompt: openBuildPrompt,
+      siteType: websiteType || "default",
+      websiteName,
+    });
 
     if (!useAIGeneration) {
       const newWebsite: Website = {
@@ -282,13 +290,13 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
         status: "draft",
         url: "",
         createdAt: new Date().toISOString().split("T")[0],
-        customTemplate: blankTemplate,
+        customTemplate: creativeTemplate,
         clientId: selectedClientId || undefined,
       };
       setCreatedWebsiteId(newWebsite.id);
       onWebsiteCreated(newWebsite);
       setCurrentStep(successStepIndex);
-      toast({ title: "Site criado!", description: "Pode editá-lo manualmente no editor." });
+      toast({ title: "Site criado!", description: "Composição criativa gerada — edite no editor." });
       return;
     }
 
@@ -298,16 +306,22 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
       const generatedContent = await generateContent({
         websiteType: "landing",
         niche: websiteType || "Open Build",
-        templateName: "Gerado por IA",
+        templateName: "Composição Criativa",
         prompt: openBuildPrompt,
         websiteName,
-        sections: blankTemplate.sections.map((s) => s.type),
+        sections: creativeTemplate.sections.map((s) => s.type),
       });
 
-      let customTemplate = { ...blankTemplate };
+      let customTemplate = creativeTemplate;
       if (generatedContent) {
-        customTemplate = { ...blankTemplate, sections: applySectionsContent(blankTemplate.sections, generatedContent) };
-        toast({ title: "Site criado com IA! ✨", description: "O seu site foi gerado automaticamente." });
+        customTemplate = {
+          ...creativeTemplate,
+          sections: applySectionsContent(creativeTemplate.sections, generatedContent).map((s, i) => ({
+            ...s,
+            variant: creativeTemplate.sections[i]?.variant ?? s.variant,
+          })),
+        };
+        toast({ title: "Composição criativa pronta ✨", description: "Site único gerado pela IA." });
       }
 
       const newWebsite: Website = {
