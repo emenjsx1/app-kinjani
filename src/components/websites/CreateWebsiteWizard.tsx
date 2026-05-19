@@ -42,7 +42,7 @@ interface Website {
 interface CreateWebsiteWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onWebsiteCreated: (website: Website) => void;
+  onWebsiteCreated: (website: Website) => Promise<{ id: string } | null>;
 }
 
 const STEPS_GUIDED = ["Modo", "Tipo", "Categoria", "Template", "Prompt", "Nome", "Geração IA", "A Gerar...", "Concluído"];
@@ -186,6 +186,17 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
   const handleNext = () => { if (currentStep < STEPS.length - 1) setCurrentStep(currentStep + 1); };
   const handleBack = () => { if (currentStep > 0) setCurrentStep(currentStep - 1); };
 
+  const persistWebsite = async (website: Website) => {
+    const persistedWebsite = await onWebsiteCreated(website);
+
+    if (!persistedWebsite?.id) {
+      throw new Error("Falha ao guardar o site criado");
+    }
+
+    setCreatedWebsiteId(persistedWebsite.id);
+    return persistedWebsite;
+  };
+
   const handleCreateGuided = async () => {
     if (!selectedTemplate || !websiteType) return;
     
@@ -217,8 +228,8 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
         customTemplate,
         clientId: selectedClientId || undefined,
       };
-      setCreatedWebsiteId(newWebsite.id);
-      onWebsiteCreated(newWebsite);
+
+      await persistWebsite(newWebsite);
       setCurrentStep(successStepIndex);
       toast({ title: "Site criado!", description: "Pode editá-lo manualmente no editor." });
       return;
@@ -258,11 +269,10 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
         clientId: selectedClientId || undefined,
       };
 
-      setCreatedWebsiteId(newWebsite.id);
-      onWebsiteCreated(newWebsite);
+      await persistWebsite(newWebsite);
       setCurrentStep(successStepIndex);
     } catch (error) {
-      toast({ title: "Erro", description: "Ocorreu um erro. Tente novamente.", variant: "destructive" });
+      toast({ title: "Erro", description: "Não foi possível criar e guardar o site. Tente novamente.", variant: "destructive" });
       setCurrentStep(aiQuestionStepIndex);
     }
   };
@@ -293,8 +303,8 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
         customTemplate: creativeTemplate,
         clientId: selectedClientId || undefined,
       };
-      setCreatedWebsiteId(newWebsite.id);
-      onWebsiteCreated(newWebsite);
+
+      await persistWebsite(newWebsite);
       setCurrentStep(successStepIndex);
       toast({ title: "Site criado!", description: "Composição criativa gerada — edite no editor." });
       return;
@@ -339,11 +349,10 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
         clientId: selectedClientId || undefined,
       };
 
-      setCreatedWebsiteId(newWebsite.id);
-      onWebsiteCreated(newWebsite);
+      await persistWebsite(newWebsite);
       setCurrentStep(successStepIndex);
     } catch (error) {
-      toast({ title: "Erro", description: "Ocorreu um erro. Tente novamente.", variant: "destructive" });
+      toast({ title: "Erro", description: "Não foi possível criar e guardar o site. Tente novamente.", variant: "destructive" });
       setCurrentStep(aiQuestionStepIndex);
     }
   };
