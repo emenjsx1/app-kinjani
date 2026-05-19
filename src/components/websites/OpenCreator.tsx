@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label";
 import { useWebsiteAI } from "@/hooks/useWebsiteAI";
 import { getCreativeComposition } from "@/lib/creative-composition";
 import type { WebsiteTemplate } from "@/lib/website-templates";
+import { generateCompositionGraph } from "@/core/render/CompositionGenerator";
+import { buildBrief } from "@/core/render/buildBrief";
+import type { CompositionGraph } from "@/core/render/composition-graph";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +24,7 @@ export interface OpenCreatorWebsitePayload {
   templateId?: string;
   prompt?: string;
   customTemplate?: WebsiteTemplate;
+  compositionGraph?: CompositionGraph;
 }
 
 interface OpenCreatorProps {
