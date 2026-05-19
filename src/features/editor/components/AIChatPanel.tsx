@@ -9,7 +9,7 @@ import { useTemplateBridge } from "../hooks/useTemplateBridge";
 import { websiteAIService } from "@/core/ai/services/WebsiteAIService";
 import { AIStreamEmitter } from "@/core/ai/streaming/StreamEmitter";
 import { STAGE_LABELS_PT } from "@/core/ai/streaming/StreamEvents";
-import { templateToProject, projectToTemplate } from "@/core/projects/types";
+import { projectToTemplate } from "@/core/projects/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -82,9 +82,7 @@ export const AIChatPanel = memo(function AIChatPanel({ project }: { project: Pro
       // Legacy template fallback path (if planner returned the old shape).
       const legacy = (res as { legacyTemplate?: unknown } | null)?.legacyTemplate;
       if (legacy) {
-        bridge.setTemplate(legacy, "ai edit");
-        // Sync to project model so future calls have current state.
-        templateToProject(legacy as Parameters<typeof templateToProject>[0]);
+        bridge.setTemplate(legacy as Parameters<typeof bridge.setTemplate>[0], "ai edit");
       }
 
       const msg =
