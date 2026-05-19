@@ -79,7 +79,9 @@ export function useAICreationProgress(emitter: AIStreamEmitter | null): Creation
         return next;
       });
     });
-    return () => off();
+    return () => {
+      off();
+    };
   }, [emitter]);
 
   return state;
