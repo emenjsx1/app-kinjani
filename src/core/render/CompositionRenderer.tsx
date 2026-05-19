@@ -50,6 +50,8 @@ export interface RendererContext {
   /** Optional: notify selection on node click (editor mode) */
   onNodeClick?: (id: string) => void;
   selectedId?: string | null;
+  /** Escape-hatch renderer for legacy-section nodes */
+  legacyRenderer?: (sectionType: string, content: Record<string, unknown>, variant?: number) => ReactNode;
 }
 
 interface NodeProps {
@@ -76,13 +78,15 @@ export function CompositionRenderer({
   onCtaClick,
   onNodeClick,
   selectedId,
+  legacyRenderer,
 }: {
   graph: CompositionGraph;
   onCtaClick?: (action?: string, target?: string) => void;
   onNodeClick?: (id: string) => void;
   selectedId?: string | null;
+  legacyRenderer?: RendererContext["legacyRenderer"];
 }) {
-  const ctx: RendererContext = { theme: graph.theme, onCtaClick, onNodeClick, selectedId };
+  const ctx: RendererContext = { theme: graph.theme, onCtaClick, onNodeClick, selectedId, legacyRenderer };
   return (
     <div style={themeVars(graph.theme)} className="min-h-screen w-full">
       <RenderNode node={graph.root} ctx={ctx} />
@@ -347,7 +351,13 @@ function RenderNode({ node, ctx }: NodeProps): JSX.Element | null {
       return <div id={`n-${node.id}`} className={cn(PY[node.size] ?? "py-8", node.className)} />;
 
     case "legacy-section":
-      // Escape hatch for legacy sections — should be wrapped externally
+      if (ctx.legacyRenderer) {
+        return (
+          <div id={`n-${node.id}`} onClick={ctx.onNodeClick ? handleClick : undefined} className={cn(interactive, selectedRing, node.className)}>
+            {ctx.legacyRenderer(node.sectionType, node.content, node.variant)}
+          </div>
+        );
+      }
       return null;
   }
 }
