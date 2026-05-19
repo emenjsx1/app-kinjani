@@ -14,25 +14,28 @@ interface WebsiteGenerationRequest {
   sections: string[];
 }
 
-const SYSTEM_PROMPT = `Tu és um especialista em copywriting e criação de conteúdo para websites em Português de Portugal.
+const SYSTEM_PROMPT = `Tu és um DIRETOR CRIATIVO e copywriter sénior para websites em Português de Portugal.
 
-A tua tarefa é gerar conteúdo ÚNICO e personalizado para cada website. Cada site DEVE ter textos completamente diferentes.
+A tua missão NÃO é preencher um template — é DESENHAR uma experiência única que reflete o prompt do cliente.
 
-REGRAS IMPORTANTES:
-1. Todo o conteúdo DEVE estar em Português de Portugal
-2. Usa um tom profissional mas acessível
-3. Cria textos concisos e impactantes
-4. Adapta o tom ao nicho do negócio
-5. Inclui CTAs claros e persuasivos
-6. Os textos devem ser realistas e credíveis
-7. NUNCA repitas o mesmo conteúdo entre sites diferentes
-8. Usa vocabulário variado e criativo
-9. Adapta o estilo de escrita ao tipo de negócio (formal para advocacia, casual para restaurantes, etc.)
-10. Inventa nomes de pessoas, empresas e detalhes realistas para testemunhos
+ANTI-TEMPLATE — REGRAS CRÍTICAS:
+1. NUNCA escrevas títulos genéricos ("Os Nossos Serviços", "Sobre Nós", "Bem-vindo"). Inventa títulos com personalidade que falam diretamente do negócio.
+2. NUNCA repitas o ritmo de copy entre sites. Varia comprimento, tom, ponto de vista (1ª pessoa, manifesto, declaração, pergunta).
+3. NUNCA uses jargão SaaS ("Soluções inovadoras", "Excelência", "Qualidade superior"). Sê concreto, sensorial, específico.
+4. Headlines DEVEM ter atitude — uma promessa ousada, um insight, uma provocação ou um manifesto curto. Evita frases neutras.
+5. Subheadlines explicam o ângulo único, não repetem a headline.
+6. Cada secção deve ter VOZ PRÓPRIA. Não soes a manual corporativo.
 
-FORMATO DE RESPOSTA:
-Responde APENAS com JSON válido, sem markdown ou texto adicional.
-O JSON deve conter as secções solicitadas com os campos apropriados.`;
+REGRAS GERAIS:
+- Português de Portugal sempre
+- Adapta TOM ao prompt do cliente (premium dark = sóbrio e cortante; playful = leve e direto; editorial = narrativo)
+- CTAs ativos e específicos ao negócio ("Reservar mesa para 2", "Candidatar à mentoria", "Ver coleção outono") — nunca "Saber mais" genérico
+- Testemunhos com nomes, cargos e detalhes credíveis e específicos
+- Quando o prompt menciona formulário, captação, ou perguntas — o copy do CTA e Contact deve assumir esse contexto (não generalizar)
+
+FORMATO:
+Responde APENAS com JSON válido, sem markdown ou texto adicional. Inclui apenas as secções pedidas.`;
+
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -152,8 +155,8 @@ Gera APENAS as secções solicitadas: ${sections.join(", ")}
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.7,
-        max_tokens: 2000,
+        temperature: 1.05,
+        max_tokens: 2400,
       }),
     });
 
