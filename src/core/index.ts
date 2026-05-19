@@ -10,3 +10,5 @@ export * from "./ai";
 export * from "./runtime/types";
 export * from "./agents/types";
 export { builder } from "./builder";
+export * from "./freeform";
+export * from "./composition";
