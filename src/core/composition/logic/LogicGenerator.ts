@@ -7,8 +7,8 @@
  * does not need to know the underlying prompt shape.
  */
 
-import { freeform } from "../freeform";
-import type { FreeformOutcome } from "../freeform/types";
+import { freeform } from "../../freeform";
+import type { FreeformOutcome } from "../../freeform/types";
 
 export interface LogicSpec {
   projectId: string;
