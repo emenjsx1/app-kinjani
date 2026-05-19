@@ -4,6 +4,9 @@ import type { ComponentDefinition } from "./types";
 /**
  * Section registry entries. Each mirrors a section type recognized by the
  * legacy template renderer in src/components/websites/sections/.
+ *
+ * Phase 2: definitions now carry runtime/export compatibility, AI hints, and
+ * editable field metadata used by the new PropertiesPanel + AI agents.
  */
 
 const def = (
@@ -12,11 +15,13 @@ const def = (
   label: string,
   promptable: string[] = ["title", "subtitle", "description"],
   variants = [1, 2, 3],
+  description?: string,
 ): ComponentDefinition => ({
   id,
   category: "section",
   type,
   label,
+  description,
   variants,
   defaultProps: {},
   schema: {
@@ -25,13 +30,20 @@ const def = (
       label: k.charAt(0).toUpperCase() + k.slice(1),
       kind: "string",
       aiEditable: true,
+      responsive: false,
     })),
   },
+  responsive: { perBreakpoint: [] },
+  designTokens: { surface: "background", text: "foreground", accent: "primary" },
+  editableFields: promptable,
   aiHints: { promptableFields: promptable },
+  runtimeCompatibility: ["react-template", "export-tsx"],
+  exportCompatibility: { tsx: true, html: true },
+  generationPrompt: `Generate copy and layout for a "${label}" website section.`,
 });
 
 export const sectionDefinitions: ComponentDefinition[] = [
-  def("section.hero", "hero", "Hero", ["title", "subtitle", "ctaText", "ctaAction"]),
+  def("section.hero", "hero", "Hero", ["title", "subtitle", "ctaText", "ctaAction"], [1, 2, 3], "Above-the-fold hero with primary CTA"),
   def("section.about", "about", "Sobre", ["title", "description"]),
   def("section.services", "services", "Serviços"),
   def("section.features", "features", "Funcionalidades"),

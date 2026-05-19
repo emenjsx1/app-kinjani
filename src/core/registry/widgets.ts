@@ -9,6 +9,12 @@ const def = (id: string, type: string, label: string): ComponentDefinition => ({
   variants: [1],
   defaultProps: {},
   schema: { fields: [] },
+  responsive: { perBreakpoint: [] },
+  designTokens: { surface: "background", text: "foreground" },
+  editableFields: [],
+  runtimeCompatibility: ["react-template", "export-tsx"],
+  exportCompatibility: { tsx: true, html: true },
+  generationPrompt: `Generate a "${label}" widget configuration.`,
 });
 
 export const widgetDefinitions: ComponentDefinition[] = [
