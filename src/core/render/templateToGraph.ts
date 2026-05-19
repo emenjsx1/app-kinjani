@@ -33,9 +33,9 @@ function hexToHslTriplet(hex?: string): string {
 
 export function templateToGraph(template: WebsiteTemplate): CompositionGraph {
   const theme: GraphTheme = {
-    primary: hexToHslTriplet(template.primaryColor),
-    secondary: hexToHslTriplet(template.secondaryColor),
-    accent: hexToHslTriplet(template.primaryColor),
+    primary: hexToHslTriplet(template.colors?.primary),
+    secondary: hexToHslTriplet(template.colors?.secondary),
+    accent: hexToHslTriplet(template.colors?.accent || template.colors?.primary),
     background: "0 0% 100%",
     text: "222 47% 11%",
     font: template.font || "Inter, sans-serif",
