@@ -338,7 +338,7 @@ export class AIOrchestrator {
     constraintsPrompt: string,
     directive: RetryDirective | null,
   ): Promise<AgentProposal | null> {
-    const agent = agentRegistry.get(agentId);
+    const agent = agentRegistry.get(agentId as import("../agents/types").AgentId);
     if (!agent) return null;
 
     const runner = (agent as unknown as {
