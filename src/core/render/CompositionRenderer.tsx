@@ -78,13 +78,15 @@ export function CompositionRenderer({
   onCtaClick,
   onNodeClick,
   selectedId,
+  legacyRenderer,
 }: {
   graph: CompositionGraph;
   onCtaClick?: (action?: string, target?: string) => void;
   onNodeClick?: (id: string) => void;
   selectedId?: string | null;
+  legacyRenderer?: RendererContext["legacyRenderer"];
 }) {
-  const ctx: RendererContext = { theme: graph.theme, onCtaClick, onNodeClick, selectedId };
+  const ctx: RendererContext = { theme: graph.theme, onCtaClick, onNodeClick, selectedId, legacyRenderer };
   return (
     <div style={themeVars(graph.theme)} className="min-h-screen w-full">
       <RenderNode node={graph.root} ctx={ctx} />
