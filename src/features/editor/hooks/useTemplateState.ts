@@ -59,18 +59,14 @@ export function useTemplateState(
   // local template, hydrate (undo/redo case).
   useEffect(() => {
     if (!engine) return;
-    const snap = engine.current();
+    const snap = engine.state;
     if (!snap) return;
     const fromSnap = projectToTemplate(snap);
-    // Cheap reference inequality check; deep equality avoided for perf.
-    if (fromSnap !== template) {
-      externalSyncRef.current = true;
-      setTemplateInternal((prev) => {
-        // skip if equal by content hash
-        if (JSON.stringify(prev) === JSON.stringify(fromSnap)) return prev;
-        return fromSnap;
-      });
-    }
+    externalSyncRef.current = true;
+    setTemplateInternal((prev) => {
+      if (JSON.stringify(prev) === JSON.stringify(fromSnap)) return prev;
+      return fromSnap;
+    });
   }, [histVersion, engine]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const project = useMemo(
