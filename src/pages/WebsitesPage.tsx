@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Search, MoreHorizontal, Globe, Eye, Pencil, Copy, Trash2 } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Globe, Eye, Pencil, Copy, Trash2, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
