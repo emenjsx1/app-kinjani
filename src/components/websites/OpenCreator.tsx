@@ -104,17 +104,19 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
 
       advanceStage("direction", "running");
       await sleep(450);
+      const brief = buildBrief({ prompt, websiteName: finalName });
       const creativeTemplate = getCreativeComposition({
         prompt, siteType: "open", websiteName: finalName,
       });
       advanceStage("direction", "done");
 
       advanceStage("composition", "running");
-      await sleep(500);
+      await sleep(400);
+      const compositionGraph = generateCompositionGraph(brief);
       advanceStage("composition", "done");
 
       advanceStage("components", "running");
-      await sleep(400);
+      await sleep(300);
       advanceStage("components", "done");
 
       let customTemplate = creativeTemplate;
@@ -154,6 +156,7 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
         templateId: "open-build-generated",
         prompt,
         customTemplate,
+        compositionGraph,
       });
 
       if (result?.id) {
