@@ -112,21 +112,18 @@ export default function PublicWebsitePage() {
         }
 
         setWebsiteName(data.name);
-        
         const config = parseConfig(data.config);
-        
+
+        if (config?.compositionGraph) {
+          setGraph(config.compositionGraph);
+        }
         if (config?.customTemplate) {
           setTemplate(config.customTemplate);
         } else if (config?.templateId) {
           const baseTemplate = getTemplateById(config.templateId);
-          if (baseTemplate) {
-            setTemplate(baseTemplate);
-          }
+          if (baseTemplate) setTemplate(baseTemplate);
         }
-
-        if (config?.embedConfig) {
-          setEmbedConfig(config.embedConfig);
-        }
+        if (config?.embedConfig) setEmbedConfig(config.embedConfig);
       } catch (err) {
         console.error("Error loading website:", err);
         setNotFound(true);
