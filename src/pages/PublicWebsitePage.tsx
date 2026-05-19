@@ -83,6 +83,7 @@ export default function PublicWebsitePage() {
   const { siteId } = useParams();
   const [websiteName, setWebsiteName] = useState<string>("");
   const [template, setTemplate] = useState<WebsiteTemplate | null>(null);
+  const [graph, setGraph] = useState<CompositionGraph | null>(null);
   const [embedConfig, setEmbedConfig] = useState<EmbedConfig | undefined>();
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
