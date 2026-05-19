@@ -2,9 +2,9 @@ import type { AIOperationEnvelope, OperationResult } from "../types";
 
 export type StreamEventSeverity = "info" | "warn" | "error";
 
-/** Common envelope fields attached to every emitted event. */
+/** Common envelope fields attached to every emitted event. Auto-filled by emitter. */
 export interface StreamEventCommon {
-  timestamp: number;
+  timestamp?: number;
   duration?: number;
   agent?: string;
   severity?: StreamEventSeverity;
