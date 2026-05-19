@@ -154,28 +154,53 @@ export default function PublicWebsitePage() {
     );
   }
 
-  if (graph) {
+  // Single rendering source of truth: CompositionRenderer.
+  // Legacy templates are adapted into a graph (legacy-section nodes) so we
+  // never fall back to the section-stack rendering path.
+  const finalGraph = graph ?? (template ? templateToGraph(template) : null);
+
+  if (!finalGraph) {
     return (
-      <div className="min-h-screen">
-        <CompositionRenderer
-          graph={graph}
-          onCtaClick={(action, target) => {
-            if (action === "whatsapp" && target) window.open(`https://wa.me/${target}`, "_blank");
-            else if (action === "url" && target) window.open(target, "_blank");
-            else if (target) document.getElementById(`n-${target}`)?.scrollIntoView({ behavior: "smooth" });
-          }}
-        />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen">
-      <WebsitePreview
-        template={template!}
-        websiteName={websiteName}
-        fullscreen={true}
-        embedConfig={embedConfig}
+      <CompositionRenderer
+        graph={finalGraph}
+        onCtaClick={(action, target) => {
+          if (action === "whatsapp" && target) window.open(`https://wa.me/${target}`, "_blank");
+          else if (action === "url" && target) window.open(target, "_blank");
+          else if (target) document.getElementById(`n-${target}`)?.scrollIntoView({ behavior: "smooth" });
+        }}
+        legacyRenderer={
+          template
+            ? (sectionType, content, variant) => (
+                <WebsitePreview
+                  template={{
+                    ...template,
+                    sections: [
+                      {
+                        id: `inline-${sectionType}`,
+                        type: sectionType as never,
+                        title: sectionType,
+                        content: content as Record<string, string>,
+                        enabled: true,
+                        order: 0,
+                        variant,
+                      },
+                    ],
+                  }}
+                  websiteName={websiteName}
+                  fullscreen={false}
+                  embedConfig={embedConfig}
+                />
+              )
+            : undefined
+        }
       />
     </div>
   );
