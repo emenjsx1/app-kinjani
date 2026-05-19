@@ -10,6 +10,9 @@ import { Label } from "@/components/ui/label";
 import { useWebsiteAI } from "@/hooks/useWebsiteAI";
 import { getCreativeComposition } from "@/lib/creative-composition";
 import type { WebsiteTemplate } from "@/lib/website-templates";
+import { generateCompositionGraph } from "@/core/render/CompositionGenerator";
+import { buildBrief } from "@/core/render/buildBrief";
+import type { CompositionGraph } from "@/core/render/composition-graph";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +24,7 @@ export interface OpenCreatorWebsitePayload {
   templateId?: string;
   prompt?: string;
   customTemplate?: WebsiteTemplate;
+  compositionGraph?: CompositionGraph;
 }
 
 interface OpenCreatorProps {
@@ -100,17 +104,19 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
 
       advanceStage("direction", "running");
       await sleep(450);
+      const brief = buildBrief({ prompt, websiteName: finalName });
       const creativeTemplate = getCreativeComposition({
         prompt, siteType: "open", websiteName: finalName,
       });
       advanceStage("direction", "done");
 
       advanceStage("composition", "running");
-      await sleep(500);
+      await sleep(400);
+      const compositionGraph = generateCompositionGraph(brief);
       advanceStage("composition", "done");
 
       advanceStage("components", "running");
-      await sleep(400);
+      await sleep(300);
       advanceStage("components", "done");
 
       let customTemplate = creativeTemplate;
@@ -150,6 +156,7 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
         templateId: "open-build-generated",
         prompt,
         customTemplate,
+        compositionGraph,
       });
 
       if (result?.id) {

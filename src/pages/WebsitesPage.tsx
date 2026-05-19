@@ -41,6 +41,7 @@ export default function WebsitesPage() {
     templateId?: string;
     prompt?: string;
     customTemplate?: unknown;
+    compositionGraph?: unknown;
   }) => {
     const result = await createWebsite({
       name: newWebsiteData.name,
@@ -53,6 +54,7 @@ export default function WebsitesPage() {
         templateId: newWebsiteData.templateId,
         prompt: newWebsiteData.prompt,
         customTemplate: newWebsiteData.customTemplate as Website['config']['customTemplate'],
+        compositionGraph: newWebsiteData.compositionGraph as never,
       },
     });
 

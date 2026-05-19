@@ -6,6 +6,8 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { EmbedConfig } from "@/components/websites/WebsiteEditor";
 import { supabase } from "@/integrations/supabase/client";
 import { Json } from "@/integrations/supabase/types";
+import { CompositionRenderer } from "@/core/render/CompositionRenderer";
+import type { CompositionGraph } from "@/core/render/composition-graph";
 
 interface WebsiteConfig {
   type?: "landing" | "institutional";
@@ -15,13 +17,11 @@ interface WebsiteConfig {
   prompt?: string;
   customTemplate?: WebsiteTemplate;
   embedConfig?: EmbedConfig;
+  compositionGraph?: CompositionGraph;
 }
 
-// Helper to parse config from JSON
 const parseConfig = (config: Json | null): WebsiteConfig | null => {
-  if (!config || typeof config !== "object" || Array.isArray(config)) {
-    return null;
-  }
+  if (!config || typeof config !== "object" || Array.isArray(config)) return null;
   return config as WebsiteConfig;
 };
 
@@ -83,6 +83,7 @@ export default function PublicWebsitePage() {
   const { siteId } = useParams();
   const [websiteName, setWebsiteName] = useState<string>("");
   const [template, setTemplate] = useState<WebsiteTemplate | null>(null);
+  const [graph, setGraph] = useState<CompositionGraph | null>(null);
   const [embedConfig, setEmbedConfig] = useState<EmbedConfig | undefined>();
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -111,21 +112,18 @@ export default function PublicWebsitePage() {
         }
 
         setWebsiteName(data.name);
-        
         const config = parseConfig(data.config);
-        
+
+        if (config?.compositionGraph) {
+          setGraph(config.compositionGraph);
+        }
         if (config?.customTemplate) {
           setTemplate(config.customTemplate);
         } else if (config?.templateId) {
           const baseTemplate = getTemplateById(config.templateId);
-          if (baseTemplate) {
-            setTemplate(baseTemplate);
-          }
+          if (baseTemplate) setTemplate(baseTemplate);
         }
-
-        if (config?.embedConfig) {
-          setEmbedConfig(config.embedConfig);
-        }
+        if (config?.embedConfig) setEmbedConfig(config.embedConfig);
       } catch (err) {
         console.error("Error loading website:", err);
         setNotFound(true);
@@ -145,7 +143,7 @@ export default function PublicWebsitePage() {
     );
   }
 
-  if (notFound || !template) {
+  if (notFound || (!template && !graph)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
@@ -156,10 +154,25 @@ export default function PublicWebsitePage() {
     );
   }
 
+  if (graph) {
+    return (
+      <div className="min-h-screen">
+        <CompositionRenderer
+          graph={graph}
+          onCtaClick={(action, target) => {
+            if (action === "whatsapp" && target) window.open(`https://wa.me/${target}`, "_blank");
+            else if (action === "url" && target) window.open(target, "_blank");
+            else if (target) document.getElementById(`n-${target}`)?.scrollIntoView({ behavior: "smooth" });
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen">
-      <WebsitePreview 
-        template={template} 
+      <WebsitePreview
+        template={template!}
         websiteName={websiteName}
         fullscreen={true}
         embedConfig={embedConfig}
