@@ -28,7 +28,7 @@ export interface PropSchema {
   fields: PropField[];
 }
 
-export type Breakpoint = "sm" | "md" | "lg" | "xl";
+import type { Breakpoint } from "../editor/breakpoints";
 
 export interface ResponsiveRule {
   hidden?: boolean;
