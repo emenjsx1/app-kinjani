@@ -53,7 +53,7 @@ export interface OrchestrationInput {
   sessionId: string;
   sourcePromptId: string;
   /** Optional explicit agent ids to ask for proposals; defaults to all registered. */
-  agents?: string[];
+  agents?: import("../agents/types").AgentId[];
   /** Optional editor selection (forwarded to context builder). */
   selection?: {
     pageId?: string;
@@ -152,7 +152,7 @@ export class AIOrchestrator {
     const constraintsPrompt = constraintsToPrompt(constraints);
 
     /* 3. Gather agent proposals (with retry) */
-    const agentIds = input.agents ?? agentRegistry.list().map((a) => a.id);
+    const agentIds = input.agents ?? agentRegistry.all().map((a) => a.id);
     const proposals: AgentProposal[] = [];
     let lastError: unknown = null;
 
