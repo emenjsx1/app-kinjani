@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Eye, Globe, Pencil, Trash2, ExternalLink } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
-import type { EmbedConfig } from "@/components/websites/WebsiteEditor";
+import { WebsiteEditor, type EmbedConfig } from "@/components/websites/WebsiteEditor";
 import { EditorShell } from "@/features/editor";
 import { WebsitePreview } from "@/components/websites/WebsitePreview";
 import { getTemplateById, WebsiteTemplate } from "@/lib/website-templates";
@@ -19,6 +19,8 @@ import { useProfile } from "@/hooks/useProfile";
 export default function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const useLegacyEditor = searchParams.get("legacy") === "1";
   const { getWebsite, updateWebsite, deleteWebsite } = useWebsites();
   const { profile } = useProfile();
   const [website, setWebsite] = useState<Website | null>(null);
