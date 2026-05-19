@@ -20,10 +20,13 @@ export type AIOperation =
 
 export type AgentSource =
   | "planner"
+  | "layout-agent"
   | "ui-agent"
   | "copy-agent"
+  | "responsive-agent"
   | "seo-agent"
   | "fix-agent"
+  | "export-agent"
   | "user"
   | "system";
 

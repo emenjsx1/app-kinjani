@@ -4,10 +4,12 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Project } from "@/core/projects/types";
-import { projectToTemplate } from "@/core/projects/types";
-import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 import { useTemplateBridge } from "../hooks/useTemplateBridge";
+import { websiteAIService } from "@/core/ai/services/WebsiteAIService";
+import { AIStreamEmitter } from "@/core/ai/streaming/StreamEmitter";
+import { STAGE_LABELS_PT } from "@/core/ai/streaming/StreamEvents";
+import { projectToTemplate } from "@/core/projects/types";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -18,10 +20,8 @@ interface Msg {
 }
 
 /**
- * AI chat panel. Reads current template via the template bridge, sends
- * instructions to the `ai-edit-website` edge function, and applies the
- * returned template through the bridge (which records a history snapshot
- * automatically). Future Phase 3 will switch this to AIOperationEnvelope.
+ * AI chat panel. Routes prompts through the OperationPipeline-backed
+ * WebsiteAIService, streaming pipeline stages back to the user.
  */
 export const AIChatPanel = memo(function AIChatPanel({ project }: { project: Project | null }) {
   const bridge = useTemplateBridge();
@@ -36,11 +36,12 @@ export const AIChatPanel = memo(function AIChatPanel({ project }: { project: Pro
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [stage, setStage] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages]);
+  }, [messages, stage]);
 
   const send = async () => {
     if (!input.trim() || loading || !project || !bridge) return;
@@ -48,6 +49,7 @@ export const AIChatPanel = memo(function AIChatPanel({ project }: { project: Pro
     setMessages((m) => [...m, userMsg]);
     setInput("");
     setLoading(true);
+    setStage("A iniciar");
 
     if (!profile || profile.credits_balance < 1) {
       setMessages((m) => [
@@ -55,28 +57,41 @@ export const AIChatPanel = memo(function AIChatPanel({ project }: { project: Pro
         { id: `e_${Date.now()}`, role: "assistant", content: "Sem créditos suficientes." },
       ]);
       setLoading(false);
+      setStage(null);
       return;
     }
     await deductCredits(1, "ai_website_edit", "Edição com IA");
 
+    const emitter = new AIStreamEmitter();
+    const off = emitter.on((ev) => {
+      if (ev.type === "stage") setStage(STAGE_LABELS_PT[ev.stage]);
+    });
+
     try {
-      const tmpl = projectToTemplate(project);
-      const { data, error } = await supabase.functions.invoke("ai-edit-website", {
-        body: { instruction: userMsg.content, template: tmpl, websiteName: project.name },
-      });
-      if (error || !data?.success) throw new Error(data?.error || error?.message || "Erro");
-      if (data.template) {
-        bridge.setTemplate(data.template, "ai edit");
-        toast.success("Alteração aplicada");
-      }
-      setMessages((m) => [
-        ...m,
-        {
-          id: `a_${Date.now()}`,
-          role: "assistant",
-          content: data.message || "Pronto! Alteração aplicada.",
+      const res = await websiteAIService.edit({
+        project,
+        prompt: userMsg.content,
+        emitter,
+        commit: (nextProject) => {
+          // Adapt new project back into the legacy template the bridge expects.
+          const tmpl = projectToTemplate(nextProject);
+          bridge.setTemplate(tmpl, "ai edit");
         },
-      ]);
+      });
+
+      // Legacy template fallback path (if planner returned the old shape).
+      const legacy = (res as { legacyTemplate?: unknown } | null)?.legacyTemplate;
+      if (legacy) {
+        bridge.setTemplate(legacy as Parameters<typeof bridge.setTemplate>[0], "ai edit");
+      }
+
+      const msg =
+        res?.message ??
+        (res && "applied" in res && res.applied?.length
+          ? `Aplicadas ${res.applied.length} operação(ões).`
+          : "Pronto.");
+      setMessages((m) => [...m, { id: `a_${Date.now()}`, role: "assistant", content: msg }]);
+      if (res && "applied" in res && res.applied?.length) toast.success("Alteração aplicada");
     } catch (err) {
       setMessages((m) => [
         ...m,
@@ -87,7 +102,9 @@ export const AIChatPanel = memo(function AIChatPanel({ project }: { project: Pro
         },
       ]);
     } finally {
+      off();
       setLoading(false);
+      setStage(null);
     }
   };
 
@@ -121,7 +138,8 @@ export const AIChatPanel = memo(function AIChatPanel({ project }: { project: Pro
           ))}
           {loading && (
             <div className="flex gap-2 items-center text-xs text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" /> a pensar...
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>{stage ?? "a pensar..."}</span>
             </div>
           )}
           <div ref={endRef} />
