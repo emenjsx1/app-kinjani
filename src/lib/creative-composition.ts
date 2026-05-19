@@ -194,7 +194,8 @@ export function getCreativeComposition(input: CompositionInput): WebsiteTemplate
   const intent = analyzePrompt(input.prompt, input.siteType);
 
   // Start from a randomly picked strategy then mutate based on intent.
-  let order: SectionType[] = [...(pick(rng, STRATEGIES as unknown as readonly SectionType[][]) as readonly SectionType[])];
+  const strategies = STRATEGIES as unknown as SectionType[][];
+  let order: SectionType[] = [...pick(rng, strategies)];
 
   // Intent-driven additions (always inserted at non-default positions)
   const ensure = (t: SectionType, position: number) => {
