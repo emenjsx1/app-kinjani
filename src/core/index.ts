@@ -5,6 +5,7 @@ export * from "./editor";
 export * from "./history";
 export * from "./preview";
 export * from "./generator";
+export * from "./codegen";
 export * from "./ai";
 export * from "./runtime/types";
 export * from "./agents/types";
