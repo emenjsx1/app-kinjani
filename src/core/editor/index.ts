@@ -6,3 +6,8 @@ export * from "./dnd";
 export * from "./selection";
 export * from "./keymap";
 export * from "./canvas";
+export * from "./overlay";
+export * from "./layerTree";
+export * from "./responsive";
+export * from "./toolbar";
+export * from "./nodeRegistry";
