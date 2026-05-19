@@ -19,6 +19,7 @@ export interface Website {
     prompt?: string;
     customTemplate?: WebsiteTemplate;
     embedConfig?: EmbedConfig;
+    compositionGraph?: any;
   } | null;
   created_at: string;
   updated_at: string;
