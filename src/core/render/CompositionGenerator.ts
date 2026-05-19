@@ -285,17 +285,18 @@ function cinematicHero(b: CreativeBrief, rng: () => number): CompositionNode {
 }
 
 function fullBleedCinematic(b: CreativeBrief, rng: () => number): CompositionNode {
-  // Same as cinematicHero but with bento grid below
   let n = 0;
+  const cine = cinematicHero(b, rng) as CompositionNode & { children: CompositionNode[] };
+  const heroOverlay = cine.children?.[1];
   return {
     id: id("root", n++), type: "stack", direction: "v", gap: 0,
     children: [
       navBar(b, n++),
-      cinematicHero(b, rng).children?.[1] as CompositionNode,
+      ...(heroOverlay ? [heroOverlay] : []),
       bentoGridInner(b, rng, n++),
       ctaStrip(b, n++),
       footer(b, n++),
-    ].filter(Boolean) as CompositionNode[],
+    ],
   };
 }
 
