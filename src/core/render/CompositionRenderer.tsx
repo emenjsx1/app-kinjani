@@ -351,7 +351,13 @@ function RenderNode({ node, ctx }: NodeProps): JSX.Element | null {
       return <div id={`n-${node.id}`} className={cn(PY[node.size] ?? "py-8", node.className)} />;
 
     case "legacy-section":
-      // Escape hatch for legacy sections — should be wrapped externally
+      if (ctx.legacyRenderer) {
+        return (
+          <div id={`n-${node.id}`} onClick={ctx.onNodeClick ? handleClick : undefined} className={cn(interactive, selectedRing, node.className)}>
+            {ctx.legacyRenderer(node.sectionType, node.content, node.variant)}
+          </div>
+        );
+      }
       return null;
   }
 }
