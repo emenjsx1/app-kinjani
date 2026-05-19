@@ -28,7 +28,7 @@ export interface AgentRunResult {
   data?: unknown;
 }
 
-export interface Agent {
+export interface AIAgent {
   id: AgentId;
   description: string;
   /** Lightweight predicate: can this agent handle the prompt? */

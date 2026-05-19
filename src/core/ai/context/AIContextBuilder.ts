@@ -52,7 +52,7 @@ export const AIContextBuilder = {
           id: c.id,
           type: c.type,
           category: c.category,
-          displayName: c.displayName,
+          label: c.label,
         })),
       },
       history: {

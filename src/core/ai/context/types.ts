@@ -33,7 +33,7 @@ export interface AIContext {
   selection: AIContextSelection;
   responsiveMode: ResponsiveMode;
   registry: {
-    components: Array<Pick<ComponentDefinition, "id" | "type" | "category" | "displayName">>;
+    components: Array<Pick<ComponentDefinition, "id" | "type" | "category" | "label">>;
   };
   history: {
     recent: Array<Pick<AIOperationEnvelope["meta"], "operationId" | "sourceAgent" | "label">>;
