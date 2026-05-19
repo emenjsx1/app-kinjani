@@ -167,7 +167,7 @@ export default function WebsitesPage() {
                 description="Gere o seu primeiro site com IA"
                 action={{
                   label: "Criar Site",
-                  onClick: () => setIsWizardOpen(true),
+                  onClick: () => setIsOpenCreatorOpen(true),
                 }}
               />
             </CardContent>
