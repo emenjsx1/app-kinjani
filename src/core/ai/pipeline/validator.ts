@@ -10,16 +10,21 @@ export interface ValidationError {
 export const validator = {
   validatePlan(raw: unknown) {
     const parsed = operationPlanZ.safeParse(raw);
-    return parsed.success
-      ? { ok: true as const, plan: parsed.data }
-      : { ok: false as const, errors: parsed.error.flatten() };
+    if (!parsed.success) return { ok: false as const, errors: parsed.error.flatten() };
+    return {
+      ok: true as const,
+      plan: {
+        ...parsed.data,
+        envelopes: parsed.data.envelopes as unknown as AIOperationEnvelope[],
+      },
+    };
   },
   validateEnvelopes(envs: unknown[]): { ok: boolean; errors: ValidationError[]; valid: AIOperationEnvelope[] } {
     const errors: ValidationError[] = [];
     const valid: AIOperationEnvelope[] = [];
     envs.forEach((e, i) => {
       const r = aiOperationEnvelopeZ.safeParse(e);
-      if (r.success) valid.push(r.data);
+      if (r.success) valid.push(r.data as unknown as AIOperationEnvelope);
       else
         errors.push({
           index: i,
