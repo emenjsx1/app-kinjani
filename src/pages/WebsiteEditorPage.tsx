@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { WebsiteEditor, EmbedConfig } from "@/components/websites/WebsiteEditor";
+import type { EmbedConfig } from "@/components/websites/WebsiteEditor";
+import { EditorShell } from "@/features/editor";
 import { WebsitePreview } from "@/components/websites/WebsitePreview";
 import { getTemplateById, WebsiteTemplate } from "@/lib/website-templates";
 import { toast } from "@/hooks/use-toast";
@@ -146,9 +147,10 @@ export default function WebsiteEditorPage() {
   if (isEditing) {
     return (
       <div className="h-screen">
-        <WebsiteEditor
-          template={template}
+        <EditorShell
+          websiteId={website.id}
           websiteName={website.name}
+          template={template}
           prompt={website.config?.prompt || ""}
           onBack={() => setIsEditing(false)}
           onSave={handleSaveTemplate}
