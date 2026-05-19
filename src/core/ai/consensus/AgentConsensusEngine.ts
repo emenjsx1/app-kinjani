@@ -22,7 +22,7 @@ import {
 } from "./types";
 
 function opSignature(env: AIOperationEnvelope): string {
-  const op = env.operation as Record<string, unknown>;
+  const op = env.op as Record<string, unknown>;
   const kind = String(op.op ?? "unknown");
   const target =
     (op.sectionId as string | undefined) ??
