@@ -45,7 +45,7 @@ export async function generateExperience(opts: GenerateOptions): Promise<Generat
   const { prompt, theme, seed = prompt, maxRounds = 2 } = opts;
 
   const intent = interpretIntent(prompt);
-  const dna = generateVisualDNA(seed);
+  const dna = generateVisualDNA({ prompt, websiteName: seed, uniqueSalt: seed });
   const energy = deriveEnergy(intent, dna);
 
   let plan: CompositionPlan = planComposition(intent, energy, dna);
