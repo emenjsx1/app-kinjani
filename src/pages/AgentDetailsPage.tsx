@@ -152,16 +152,9 @@ export default function AgentDetailsPage() {
 
   const connectedInstances = instances.filter(i => i.status === "connected");
 
-  const embedCode = `<!-- KINJA AI Chat Widget -->
-<script>
-  (function() {
-    var script = document.createElement('script');
-    script.src = 'https://widget.kinja.ai/chat.js';
-    script.async = true;
-    script.dataset.agentId = '${id}';
-    document.head.appendChild(script);
-  })();
-</script>`;
+  const widgetOrigin = typeof window !== "undefined" ? window.location.origin : "https://bloom-design-foundry.lovable.app";
+  const embedCode = `<!-- Kinjani AI Chat Widget -->
+<script src="${widgetOrigin}/widget.js" async data-agent-id="${id}" data-position="bottom-right" data-primary-color="#00DF81"></script>`;
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(embedCode);

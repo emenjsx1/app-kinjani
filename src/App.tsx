@@ -30,6 +30,7 @@ import CloudPage from "./pages/CloudPage";
 import DomainsPage from "./pages/DomainsPage";
 import WhatsAppSettingsPage from "./pages/WhatsAppSettingsPage";
 import EmailSettingsPage from "./pages/EmailSettingsPage";
+import EmbedPage from "./pages/EmbedPage";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/site/:siteId" element={<PublicWebsitePage />} />
             <Route path="/s/:slug" element={<PublicWebsitePage />} />
             <Route path="/genesis-preview" element={<GenesisPreviewPage />} />
+            <Route path="/embed/:agentId" element={<EmbedPage />} />
             
             {/* Protected routes */}
             <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MessageCircle, X, Minimize2, Send } from "lucide-react";
+import { Bot, X, Minimize2, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -102,7 +102,7 @@ export function EmbedWidget({
                 className="h-10 w-10 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: "rgba(255,255,255,0.2)" }}
               >
-                <MessageCircle className="h-5 w-5" />
+                <Bot className="h-5 w-5" />
               </div>
               <div>
                 <h3 className="font-semibold text-sm">{agentName}</h3>
@@ -204,7 +204,7 @@ export function EmbedWidget({
           className="h-14 w-14 rounded-full shadow-lg hover:scale-105 transition-transform"
           style={{ backgroundColor: primaryColor }}
         >
-          <MessageCircle className="h-6 w-6" />
+          <Bot className="h-6 w-6 text-white" />
         </Button>
       )}
     </div>
@@ -232,25 +232,8 @@ export function generateEmbedCode(options: EmbedCodeOptions): string {
 
   const positionValue = position === "left" ? "bottom-left" : position === "right" ? "bottom-right" : position;
 
-  return `<!-- KINJA AI Chat Widget -->
-<script>
-  (function() {
-    var w = window;
-    var d = document;
-    var s = d.createElement('script');
-    s.src = 'https://cdn.kinja.ai/widget.js';
-    s.async = true;
-    s.onload = function() {
-      w.KinjaChat.init({
-        agentId: '${agentId}',
-        agentName: '${agentName}',
-        primaryColor: '${primaryColor}',
-        position: '${positionValue}',
-        welcomeMessage: '${welcomeMessage}'
-      });
-    };
-    d.head.appendChild(s);
-  })();
-</script>
-<!-- End KINJA AI Widget -->`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://bloom-design-foundry.lovable.app";
+  return `<!-- Kinjani AI Chat Widget -->
+<script src="${origin}/widget.js" async data-agent-id="${agentId}" data-position="${positionValue}" data-primary-color="${primaryColor}"></script>
+<!-- End Kinjani AI Widget -->`;
 }
