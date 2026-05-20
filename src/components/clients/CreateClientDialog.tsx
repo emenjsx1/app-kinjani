@@ -133,17 +133,17 @@ export function CreateClientDialog({ open, onOpenChange }: CreateClientDialogPro
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="monthly_value">Valor Mensal (€)</Label>
+              <Label htmlFor="monthly_value">Valor Mensal (MZN)</Label>
               <Input
                 id="monthly_value"
                 type="number"
                 min="0"
-                step="0.01"
+                step="1"
                 value={formData.monthly_value || ""}
                 onChange={(e) =>
                   setFormData({ ...formData, monthly_value: parseFloat(e.target.value) || 0 })
                 }
-                placeholder="99.00"
+                placeholder="2500"
               />
             </div>
           </div>
