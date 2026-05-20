@@ -39,7 +39,10 @@ function pickFirst(
 ): string {
   const t = text.toLowerCase();
   for (const [k, words] of Object.entries(table)) {
-    if (words.some((w) => t.includes(w))) return k;
+    // Word-boundary match — prevents false positives like "Stripe" matching "trip".
+    if (words.some((w) => new RegExp(`\\b${w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(t))) {
+      return k;
+    }
   }
   return fallback;
 }
