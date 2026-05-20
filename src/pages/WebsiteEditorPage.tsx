@@ -43,6 +43,30 @@ export default function WebsiteEditorPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const didAutoRunRef = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const callEdge = async (fn: string, body: any, signal: AbortSignal) => {
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fn}`;
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const res = await fetch(url, {
+      method: "POST",
+      signal,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.error || `Erro ${res.status}`);
+    return json;
+  };
+
+  const stop = () => {
+    abortRef.current?.abort();
+  };
 
   useEffect(() => {
     (async () => {
@@ -83,25 +107,40 @@ export default function WebsiteEditorPage() {
   };
 
   const runGenerate = async (prompt: string, name?: string) => {
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     setBusy(true);
     setBusyLabel("A criar o teu site...");
     const userMsg: ChatMsg = { role: "user", content: prompt, ts: Date.now() };
     const draftHistory = [...history, userMsg];
     setHistory(draftHistory);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-site-html", {
-        body: { prompt, websiteName: name || website?.name },
-      });
-      if (error || !data?.html) throw new Error(error?.message || data?.error || "Falha");
-      const asst: ChatMsg = { role: "assistant", content: "Site criado ✨ Pede qualquer alteração — cores, secções, logo, links, equipa, contactos. Podes anexar imagens e eu uso-as no site.", ts: Date.now(), action: "edit", htmlSnapshot: data.html };
+      const data = await callEdge("generate-site-html", { prompt, websiteName: name || website?.name }, ctrl.signal);
+      if (!data?.html) throw new Error(data?.error || "Sem resposta");
+      const asst: ChatMsg = {
+        role: "assistant",
+        content: "Site criado ✨ Pede qualquer alteração — cores, secções, logo, links, equipa, contactos, ou pede para transformar em site multi-página (com rotas /sobre, /serviços, etc).",
+        ts: Date.now(),
+        action: "edit",
+        htmlSnapshot: data.html,
+      };
       const finalHistory = [...draftHistory, asst];
       setHtml(data.html);
       setHistory(finalHistory);
       await persist(data.html, finalHistory);
     } catch (e: any) {
-      toast({ title: "Erro", description: e.message || "Falha ao gerar.", variant: "destructive" });
-      setHistory(history);
+      const aborted = e?.name === "AbortError" || ctrl.signal.aborted;
+      const asst: ChatMsg = {
+        role: "assistant",
+        content: aborted ? "_Parado pelo utilizador._" : `⚠️ Não consegui criar: ${e?.message || "erro desconhecido"}. Tenta de novo ou reformula o pedido.`,
+        ts: Date.now(),
+        action: "chat",
+      };
+      const finalHistory = [...draftHistory, asst];
+      setHistory(finalHistory);
+      await persist(html, finalHistory);
     } finally {
+      abortRef.current = null;
       setBusy(false);
       setBusyLabel("");
     }
@@ -130,22 +169,21 @@ export default function WebsiteEditorPage() {
       return;
     }
 
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
     setBusy(true);
     setBusyLabel(mode === "plan" ? "A elaborar plano..." : "A pensar...");
     const userMsg: ChatMsg = { role: "user", content: finalText + (sentAttachments.length ? `  📎 ${sentAttachments.length}` : ""), ts: Date.now() };
     const draft = [...history, userMsg];
     setHistory(draft);
     try {
-      const { data, error } = await supabase.functions.invoke("edit-site-html", {
-        body: {
-          html,
-          instruction: finalText,
-          history: draft.slice(-8),
-          mode,
-          attachments: sentAttachments,
-        },
-      });
-      if (error) throw new Error(error.message || "Falha");
+      const data = await callEdge("edit-site-html", {
+        html,
+        instruction: finalText,
+        history: draft.slice(-8),
+        mode,
+        attachments: sentAttachments,
+      }, ctrl.signal);
 
       const action: "chat" | "plan" | "edit" = data?.action || (data?.html ? "edit" : "chat");
       const newHtml = action === "edit" && data?.html ? data.html : html;
@@ -161,9 +199,18 @@ export default function WebsiteEditorPage() {
       setHistory(final);
       await persist(newHtml, final);
     } catch (e: any) {
-      toast({ title: "Erro", description: e.message || "Falha.", variant: "destructive" });
-      setHistory(history);
+      const aborted = e?.name === "AbortError" || ctrl.signal.aborted;
+      const asst: ChatMsg = {
+        role: "assistant",
+        content: aborted ? "_Parado pelo utilizador._" : `⚠️ Erro: ${e?.message || "falha desconhecida"}. Tenta reformular o pedido.`,
+        ts: Date.now(),
+        action: "chat",
+      };
+      const final = [...draft, asst];
+      setHistory(final);
+      await persist(html, final);
     } finally {
+      abortRef.current = null;
       setBusy(false);
       setBusyLabel("");
     }
