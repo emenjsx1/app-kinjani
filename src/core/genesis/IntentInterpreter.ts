@@ -9,6 +9,7 @@ import type { Intent } from "./types";
 // Order matters — more specific domains MUST come before generic ones
 // (e.g. "dental" before "health", "fintech" before generic finance).
 const DOMAIN_HINTS: Record<string, string[]> = {
+  construction: ["construction", "construção", "construcao", "construir", "builder", "build", "obra", "obras", "engenharia", "civil", "arquitetura", "contractor", "empreiteiro"],
   dental: ["dental", "dentist", "dentistry", "smile", "implant", "implants", "whitening", "orthodontic", "invisalign", "teeth", "oral care"],
   beauty: ["aesthetic", "aesthetics", "cosmetic", "skincare", "salon", "beauty", "facial", "botox"],
   tourism: ["tourism", "travel", "destination", "safari", "resort", "hotel", "lodge", "tour", "trip", "journey", "expedition", "getaway", "voyage", "hospitality"],
@@ -25,7 +26,7 @@ const DOMAIN_HINTS: Record<string, string[]> = {
 };
 
 // Quick location detector — adds "place" awareness to copy without an LLM call.
-const LOCATION_RE = /\b(?:in|to|across|from)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)\b/;
+const LOCATION_RE = /\b(?:in|to|across|from|em|na|no|location|localização|localiacao|morada|address)\s+([A-ZÀ-ÿ][a-zA-ZÀ-ÿ]+(?:\s+[A-ZÀ-ÿ][a-zA-ZÀ-ÿ]+)?)\b/i;
 
 const EMOTION_HINTS: Record<string, string[]> = {
   bold: ["bold", "loud", "powerful", "energetic", "kinetic"],
@@ -80,7 +81,8 @@ export function interpretIntent(prompt: string): Intent {
   );
 
   const locMatch = clean.match(LOCATION_RE);
-  const location = locMatch ? locMatch[1] : undefined;
+  const bareLocation = /\b(maputo|mozambique|moçambique|luanda|africa)\b/i.exec(clean)?.[1];
+  const location = locMatch ? locMatch[1] : bareLocation;
 
   return {
     prompt: clean,

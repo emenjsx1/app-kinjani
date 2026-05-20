@@ -14,6 +14,10 @@ import {
   interpretIntent,
   type GenerativeResult,
 } from "@/core/genesis";
+import {
+  buildStructuredTemplateFromPrompt,
+  inferWebsiteNameFromPrompt,
+} from "@/core/genesis/StructuredTemplateBuilder";
 import type { CompositionGraph } from "@/core/render/composition-graph";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -91,10 +95,7 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
   };
   
 
-  const inferName = (p: string) => {
-    const firstWords = p.trim().split(/\s+/).slice(0, 4).join(" ");
-    return firstWords.charAt(0).toUpperCase() + firstWords.slice(1);
-  };
+  const inferName = (p: string) => inferWebsiteNameFromPrompt(p);
 
   const handleCreate = async () => {
     if (!prompt.trim() || prompt.trim().length < 12) {
@@ -144,6 +145,8 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
       });
       const compositionGraph: CompositionGraph = exp.graph;
       const generationSession: GenerativeResult = exp;
+      const structuredTemplate = buildStructuredTemplateFromPrompt(prompt, finalName, intentSnapshot);
+      const resolvedType = structuredTemplate?.type ?? (/institucional|empresa|home|sobre|contacto|portfolio|portofolio/i.test(prompt) ? "institutional" : "landing");
       updateStage("composition", {
         status: "done",
         detail: `Energia ${exp.energy.label} — ${exp.plan.beats.length} batidas · ${[...new Set(exp.plan.beats.map(b => b.spatial))].join(" · ")}`,
@@ -178,14 +181,15 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
       await sleep(450);
 
       const result = await onWebsiteCreated({
-        name: finalName,
-        type: "landing",
+        name: structuredTemplate?.name ?? finalName,
+        type: resolvedType,
         niche: "Open Build",
         nicheId: "open-build",
         templateId: "open-build-generated",
         prompt,
-        compositionGraph,
-        generationSession,
+        customTemplate: structuredTemplate ?? undefined,
+        compositionGraph: structuredTemplate ? undefined : compositionGraph,
+        generationSession: structuredTemplate ? undefined : generationSession,
       });
 
       if (result?.id) {
