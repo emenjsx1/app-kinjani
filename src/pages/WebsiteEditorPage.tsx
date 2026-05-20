@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Send, Globe, ExternalLink, Loader2, Sparkles, Monitor, Smartphone, Tablet, Paperclip, Mic, Square, Lightbulb, Hammer, X, Download, Undo2 } from "lucide-react";
+import { ArrowLeft, Send, Globe, ExternalLink, Loader2, Sparkles, Monitor, Smartphone, Tablet, Paperclip, Mic, Square, Lightbulb, Hammer, X, Download, Undo2, History as HistoryIcon } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -478,6 +479,59 @@ export default function WebsiteEditorPage() {
           <Button size="sm" variant={device === "mobile" ? "default" : "ghost"} className="h-7 px-2" onClick={() => setDevice("mobile")}><Smartphone className="h-3.5 w-3.5" /></Button>
         </div>
         <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" disabled={versions.length === 0} title="Histórico de versões">
+                <HistoryIcon className="h-3.5 w-3.5 mr-1.5" />
+                Histórico
+                {versions.length > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-primary/15 text-primary text-[10px] font-semibold">
+                    {versions.length}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-[380px] p-0">
+              <div className="px-4 py-3 border-b flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Histórico de versões</p>
+                  <p className="text-[11px] text-muted-foreground">{versions.length} guardada{versions.length === 1 ? "" : "s"} · clica para reverter</p>
+                </div>
+                <HistoryIcon className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1">
+                {versions.length === 0 && (
+                  <p className="text-xs text-muted-foreground px-3 py-6 text-center">Ainda sem versões. Cada alteração da IA cria uma versão automaticamente.</p>
+                )}
+                {versions.map(({ message, index }, versionIndex) => {
+                  const date = new Date(message.ts);
+                  const timeLabel = date.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+                  const dateLabel = date.toLocaleDateString("pt-PT", { day: "2-digit", month: "short" });
+                  return (
+                    <button
+                      key={`${message.ts}-${index}`}
+                      onClick={() => revertTo(message.htmlSnapshot!, index)}
+                      className="group w-full flex items-start gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-muted/60 transition"
+                    >
+                      <div className="mt-0.5 w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center shrink-0">
+                        v{versions.length - versionIndex}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <span className="text-xs font-medium text-foreground">Versão {versions.length - versionIndex}</span>
+                          <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{dateLabel} · {timeLabel}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground line-clamp-2">{message.content}</p>
+                      </div>
+                      <span className="opacity-0 group-hover:opacity-100 transition inline-flex items-center gap-1 text-[11px] text-primary shrink-0 self-center">
+                        <Undo2 className="h-3 w-3" /> Reverter
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
           <Button variant="outline" size="sm" onClick={downloadHtml} disabled={!html} title="Descarregar HTML">
             <Download className="h-3.5 w-3.5 mr-1.5" />Download
           </Button>
@@ -511,42 +565,12 @@ export default function WebsiteEditorPage() {
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium">Assistente Kinjani</span>
           </div>
-          {(busy || versions.length > 0) && (
-            <div className="border-b px-4 py-3 space-y-3">
-              {busy && (
-                <div className="flex items-center justify-between gap-3">
-                  <ThinkingIndicator label={busyLabel || undefined} elapsed={elapsedLabel} />
-                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs shrink-0 text-muted-foreground hover:text-destructive" onClick={stop}>
-                    <Square className="h-3 w-3 mr-1" />Pausar
-                  </Button>
-                </div>
-              )}
-
-              {versions.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-foreground">Reverter versões</span>
-                    <span className="text-[11px] text-muted-foreground">{versions.length} guardada{versions.length > 1 ? "s" : ""}</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {versions.slice(0, 3).map(({ message, index }, versionIndex) => (
-                      <button
-                        key={`${message.ts}-${index}`}
-                        onClick={() => revertTo(message.htmlSnapshot!, index)}
-                        className="w-full flex items-start justify-between gap-3 rounded-lg border px-2.5 py-2 text-left hover:bg-muted/50 transition"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-foreground">Versão {versions.length - versionIndex}</p>
-                          <p className="text-[11px] text-muted-foreground line-clamp-2">{message.content}</p>
-                        </div>
-                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
-                          <Undo2 className="h-3 w-3" /> Reverter
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+          {busy && (
+            <div className="border-b px-4 py-3 flex items-center justify-between gap-3">
+              <ThinkingIndicator label={busyLabel || undefined} elapsed={elapsedLabel} />
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs shrink-0 text-muted-foreground hover:text-destructive" onClick={stop}>
+                <Square className="h-3 w-3 mr-1" />Pausar
+              </Button>
             </div>
           )}
           <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 min-w-0">
