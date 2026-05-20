@@ -12,6 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { injectRuntime } from "@/lib/inject-runtime";
 import { PublishDialog } from "@/components/websites/PublishDialog";
+import { ThinkingIndicator } from "@/components/ui/thinking-indicator";
+import { SmoothPreviewIframe } from "@/components/websites/SmoothPreviewIframe";
 
 type ChatMsg = {
   role: "user" | "assistant";
@@ -402,13 +404,10 @@ export default function WebsiteEditorPage() {
           {(busy || versions.length > 0) && (
             <div className="border-b px-4 py-3 space-y-3">
               {busy && (
-                <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                  <div className="min-w-0">
-                    <p className="font-medium text-foreground">A processar pedido{elapsedLabel}</p>
-                    <p className="truncate">{busyLabel || "A pensar..."}</p>
-                  </div>
-                  <Button size="sm" variant="destructive" className="h-7 px-2.5 shrink-0" onClick={stop}>
-                    <Square className="h-3 w-3 mr-1.5" />Pausar
+                <div className="flex items-center justify-between gap-3">
+                  <ThinkingIndicator label={busyLabel || undefined} elapsed={elapsedLabel} />
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs shrink-0 text-muted-foreground hover:text-destructive" onClick={stop}>
+                    <Square className="h-3 w-3 mr-1" />Pausar
                   </Button>
                 </div>
               )}
@@ -459,7 +458,7 @@ export default function WebsiteEditorPage() {
                 }
               }
               return (
-                <div key={i} className={m.role === "user" ? "flex justify-end min-w-0" : "group min-w-0"}>
+                <div key={i} className={cn("animate-fade-in", m.role === "user" ? "flex justify-end min-w-0" : "group min-w-0")}>
                   <div className={cn(
                     "min-w-0 break-words [overflow-wrap:anywhere]",
                     m.role === "user"
@@ -485,9 +484,8 @@ export default function WebsiteEditorPage() {
               );
             })}
             {busy && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>{busyLabel || "A pensar..."}{elapsedLabel}</span>
+              <div className="animate-fade-in">
+                <ThinkingIndicator label={busyLabel || undefined} elapsed={elapsedLabel} />
               </div>
             )}
           </div>
@@ -605,8 +603,8 @@ export default function WebsiteEditorPage() {
         {/* Preview */}
         <main className="flex-1 bg-muted/30 overflow-auto flex items-start justify-center p-6">
           {html ? (
-            <div className="bg-white shadow-2xl rounded-lg overflow-hidden transition-all" style={{ width: deviceWidth, maxWidth: "100%", height: "calc(100vh - 7rem)" }}>
-              <iframe srcDoc={injectRuntime(html)} title="preview" className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" />
+            <div className="bg-white shadow-2xl rounded-lg overflow-hidden transition-all duration-300" style={{ width: deviceWidth, maxWidth: "100%", height: "calc(100vh - 7rem)" }}>
+              <SmoothPreviewIframe html={injectRuntime(html)} device={device} />
             </div>
           ) : (
             <div className="text-center text-muted-foreground mt-20">
