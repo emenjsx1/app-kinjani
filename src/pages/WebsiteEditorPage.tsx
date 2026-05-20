@@ -11,6 +11,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { injectRuntime } from "@/lib/inject-runtime";
+import { PublishDialog } from "@/components/websites/PublishDialog";
 
 type ChatMsg = {
   role: "user" | "assistant";
