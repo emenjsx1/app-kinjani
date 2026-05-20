@@ -41,16 +41,55 @@ function extractIncomingWhatsAppText(message: Record<string, any> | undefined): 
   );
 }
 
-function describeIncomingMedia(message: Record<string, any> | undefined): string[] {
-  if (!message) return [];
-  const descriptions: string[] = [];
+type IncomingMedia = {
+  kind: 'audio' | 'image' | 'document' | 'video';
+  mimeType: string;
+  caption?: string;
+  fileName?: string;
+};
 
-  if (message.audioMessage) descriptions.push('O utilizador enviou um áudio no WhatsApp. Se o texto não vier transcrito ainda, informa de forma breve que o processamento multimodal completo do áudio está a ser ligado ao canal WhatsApp.');
-  if (message.imageMessage) descriptions.push(`O utilizador enviou uma imagem${message.imageMessage.caption ? ` com legenda: "${message.imageMessage.caption}"` : ''}.`);
-  if (message.documentMessage) descriptions.push(`O utilizador enviou um documento${message.documentMessage.fileName ? ` chamado "${message.documentMessage.fileName}"` : ''}.`);
-  if (message.videoMessage) descriptions.push(`O utilizador enviou um vídeo${message.videoMessage.caption ? ` com legenda: "${message.videoMessage.caption}"` : ''}.`);
+function detectIncomingMedia(message: Record<string, any> | undefined): IncomingMedia | null {
+  if (!message) return null;
+  if (message.audioMessage) {
+    return { kind: 'audio', mimeType: message.audioMessage.mimetype || 'audio/ogg' };
+  }
+  if (message.imageMessage) {
+    return { kind: 'image', mimeType: message.imageMessage.mimetype || 'image/jpeg', caption: message.imageMessage.caption };
+  }
+  if (message.documentMessage) {
+    return {
+      kind: 'document',
+      mimeType: message.documentMessage.mimetype || 'application/pdf',
+      caption: message.documentMessage.caption,
+      fileName: message.documentMessage.fileName,
+    };
+  }
+  if (message.videoMessage) {
+    return { kind: 'video', mimeType: message.videoMessage.mimetype || 'video/mp4', caption: message.videoMessage.caption };
+  }
+  return null;
+}
 
-  return descriptions;
+async function fetchMediaBase64(instanceKey: string, payloadData: Record<string, any>): Promise<string | null> {
+  const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+  const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
+  if (!evolutionApiUrl || !evolutionApiKey) return null;
+  try {
+    const res = await fetch(`${evolutionApiUrl}/chat/getBase64FromMediaMessage/${instanceKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': evolutionApiKey },
+      body: JSON.stringify({ message: { key: payloadData.key, message: payloadData.message }, convertToMp4: false }),
+    });
+    if (!res.ok) {
+      console.error('Evolution getBase64 failed:', res.status, await res.text());
+      return null;
+    }
+    const data = await res.json();
+    return data.base64 || data.media || null;
+  } catch (e) {
+    console.error('fetchMediaBase64 error:', e);
+    return null;
+  }
 }
 
 // Send message via Evolution API using the correct instance name
@@ -92,7 +131,15 @@ async function sendWhatsAppMessage(instanceKey: string, phone: string, message: 
   }
 }
 
-async function generateAgentResponse(messages: ChatMsg[], agentPrompt: string, agentType?: string): Promise<string> {
+
+type GeminiPart = { text?: string; inline_data?: { mime_type: string; data: string } };
+
+async function generateAgentResponse(
+  messages: ChatMsg[],
+  agentPrompt: string,
+  agentType?: string,
+  lastUserExtraParts: GeminiPart[] = [],
+): Promise<string> {
   const geminiKey = Deno.env.get('GEMINI_API_KEY');
 
   if (!geminiKey) {
@@ -103,22 +150,25 @@ async function generateAgentResponse(messages: ChatMsg[], agentPrompt: string, a
   const baseSystem = AGENT_SYSTEM_PROMPTS[agentType || ''] || AGENT_SYSTEM_PROMPTS['atendimento-faq'];
   const systemText = (agentPrompt ? `${baseSystem}\n\nInstruções específicas:\n${agentPrompt}` : baseSystem) + BASE_RULES;
 
+  const contents = messages.map((message, idx) => {
+    const parts: GeminiPart[] = [{ text: message.content }];
+    if (idx === messages.length - 1 && message.role === 'user' && lastUserExtraParts.length) {
+      parts.push(...lastUserExtraParts);
+    }
+    return {
+      role: message.role === 'assistant' ? 'model' : 'user',
+      parts,
+    };
+  });
+
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: systemText }] },
-        contents: messages.map((message) => ({
-          role: message.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: message.content }],
-        })),
-        generationConfig: {
-          maxOutputTokens: 700,
-          temperature: 0.7,
-        },
+        contents,
+        generationConfig: { maxOutputTokens: 700, temperature: 0.7 },
       }),
     });
 
@@ -219,12 +269,12 @@ serve(async (req) => {
         });
       }
 
-      // Extract user message
+      // Extract user message + media
       const rawMessage = payload.data?.message;
       const userMessage = extractIncomingWhatsAppText(rawMessage);
-      const mediaHints = describeIncomingMedia(rawMessage);
+      const media = detectIncomingMedia(rawMessage);
 
-      if (!userMessage && mediaHints.length === 0) {
+      if (!userMessage && !media) {
         console.log('No supported content in payload');
         return new Response(JSON.stringify({ status: 'no_text' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -233,8 +283,26 @@ serve(async (req) => {
 
       const remoteJid = payload.data.key.remoteJid;
       const senderPhone = remoteJid.replace('@s.whatsapp.net', '');
-      const normalizedUserMessage = [userMessage, ...mediaHints].filter(Boolean).join('\n');
-      console.log(`Message from ${senderPhone}: "${normalizedUserMessage}"`);
+
+      // Fetch media base64 (if any) and build extra parts + guidance
+      const extraParts: GeminiPart[] = [];
+      const mediaHints: string[] = [];
+      if (media) {
+        const b64 = await fetchMediaBase64(instanceKey!, payload.data);
+        if (b64) {
+          extraParts.push({ inline_data: { mime_type: media.mimeType, data: b64 } });
+          if (media.kind === 'audio') mediaHints.push('[O utilizador enviou uma mensagem de voz. Transcreve mentalmente e responde ao que ele realmente disse.]');
+          else if (media.kind === 'image') mediaHints.push(`[O utilizador enviou uma imagem${media.caption ? ` com a legenda: "${media.caption}"` : ''}. Analisa o conteúdo visual e responde.]`);
+          else if (media.kind === 'document') mediaHints.push(`[O utilizador enviou um documento${media.fileName ? ` "${media.fileName}"` : ''}. Lê o conteúdo e responde.]`);
+          else if (media.kind === 'video') mediaHints.push(`[O utilizador enviou um vídeo${media.caption ? ` com legenda: "${media.caption}"` : ''}. Considera o conteúdo.]`);
+        } else {
+          mediaHints.push(`[O utilizador enviou um ${media.kind} mas não foi possível descarregar o ficheiro. Pede para reenviar.]`);
+        }
+      }
+
+      const normalizedUserMessage = [userMessage, ...mediaHints].filter(Boolean).join('\n') || '[anexo multimédia]';
+      console.log(`Message from ${senderPhone}: "${normalizedUserMessage}" (media: ${media?.kind || 'none'})`);
+
 
       // Look up the instance and linked agent in the database
       const supabase = getServiceClient();
@@ -300,7 +368,7 @@ serve(async (req) => {
       const convo: ChatMsg[] = [...trimmedHistory, { role: 'user', content: normalizedUserMessage }];
 
       // Generate AI response
-      const agentResponse = await generateAgentResponse(convo, agentPrompt, agentType);
+      const agentResponse = await generateAgentResponse(convo, agentPrompt, agentType, extraParts);
       console.log(`AI response generated (${agentResponse.length} chars)`);
 
       await saveConversationHistory({
