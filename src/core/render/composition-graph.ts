@@ -165,6 +165,8 @@ export interface GraphTheme {
   font: string;
   /** Composition mood — affects renderer defaults */
   mood: "editorial" | "cinematic" | "brutalist" | "minimal" | "magazine" | "bento" | "futuristic" | "apple";
+  /** Optional per-project visual DNA (see core/dna) */
+  dna?: import("@/core/dna").VisualDNA;
 }
 
 export interface CompositionGraph {

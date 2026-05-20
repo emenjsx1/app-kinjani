@@ -66,6 +66,7 @@ export function generateCompositionGraph(brief: CreativeBrief): CompositionGraph
       ...brief.palette,
       font: brief.font,
       mood: brief.mood,
+      dna: brief.dna,
     },
     root,
   };
