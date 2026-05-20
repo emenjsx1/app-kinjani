@@ -562,23 +562,77 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
 
     // Manual Creation Path
     switch (currentStep) {
-      case 1:
+      case 1: {
+        const conversational = AGENT_TYPES.filter((t) => t.category === "conversational");
+        const automation = AGENT_TYPES.filter((t) => t.category === "automation");
+
+        const renderCard = (type: AgentTypeDef) => {
+          const disabled = !!type.comingSoon;
+          const selected = agentType === type.id;
+          return (
+            <button
+              key={type.id}
+              type="button"
+              disabled={disabled}
+              onClick={() => !disabled && setAgentType(type.id)}
+              className={`text-left p-4 border rounded-lg transition-all ${
+                disabled
+                  ? "opacity-50 cursor-not-allowed border-border bg-muted/30"
+                  : selected
+                  ? "border-primary bg-primary/5 cursor-pointer"
+                  : "border-border hover:border-primary/50 cursor-pointer"
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-md bg-primary/10 shrink-0">{type.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-medium">{type.title}</h4>
+                    {disabled && (
+                      <Badge variant="outline" className="text-xs">Em breve</Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">{type.description}</p>
+                </div>
+                {selected && !disabled && (
+                  <CheckCircle2 className="h-5 w-5 text-primary shrink-0" />
+                )}
+              </div>
+            </button>
+          );
+        };
+
         return (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold">Selecionar Tipo de Agente</h3>
-              <p className="text-sm text-muted-foreground">
-                Escolha o tipo de agente IA que deseja criar
-              </p>
+          <ScrollArea className="max-h-[460px] pr-3">
+            <div className="space-y-5">
+              <div>
+                <h3 className="text-lg font-semibold">Selecionar Tipo de Agente</h3>
+                <p className="text-sm text-muted-foreground">
+                  Escolha como o agente deve operar
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  <h4 className="text-sm font-semibold">Conversacionais</h4>
+                  <span className="text-xs text-muted-foreground">— respondem por chat / WhatsApp</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">{conversational.map(renderCard)}</div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Wand2 className="h-4 w-4 text-muted-foreground" />
+                  <h4 className="text-sm font-semibold">Automação</h4>
+                  <span className="text-xs text-muted-foreground">— executam tarefas em massa</span>
+                </div>
+                <div className="grid grid-cols-2 gap-3">{automation.map(renderCard)}</div>
+              </div>
             </div>
-            <CardSelect
-              options={AGENT_TYPES}
-              value={agentType}
-              onChange={setAgentType}
-              className="grid-cols-2"
-            />
-          </div>
+          </ScrollArea>
         );
+      }
 
       case 2:
         return (
