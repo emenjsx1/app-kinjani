@@ -12,6 +12,7 @@ import { AgentActivityPanel } from "@/components/ai/AgentActivityPanel";
 import { staggerContainer, staggerItem } from "@/lib/motion";
 import { useProfile } from "@/hooks/useProfile";
 import { useAgents } from "@/hooks/useAgents";
+import { useWebsites } from "@/hooks/useWebsites";
 import { useCredits } from "@/hooks/useCredits";
 import {
   LineChart,
