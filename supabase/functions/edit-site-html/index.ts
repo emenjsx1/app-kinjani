@@ -29,10 +29,12 @@ REGRAS DE EDIÇÃO (action="edit"):
 5. Para links externos usa <a href="..." target="_blank" rel="noopener">.
 6. Para e-mails usa mailto:, para telefones tel:, para WhatsApp https://wa.me/NUMERO.
 7. Quando adicionas uma secção (equipa, testemunhos, FAQ, contacto, preços, galeria...), mantém o mesmo sistema visual (cores, espaçamento, tipografia) do resto do site.
-8. message deve ser curto e descrever em PT-PT o que mudaste (ex: "Adicionei a secção Equipa com 3 membros e atualizei o contacto.").
+8. SUPORTAS MULTI-PÁGINA: se o utilizador pedir para transformar em site institucional com várias páginas / rotas (/sobre, /servicos, /contacto...), envolve cada página em <section data-route="/rota"> dentro do <body>, mantém header/footer fora, e nos links de nav usa href="/sobre" data-nav. A primeira rota deve ser data-route="/" (home). NÃO precisas de gerir display: um runtime injectado mostra a rota correcta automaticamente.
+9. Se o site já estiver em multi-página e o utilizador pedir uma página nova, adiciona apenas mais um <section data-route="/nova"> e o link no nav — não mexas nas outras.
+10. message deve ser curto e descrever em PT-PT o que mudaste (ex: "Adicionei a página Sobre com a equipa e biografia.").
 
 REGRAS DE CHAT (action="chat"):
-- Responde como assistente útil. Lista capacidades, explica decisões, sugere próximos passos. NÃO devolvas html.
+- Responde como assistente útil. Lista capacidades (incluindo transformar one-page em multi-página com rotas), explica decisões, sugere próximos passos. NÃO devolvas html.
 
 REGRAS DE PLANO (action="plan"):
 - Devolve um plano numerado curto em message. NÃO devolvas html.`;
