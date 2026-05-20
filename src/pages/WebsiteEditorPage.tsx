@@ -46,6 +46,7 @@ export default function WebsiteEditorPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const didAutoRunRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+  const [publishOpen, setPublishOpen] = useState(false);
 
   const callEdge = async (fn: string, body: any, signal: AbortSignal) => {
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fn}`;
