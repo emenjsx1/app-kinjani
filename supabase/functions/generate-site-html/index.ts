@@ -88,6 +88,12 @@ Deno.serve(async (req) => {
 
     const data = await resp.json();
     let html: string = data?.choices?.[0]?.message?.content || "";
+    if (!html.trim()) {
+      return new Response(JSON.stringify({ error: "Resposta vazia do modelo ao criar o site." }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     // strip code fences if any
     html = html.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
     if (!html.toLowerCase().startsWith("<!doctype") && !html.toLowerCase().startsWith("<html")) {
