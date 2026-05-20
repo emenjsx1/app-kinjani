@@ -364,7 +364,7 @@ export default function WebsiteEditorPage() {
                   {m.role === "assistant" && m.action === "edit" && m.htmlSnapshot && i < history.length - 1 && (
                     <button
                       onClick={() => revertTo(m.htmlSnapshot!, i)}
-                      className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition"
+                      className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition"
                       title="Reverter o site para este ponto"
                     >
                       <Undo2 className="h-3 w-3" /> Reverter para aqui
