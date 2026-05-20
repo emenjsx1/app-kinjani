@@ -190,8 +190,8 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
   const availableTemplates = agentType ? getTemplatesForAgentType(agentType) : [];
 
   const resetWizard = () => {
-    setCurrentStep(0);
-    setCreationMethod(null);
+    setCurrentStep(1);
+    setCreationMethod("ai");
     setAgentType(null);
     setSelectedTemplate(null);
     setPrompt("");
