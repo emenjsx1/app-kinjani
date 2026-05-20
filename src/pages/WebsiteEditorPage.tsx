@@ -92,7 +92,7 @@ export default function WebsiteEditorPage() {
         body: { prompt, websiteName: name || website?.name },
       });
       if (error || !data?.html) throw new Error(error?.message || data?.error || "Falha");
-      const asst: ChatMsg = { role: "assistant", content: "Site criado. Pede qualquer alteração — cores, secções, logo, links, botões...", ts: Date.now() };
+      const asst: ChatMsg = { role: "assistant", content: "Site criado ✨ Pede qualquer alteração — cores, secções, logo, links, equipa, contactos. Podes anexar imagens e eu uso-as no site.", ts: Date.now(), action: "edit", htmlSnapshot: data.html };
       const finalHistory = [...draftHistory, asst];
       setHtml(data.html);
       setHistory(finalHistory);
