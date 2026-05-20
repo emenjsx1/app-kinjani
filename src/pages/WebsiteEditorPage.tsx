@@ -426,37 +426,50 @@ export default function WebsiteEditorPage() {
               )}
             </div>
           )}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 min-w-0">
             {history.length === 0 && !busy && (
               <div className="text-sm text-muted-foreground">
                 <p className="mb-2">Olá! Descreve o site que queres ou peça uma alteração.</p>
                 <p className="text-xs">Exemplos:<br/>• "Cria um site de psicologia, calmo, com booking"<br/>• "Adiciona uma secção de testemunhos"<br/>• "Muda a cor principal para verde-escuro"<br/>• "Coloca botão 'WhatsApp' que abre wa.me/258840000000"</p>
               </div>
             )}
-            {history.map((m, i) => (
-              <div key={i} className={m.role === "user" ? "flex justify-end" : "group"}>
-                <div className={cn(
-                  m.role === "user"
-                    ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-3 py-2 text-sm max-w-[85%]"
-                    : "text-sm text-foreground max-w-[95%] whitespace-pre-wrap",
-                  m.role === "assistant" && m.content.startsWith("⚠️") && "text-destructive"
-                )}>
-                  {m.content}
-                  {m.role === "assistant" && m.action === "edit" && m.htmlSnapshot && (
-                    <button
-                      onClick={() => revertTo(m.htmlSnapshot!, i)}
-                      className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition"
-                      title="Reverter o site para este ponto"
-                    >
-                      <Undo2 className="h-3 w-3" /> Reverter para aqui
-                    </button>
-                  )}
-                  {m.role === "assistant" && m.action === "plan" && (
-                    <span className="ml-2 text-[10px] uppercase tracking-wider text-muted-foreground">· plano</span>
-                  )}
+            {history.map((m, i) => {
+              const isError = m.role === "assistant" && m.content.startsWith("⚠️");
+              let displayContent = m.content;
+              if (isError) {
+                const match = m.content.match(/"message"\s*:\s*"([^"]+)"/);
+                if (match) {
+                  displayContent = `⚠️ ${match[1].split("\\n")[0]}`;
+                } else if (m.content.length > 280) {
+                  displayContent = m.content.slice(0, 280) + "…";
+                }
+              }
+              return (
+                <div key={i} className={m.role === "user" ? "flex justify-end min-w-0" : "group min-w-0"}>
+                  <div className={cn(
+                    "min-w-0 break-words [overflow-wrap:anywhere]",
+                    m.role === "user"
+                      ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-3 py-2 text-sm max-w-[85%]"
+                      : "text-sm text-foreground max-w-full whitespace-pre-wrap",
+                    isError && "text-destructive bg-destructive/10 rounded-lg px-3 py-2 border border-destructive/20"
+                  )}>
+                    {displayContent}
+                    {m.role === "assistant" && m.action === "edit" && m.htmlSnapshot && (
+                      <button
+                        onClick={() => revertTo(m.htmlSnapshot!, i)}
+                        className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition"
+                        title="Reverter o site para este ponto"
+                      >
+                        <Undo2 className="h-3 w-3" /> Reverter para aqui
+                      </button>
+                    )}
+                    {m.role === "assistant" && m.action === "plan" && (
+                      <span className="ml-2 text-[10px] uppercase tracking-wider text-muted-foreground">· plano</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {busy && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
