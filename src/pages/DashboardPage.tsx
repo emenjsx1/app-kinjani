@@ -243,21 +243,31 @@ export default function DashboardPage() {
         </div>
 
         {/* Ações Rápidas */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Ações Rápidas</CardTitle>
-            <CardDescription>Comece com tarefas comuns</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={() => navigate("/agents")}>Criar Novo Agente</Button>
-              <Button variant="outline" onClick={() => navigate("/websites")}>Gerar Site</Button>
-              <Button variant="outline" onClick={() => navigate("/integrations")}>Configurar WhatsApp</Button>
-              <Button variant="secondary" onClick={() => navigate("/credits")}>Comprar Créditos</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <motion.div variants={staggerItem} className="rounded-xl border border-border/60 glass elev-2 p-6">
+          <div className="mb-4">
+            <h3 className="text-base font-semibold">Ações Rápidas</h3>
+            <p className="text-sm text-muted-foreground">Comece com tarefas comuns</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {quickActions.map((a, i) => (
+              <PremiumCard
+                key={a.label}
+                index={i}
+                onClick={a.onClick}
+                className="cursor-pointer group flex items-center gap-3"
+              >
+                <div className="rounded-lg bg-primary/10 p-2.5 group-hover:bg-primary/20 transition-colors">
+                  <a.icon className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{a.label}</p>
+                </div>
+                <Plus className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </PremiumCard>
+            ))}
+          </div>
+        </motion.div>
+      </motion.div>
     </AppLayout>
   );
 }
