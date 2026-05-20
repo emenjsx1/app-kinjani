@@ -281,18 +281,64 @@ export default function WebsiteEditorPage() {
               </div>
             )}
           </div>
-          <div className="p-3 border-t">
+          <div className="p-3 border-t space-y-2">
+            {/* Mode toggle */}
+            <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5 w-fit">
+              <button
+                onClick={() => setMode("build")}
+                className={cn("flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md transition", mode === "build" ? "bg-background shadow-sm font-medium" : "text-muted-foreground")}
+              >
+                <Hammer className="h-3 w-3" /> Construir
+              </button>
+              <button
+                onClick={() => setMode("plan")}
+                className={cn("flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md transition", mode === "plan" ? "bg-background shadow-sm font-medium" : "text-muted-foreground")}
+              >
+                <Lightbulb className="h-3 w-3" /> Planear
+              </button>
+            </div>
+
+            {/* Attachments preview */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {attachments.map((a, i) => (
+                  <div key={i} className="flex items-center gap-1 bg-muted rounded-md px-2 py-1 text-xs">
+                    <span className="truncate max-w-[140px]">{a.name}</span>
+                    <button onClick={() => setAttachments(p => p.filter((_, j) => j !== i))} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="relative">
               <Textarea
                 ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-                placeholder={html ? "Descreve a alteração..." : "Descreve o site que queres criar..."}
-                className="min-h-[80px] pr-12 resize-none"
+                placeholder={html ? (mode === "plan" ? "Pede um plano..." : "Descreve a alteração...") : "Descreve o site que queres criar..."}
+                className="min-h-[80px] pr-12 pb-10 resize-none"
                 disabled={busy}
               />
-              <Button size="icon" className="absolute bottom-2 right-2 h-8 w-8" onClick={send} disabled={busy || !input.trim()}>
+              <div className="absolute bottom-2 left-2 flex items-center gap-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,audio/*,.pdf,.txt"
+                  className="hidden"
+                  onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }}
+                />
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => fileInputRef.current?.click()} disabled={busy} title="Anexar ficheiro">
+                  <Paperclip className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="icon" variant={recording ? "destructive" : "ghost"} className="h-7 w-7" onClick={toggleRecord} disabled={busy} title="Gravar áudio">
+                  {recording ? <Square className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
+              <Button size="icon" className="absolute bottom-2 right-2 h-8 w-8" onClick={send} disabled={busy || (!input.trim() && attachments.length === 0)}>
                 <Send className="h-3.5 w-3.5" />
               </Button>
             </div>
