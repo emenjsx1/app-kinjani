@@ -41,16 +41,55 @@ function extractIncomingWhatsAppText(message: Record<string, any> | undefined): 
   );
 }
 
-function describeIncomingMedia(message: Record<string, any> | undefined): string[] {
-  if (!message) return [];
-  const descriptions: string[] = [];
+type IncomingMedia = {
+  kind: 'audio' | 'image' | 'document' | 'video';
+  mimeType: string;
+  caption?: string;
+  fileName?: string;
+};
 
-  if (message.audioMessage) descriptions.push('O utilizador enviou um áudio no WhatsApp. Se o texto não vier transcrito ainda, informa de forma breve que o processamento multimodal completo do áudio está a ser ligado ao canal WhatsApp.');
-  if (message.imageMessage) descriptions.push(`O utilizador enviou uma imagem${message.imageMessage.caption ? ` com legenda: "${message.imageMessage.caption}"` : ''}.`);
-  if (message.documentMessage) descriptions.push(`O utilizador enviou um documento${message.documentMessage.fileName ? ` chamado "${message.documentMessage.fileName}"` : ''}.`);
-  if (message.videoMessage) descriptions.push(`O utilizador enviou um vídeo${message.videoMessage.caption ? ` com legenda: "${message.videoMessage.caption}"` : ''}.`);
+function detectIncomingMedia(message: Record<string, any> | undefined): IncomingMedia | null {
+  if (!message) return null;
+  if (message.audioMessage) {
+    return { kind: 'audio', mimeType: message.audioMessage.mimetype || 'audio/ogg' };
+  }
+  if (message.imageMessage) {
+    return { kind: 'image', mimeType: message.imageMessage.mimetype || 'image/jpeg', caption: message.imageMessage.caption };
+  }
+  if (message.documentMessage) {
+    return {
+      kind: 'document',
+      mimeType: message.documentMessage.mimetype || 'application/pdf',
+      caption: message.documentMessage.caption,
+      fileName: message.documentMessage.fileName,
+    };
+  }
+  if (message.videoMessage) {
+    return { kind: 'video', mimeType: message.videoMessage.mimetype || 'video/mp4', caption: message.videoMessage.caption };
+  }
+  return null;
+}
 
-  return descriptions;
+async function fetchMediaBase64(instanceKey: string, payloadData: Record<string, any>): Promise<string | null> {
+  const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+  const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
+  if (!evolutionApiUrl || !evolutionApiKey) return null;
+  try {
+    const res = await fetch(`${evolutionApiUrl}/chat/getBase64FromMediaMessage/${instanceKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': evolutionApiKey },
+      body: JSON.stringify({ message: { key: payloadData.key, message: payloadData.message }, convertToMp4: false }),
+    });
+    if (!res.ok) {
+      console.error('Evolution getBase64 failed:', res.status, await res.text());
+      return null;
+    }
+    const data = await res.json();
+    return data.base64 || data.media || null;
+  } catch (e) {
+    console.error('fetchMediaBase64 error:', e);
+    return null;
+  }
 }
 
 // Send message via Evolution API using the correct instance name
