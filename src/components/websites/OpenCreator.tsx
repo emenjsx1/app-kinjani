@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Wand2, ArrowRight, Loader2, Check, Settings2, X } from "lucide-react";
+import { Sparkles, Wand2, ArrowRight, Loader2, Check, Settings2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +9,11 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import type { WebsiteTemplate } from "@/lib/website-templates";
 import { buildBrief } from "@/core/render/buildBrief";
-import { generateExperience, type GenerativeResult } from "@/core/genesis";
+import {
+  generateExperience,
+  interpretIntent,
+  type GenerativeResult,
+} from "@/core/genesis";
 import type { CompositionGraph } from "@/core/render/composition-graph";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
