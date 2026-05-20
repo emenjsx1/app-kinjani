@@ -212,9 +212,12 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
       });
       if (error) throw error;
       const text = (data as any)?.text?.trim();
+      const fallbackMsg = (data as any)?.error as string | undefined;
       if (text) {
         setPrompt(prev => prev ? `${prev}\n${text}` : text);
         toast.success("Transcrição adicionada");
+      } else if (fallbackMsg) {
+        toast.error(fallbackMsg);
       } else {
         toast.error("Não foi possível transcrever.");
       }
