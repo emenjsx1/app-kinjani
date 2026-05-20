@@ -1,6 +1,9 @@
 // Conversational website editor.
 // Classifies intent (chat / plan / edit), and in edit mode returns full new HTML.
 // Supports image attachments (vision) and embeds uploaded images directly into the page when relevant.
+// Cobrança proporcional: pré-cobra 5 créd; após geração ajusta para o nível real (micro/small/medium/large/massive).
+import { chargeCredits, classifyEditByTokens, CREDIT_COSTS, insufficientCreditsResponse, resolveUserId } from "../_shared/credits.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
