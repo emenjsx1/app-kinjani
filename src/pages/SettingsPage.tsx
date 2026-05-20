@@ -268,23 +268,33 @@ export default function SettingsPage() {
                 <Separator />
                 
                 <div className="space-y-4">
-                  <h4 className="font-medium">Atualizar Plano</h4>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <Card className={`border-2 cursor-pointer transition-colors ${profile?.plan === 'pro' ? 'border-primary' : 'hover:border-primary/50'}`}>
+                  <h4 className="font-medium">Planos Disponíveis</h4>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <Card className={`border-2 ${profile?.plan === 'starter' ? 'border-primary' : 'hover:border-primary/50'}`}>
                       <CardContent className="pt-4">
-                        <p className="font-medium">Plano Pro</p>
-                        <p className="text-sm text-muted-foreground">2.000 créditos/mês</p>
-                        <p className="text-lg font-bold mt-2">49€/mês</p>
+                        <p className="font-medium">Starter</p>
+                        <p className="text-sm text-muted-foreground">Sem créditos — use as suas APIs. 1 instância WhatsApp.</p>
+                        <p className="text-lg font-bold mt-2">999 MZN/mês</p>
                       </CardContent>
                     </Card>
-                    <Card className={`border-2 cursor-pointer transition-colors ${profile?.plan === 'business' ? 'border-primary' : 'hover:border-primary/50'}`}>
+                    <Card className={`border-2 ${profile?.plan === 'pro' ? 'border-primary' : 'hover:border-primary/50'}`}>
                       <CardContent className="pt-4">
-                        <p className="font-medium">Plano Business</p>
-                        <p className="text-sm text-muted-foreground">5.000 créditos/mês</p>
-                        <p className="text-lg font-bold mt-2">99€/mês</p>
+                        <p className="font-medium">Pro</p>
+                        <p className="text-sm text-muted-foreground">1.500 créditos/mês • 5 instâncias.</p>
+                        <p className="text-lg font-bold mt-2">2.999 MZN/mês</p>
+                      </CardContent>
+                    </Card>
+                    <Card className={`border-2 ${profile?.plan === 'business' ? 'border-primary' : 'hover:border-primary/50'}`}>
+                      <CardContent className="pt-4">
+                        <p className="font-medium">Business</p>
+                        <p className="text-sm text-muted-foreground">5.000 créditos/mês • 15 instâncias.</p>
+                        <p className="text-lg font-bold mt-2">7.999 MZN/mês</p>
                       </CardContent>
                     </Card>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Instâncias WhatsApp extras: <strong>500 créditos</strong> por instância adicional acima do limite do plano.
+                  </p>
                 </div>
               </CardContent>
             </Card>
