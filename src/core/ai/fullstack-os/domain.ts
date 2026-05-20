@@ -2,7 +2,7 @@
  * Domain heuristics — infer business domain from intent so specialized
  * BusinessLogicAgent can choose the right pattern.
  */
-import type { DataGraph, TableDef, FieldDef, AuthFlow, ApiGraph, WorkflowGraph, RealtimeGraph } from "./types";
+import type { DataGraph, TableDef, FieldDef, AuthFlow, ApiGraph, WorkflowGraph, RuntimeGraph } from "./types";
 
 export type Domain =
   | "crm"
