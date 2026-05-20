@@ -118,6 +118,12 @@ Deno.serve(async (req) => {
 
     const data = await resp.json();
     const raw: string = data?.choices?.[0]?.message?.content || "";
+    if (!raw.trim()) {
+      return new Response(JSON.stringify({ error: "Resposta vazia do modelo ao editar o site." }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     let parsed: any = null;
     try {
@@ -156,11 +162,18 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       action,
-      message: parsed.message || (action === "edit" ? "Alteração aplicada." : "Pronto."),
+      message: typeof parsed.message === "string" && parsed.message.trim()
+        ? parsed.message.trim()
+        : action === "edit"
+          ? "Fiz a alteração pedida no site."
+          : action === "plan"
+            ? "Aqui está o plano proposto."
+            : "Posso ajudar-te com alterações, estrutura, conteúdo, imagens e navegação do site.",
       html: newHtml,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), {
+    const message = e instanceof Error ? e.message : String(e);
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
