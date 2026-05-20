@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { EmbedConfig } from "@/components/websites/WebsiteEditor";
 import { WebsitePreview } from "@/components/websites/WebsitePreview";
 import type { WebsiteTemplate } from "@/lib/website-templates";
+import { CompositionRenderer } from "@/core/render/CompositionRenderer";
+import type { CompositionGraph } from "@/core/render/composition-graph";
 import { registerSections } from "@/core/registry/sections";
 import { registerWidgets } from "@/core/registry/widgets";
 import { defaultPreviewEngine } from "@/core/preview/ReactTemplatePreviewEngine";
@@ -20,6 +22,7 @@ interface Props {
   websiteName: string;
   template: WebsiteTemplate;
   prompt: string;
+  compositionGraph?: CompositionGraph;
   initialEmbedConfig?: EmbedConfig;
   onBack: () => void;
   onSave: (template: WebsiteTemplate, embed?: EmbedConfig) => Promise<void> | void;
@@ -58,6 +61,7 @@ export function EditorShell({
   websiteName,
   template: initialTemplate,
   prompt: _prompt,
+  compositionGraph,
   initialEmbedConfig,
   onBack,
   onSave,
@@ -141,13 +145,17 @@ export function EditorShell({
               onToggleVisible={tpl.toggleSection}
               onAIEdit={handleAIEdit}
             >
-              <WebsitePreview
-                template={tpl.template}
-                websiteName={websiteName}
-                embedConfig={embedConfig}
-                fullscreen={false}
-                showChatWidget={false}
-              />
+              {compositionGraph ? (
+                <CompositionRenderer graph={compositionGraph} />
+              ) : (
+                <WebsitePreview
+                  template={tpl.template}
+                  websiteName={websiteName}
+                  embedConfig={embedConfig}
+                  fullscreen={false}
+                  showChatWidget={false}
+                />
+              )}
             </CanvasFrame>
           </main>
           <aside className="w-72 border-l bg-background overflow-hidden">
