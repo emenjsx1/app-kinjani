@@ -269,7 +269,14 @@ export default function DashboardPage() {
             ))}
           </div>
         </motion.div>
+
+        {/* Fábrica de Software AI */}
+        <motion.div variants={staggerItem} className="grid gap-4 lg:grid-cols-3">
+          <SoftwareTimeline className="lg:col-span-2" defaultIntent="CRM para empresas de logística" />
+          <AgentActivityPanel />
+        </motion.div>
       </motion.div>
+
     </AppLayout>
   );
 }
