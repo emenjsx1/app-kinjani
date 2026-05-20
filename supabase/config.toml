@@ -1,1 +1,4 @@
 project_id = "colxdrjqiwpwdtkqwvmr"
+
+[functions.whatsapp-monthly-billing]
+verify_jwt = false
