@@ -35,7 +35,7 @@ export const CREDIT_COSTS: Record<CreditAction, number> = {
   lead_scraper: 15,
   email_blast: 1,
   whatsapp_blast: 1,
-  whatsapp_instance_monthly: 500,
+  whatsapp_instance_monthly: 50,
 };
 
 export const CREDIT_LABELS: Record<CreditAction, string> = {
