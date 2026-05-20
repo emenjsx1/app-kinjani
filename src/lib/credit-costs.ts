@@ -54,7 +54,7 @@ export const CREDIT_LABELS: Record<CreditAction, string> = {
   lead_scraper: "Lead scraper",
   email_blast: "Email blast (por destinatário)",
   whatsapp_blast: "WhatsApp blast (por destinatário)",
-  whatsapp_instance_monthly: "Instância WhatsApp dedicada / mês",
+  whatsapp_instance_monthly: "Instância WhatsApp / mês",
 };
 
 export const LOW_CREDIT_THRESHOLD = 100;
