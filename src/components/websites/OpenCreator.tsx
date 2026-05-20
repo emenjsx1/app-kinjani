@@ -12,6 +12,7 @@ import { getCreativeComposition } from "@/lib/creative-composition";
 import type { WebsiteTemplate } from "@/lib/website-templates";
 import { generateCompositionGraph } from "@/core/render/CompositionGenerator";
 import { buildBrief } from "@/core/render/buildBrief";
+import { generateExperience } from "@/core/genesis";
 import type { CompositionGraph } from "@/core/render/composition-graph";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -112,7 +113,28 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
 
       advanceStage("composition", "running");
       await sleep(400);
-      const compositionGraph = generateCompositionGraph(brief);
+      // AI-first generative pipeline (intention → energy → beats → critique).
+      // Falls back to legacy composition graph only if Genesis fails.
+      let compositionGraph: CompositionGraph;
+      try {
+        const exp = await generateExperience({
+          prompt,
+          theme: {
+            primary: brief.theme?.primary ?? "220 70% 50%",
+            secondary: brief.theme?.secondary ?? "280 60% 50%",
+            accent: brief.theme?.accent ?? "40 90% 55%",
+            background: brief.theme?.background ?? "0 0% 100%",
+            text: brief.theme?.text ?? "0 0% 10%",
+            font: brief.theme?.font ?? "Inter",
+            mood: (brief.theme?.mood as any) ?? "editorial",
+          },
+          seed: finalName,
+          maxRounds: 2,
+        });
+        compositionGraph = exp.graph;
+      } catch {
+        compositionGraph = generateCompositionGraph(brief);
+      }
       advanceStage("composition", "done");
 
       advanceStage("components", "running");
