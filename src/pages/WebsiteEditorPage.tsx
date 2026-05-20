@@ -61,7 +61,12 @@ export default function WebsiteEditorPage() {
       body: JSON.stringify(body),
     });
     const rawText = await res.text();
-    const json = rawText ? JSON.parse(rawText) : {};
+    let json: any = {};
+    try {
+      json = rawText ? JSON.parse(rawText) : {};
+    } catch {
+      json = { error: rawText || `Resposta inválida de ${fn}` };
+    }
     if (!res.ok) {
       const message = json?.error || json?.message || `Erro ${res.status}`;
       throw new Error(message);
