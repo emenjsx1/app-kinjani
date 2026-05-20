@@ -102,7 +102,7 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
   const inferName = (p: string) => inferWebsiteNameFromPrompt(p);
 
   const handleCreate = async () => {
-    if (!prompt.trim() || prompt.trim().length < 12) {
+    if (!prompt.trim() || prompt.trim().length < 8) {
       toast.error("Descreva a sua visão com pelo menos algumas palavras.");
       return;
     }
@@ -112,120 +112,38 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
     stagesRef.current = INITIAL_STAGES;
 
     try {
-      // 1. Intent — AI analisa o pedido (LLM real, sem keyword guessing)
-      updateStage("intent", { status: "running", detail: "A enviar pedido para análise..." });
-      const aiPlan = await planWebsiteWithAI(prompt, finalName);
-      const intentSnapshot = interpretIntent(prompt);
-
-      if (aiPlan) {
-        updateStage("intent", {
-          status: "done",
-          detail: `${aiPlan.domainLabel} · ${aiPlan.sections.length} secções → ${aiPlan.sections.map(s => s.type).join(" · ")}`,
-        });
-
-        // 2. Direction
-        updateStage("direction", {
-          status: "done",
-          detail: `${aiPlan.font} · paleta ${aiPlan.palette.primary} · ${aiPlan.type}`,
-        });
-
-        // 3-6. Composição estruturada vinda da IA
-        const aiTemplate = templateFromAIPlan(aiPlan, finalName);
-        updateStage("composition", { status: "done", detail: `Plano gerado: ${aiTemplate.sections.length} blocos` });
-        updateStage("components", { status: "done", detail: aiTemplate.sections.map(s => s.type).slice(0, 6).join(" → ") });
-        updateStage("content", { status: "done", detail: `"${aiPlan.tagline}"` });
-        updateStage("finalize", { status: "done", detail: `Pronto · ${aiTemplate.sections.length} secções` });
-        await sleep(350);
-
-        const result = await onWebsiteCreated({
-          name: aiTemplate.name,
-          type: aiTemplate.type,
-          niche: aiPlan.domainLabel,
-          nicheId: "ai-planned",
-          templateId: "ai-planned",
-          prompt,
-          customTemplate: aiTemplate,
-        });
-        if (result?.id) {
-          toast.success("Site criado ✨");
-          onOpenChange(false);
-          navigate(`/websites/${result.id}/edit`);
-          return;
-        }
-        throw new Error("persist failed");
-      }
-
-      // ============ FALLBACK: pipeline antigo se a IA falhar ============
-      updateStage("intent", {
-        status: "done",
-        detail: `${intentSnapshot.domain} · ${intentSnapshot.emotion}${intentSnapshot.location ? ` · ${intentSnapshot.location}` : ""} → ${intentSnapshot.goal} para ${intentSnapshot.audience} (fallback local)`,
-      });
-
-      updateStage("direction", { status: "running" });
-      await sleep(340);
-      const brief = buildBrief({ prompt, websiteName: finalName });
-      updateStage("direction", {
-        status: "done",
-        detail: `Mood ${brief.mood} · ${brief.font} · paleta ${brief.palette.primary.slice(0, 12)}…`,
-      });
-
-      updateStage("composition", { status: "running" });
-      const generationSeed = crypto.randomUUID();
-      const exp = await generateExperience({
-        prompt,
-        theme: {
-          primary: brief.palette.primary,
-          secondary: brief.palette.secondary,
-          accent: brief.palette.accent,
-          background: brief.palette.background,
-          text: brief.palette.text,
-          font: brief.font,
-          mood: brief.mood,
-        },
-        seed: generationSeed,
-        maxRounds: 4,
-      });
-      const compositionGraph: CompositionGraph = exp.graph;
-      const generationSession: GenerativeResult = exp;
-      const structuredTemplate = buildStructuredTemplateFromPrompt(prompt, finalName, intentSnapshot);
-      const resolvedType = structuredTemplate?.type ?? (/institucional|empresa|home|sobre|contacto|portfolio|portofolio/i.test(prompt) ? "institutional" : "landing");
-      updateStage("composition", {
-        status: "done",
-        detail: `Energia ${exp.energy.label} — ${exp.plan.beats.length} batidas`,
-      });
-      updateStage("components", { status: "done", detail: exp.plan.beats.map(b => b.kind).slice(0, 4).join(" → ") });
-      updateStage("content", { status: "done", detail: `"${exp.energy.manifesto}"` });
-      const score = exp.critique ? Math.round(exp.critique.overall * 100) : 0;
-      updateStage("finalize", {
-        status: "done",
-        detail: exp.critique ? `Score ${score}/100` : "Composição finalizada",
-      });
-      await sleep(350);
+      // Chat-first: criamos o site imediatamente e o editor (chat) trata da geração real
+      updateStage("intent", { status: "done", detail: "Pedido recebido" });
+      updateStage("direction", { status: "done", detail: "A preparar conversa criativa" });
+      updateStage("composition", { status: "done", detail: "Render delegado ao chat" });
+      updateStage("components", { status: "done", detail: "—" });
+      updateStage("content", { status: "done", detail: "—" });
+      updateStage("finalize", { status: "running", detail: "A guardar projecto..." });
 
       const result = await onWebsiteCreated({
-        name: structuredTemplate?.name ?? finalName,
-        type: resolvedType,
-        niche: "Open Build",
-        nicheId: "open-build",
-        templateId: "open-build-generated",
+        name: finalName,
+        type: "landing",
+        niche: "AI Chat",
+        nicheId: "ai-chat",
+        templateId: "ai-chat",
         prompt,
-        customTemplate: structuredTemplate ?? undefined,
-        compositionGraph: structuredTemplate ? undefined : compositionGraph,
-        generationSession: structuredTemplate ? undefined : generationSession,
       });
 
       if (result?.id) {
-        toast.success("Site criado ✨");
+        updateStage("finalize", { status: "done", detail: "Projecto criado" });
+        toast.success("Projecto criado ✨ O chat vai começar a gerar o site...");
         onOpenChange(false);
         navigate(`/websites/${result.id}/edit`);
-      } else {
-        throw new Error("persist failed");
+        return;
       }
+      throw new Error("persist failed");
     } catch (e) {
+      console.error("[OpenCreator]", e);
       toast.error("Não foi possível criar o site. Tente novamente.");
       setGenerating(false);
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!generating) onOpenChange(o); }}>

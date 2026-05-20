@@ -116,16 +116,18 @@ export function useWebsites() {
     updates: Partial<Omit<Website, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
   ) => {
     try {
-      const updateData: Partial<{ name: string; template: string; config: Json; status: string; published_url: string }> = {};
+      const updateData: Record<string, any> = {};
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.template !== undefined) updateData.template = updates.template;
       if (updates.status !== undefined) updateData.status = updates.status;
       if (updates.published_url !== undefined) updateData.published_url = updates.published_url;
       if (updates.config !== undefined) updateData.config = updates.config as Json;
+      if ((updates as any).generated_html !== undefined) updateData.generated_html = (updates as any).generated_html;
+      if ((updates as any).chat_history !== undefined) updateData.chat_history = (updates as any).chat_history;
 
       const { data, error } = await supabase
         .from('websites')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', id)
         .select()
         .single();
