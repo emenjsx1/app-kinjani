@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChatBubble } from "./ChatBubble";
-import { ChatInput } from "./ChatInput";
+import { ChatBubble, BubbleAttachment } from "./ChatBubble";
+import { ChatInput, InputAttachment } from "./ChatInput";
 import { cn } from "@/lib/utils";
 
 export interface Message {
@@ -9,14 +9,17 @@ export interface Message {
   content: string;
   isUser: boolean;
   timestamp: string;
+  attachments?: BubbleAttachment[];
+  phase?: string;
 }
 
 interface ChatContainerProps {
   messages: Message[];
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string, attachments?: InputAttachment[]) => void;
   isLoading?: boolean;
   className?: string;
   placeholder?: string;
+  multimodal?: boolean;
 }
 
 export function ChatContainer({
@@ -25,10 +28,10 @@ export function ChatContainer({
   isLoading = false,
   className,
   placeholder,
+  multimodal = true,
 }: ChatContainerProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom on new messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -45,15 +48,17 @@ export function ChatContainer({
               message={msg.content}
               isUser={msg.isUser}
               timestamp={msg.timestamp}
+              attachments={msg.attachments}
+              phase={msg.phase}
             />
           ))}
-          {isLoading && <ChatBubble message="" isUser={false} isLoading />}
         </div>
       </ScrollArea>
       <ChatInput
         onSend={onSendMessage}
         disabled={isLoading}
         placeholder={placeholder}
+        multimodal={multimodal}
       />
     </div>
   );
