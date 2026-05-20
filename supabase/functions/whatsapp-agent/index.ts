@@ -368,7 +368,7 @@ serve(async (req) => {
       const convo: ChatMsg[] = [...trimmedHistory, { role: 'user', content: normalizedUserMessage }];
 
       // Generate AI response
-      const agentResponse = await generateAgentResponse(convo, agentPrompt, agentType);
+      const agentResponse = await generateAgentResponse(convo, agentPrompt, agentType, extraParts);
       console.log(`AI response generated (${agentResponse.length} chars)`);
 
       await saveConversationHistory({
