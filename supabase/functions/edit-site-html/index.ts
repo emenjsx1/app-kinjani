@@ -62,6 +62,11 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Pré-cobra "small" (5 créd). Após geração, ajustamos para o nível real com base nos tokens de output.
+    const userId = await resolveUserId(req);
+    const preCharge = await chargeCredits(req, "site_edit_small", "Edição de site (pré-cobrança)");
+    if (!preCharge.ok) return insufficientCreditsResponse(corsHeaders, preCharge);
+
     const messages: any[] = [{ role: "system", content: SYSTEM_PROMPT }];
 
     if (Array.isArray(history)) {
