@@ -104,27 +104,26 @@ const AGENT_TYPES: AgentTypeDef[] = [
     icon: <FileText className="h-5 w-5" />,
     category: "automation",
   },
-  // Em breve
+  // Funcionais via prompt + agent-chat
   {
     id: "agendamento",
     title: "Agendamento",
-    description: "Agenda reuniões via Google Calendar",
+    description: "Recolhe pedidos de marcação e regista agendamentos",
     icon: <Calendar className="h-5 w-5" />,
     category: "automation",
-    comingSoon: true,
   },
   {
     id: "controlo-gastos",
     title: "Controlo de Gastos",
-    description: "Regista gastos em Google Sheets",
+    description: "Regista despesas e devolve resumos do orçamento",
     icon: <Coins className="h-5 w-5" />,
     category: "automation",
-    comingSoon: true,
   },
+  // Em breve
   {
     id: "gmail-contacts",
     title: "Gmail → Contactos",
-    description: "Extrai remetentes do Gmail para contactos",
+    description: "Extrai remetentes do Gmail para contactos (requer Google)",
     icon: <Users className="h-5 w-5" />,
     category: "automation",
     comingSoon: true,
