@@ -420,6 +420,45 @@ export type Database = {
         }
         Relationships: []
       }
+      wa_conversations: {
+        Row: {
+          agent_id: string | null
+          created_at: string
+          history: Json
+          id: string
+          instance_key: string
+          jid: string
+          last_message_at: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agent_id?: string | null
+          created_at?: string
+          history?: Json
+          id?: string
+          instance_key: string
+          jid: string
+          last_message_at?: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agent_id?: string | null
+          created_at?: string
+          history?: Json
+          id?: string
+          instance_key?: string
+          jid?: string
+          last_message_at?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       websites: {
         Row: {
           chat_history: Json
