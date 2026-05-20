@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const SUPABASE_URL = "https://mpxsivfiltwvnvqtixuo.supabase.co";
-
 interface ApiKeyInfo {
   id: string;
   provider: string;
@@ -13,44 +11,34 @@ interface ApiKeyInfo {
   updated_at: string;
 }
 
+async function invokeFn(action: string, body: any = {}) {
+  const { data, error } = await supabase.functions.invoke(
+    `user-api-keys?action=${action}`,
+    { body }
+  );
+  if (error) {
+    return { success: false, error: error.message };
+  }
+  return data;
+}
+
 export function useUserApiKeys() {
   const [keys, setKeys] = useState<ApiKeyInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const getAuthToken = async (): Promise<string | null> => {
-    const { data: { session } } = await supabase.auth.getSession();
-    return session?.access_token || null;
-  };
-
   const fetchKeys = async () => {
     setIsLoading(true);
     try {
-      const token = await getAuthToken();
-      
-      if (!token) {
-        console.log("No auth token available - user not logged in");
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         setKeys([]);
-        setIsLoading(false);
         return;
       }
-
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/user-api-keys?action=list`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-          },
-        }
-      );
-
-      const result = await response.json();
-
-      if (result.success) {
+      const result = await invokeFn("list");
+      if (result?.success) {
         setKeys(result.keys || []);
-      } else {
+      } else if (result?.error) {
         console.error("Error fetching API keys:", result.error);
       }
     } catch (error) {
@@ -63,35 +51,19 @@ export function useUserApiKeys() {
   const saveKey = async (provider: string, apiKey: string) => {
     setIsSaving(true);
     try {
-      const token = await getAuthToken();
-      
-      if (!token) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         toast.error("Precisa de estar autenticado para guardar chaves de API");
         return false;
       }
-
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/user-api-keys?action=save`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-          },
-          body: JSON.stringify({ provider, apiKey }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (result.success) {
+      const result = await invokeFn("save", { provider, apiKey });
+      if (result?.success) {
         toast.success("Chave de API guardada com sucesso!");
         await fetchKeys();
         return true;
-      } else {
-        toast.error(result.error || "Erro ao guardar chave de API");
-        return false;
       }
+      toast.error(result?.error || "Erro ao guardar chave de API");
+      return false;
     } catch (error) {
       console.error("Error saving API key:", error);
       toast.error("Erro ao guardar chave de API");
@@ -103,35 +75,19 @@ export function useUserApiKeys() {
 
   const deleteKey = async (provider: string) => {
     try {
-      const token = await getAuthToken();
-      
-      if (!token) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
         toast.error("Precisa de estar autenticado para remover chaves de API");
         return false;
       }
-
-      const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/user-api-keys?action=delete`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,
-          },
-          body: JSON.stringify({ provider }),
-        }
-      );
-
-      const result = await response.json();
-
-      if (result.success) {
+      const result = await invokeFn("delete", { provider });
+      if (result?.success) {
         toast.success("Chave de API removida com sucesso!");
         await fetchKeys();
         return true;
-      } else {
-        toast.error(result.error || "Erro ao remover chave de API");
-        return false;
       }
+      toast.error(result?.error || "Erro ao remover chave de API");
+      return false;
     } catch (error) {
       console.error("Error deleting API key:", error);
       toast.error("Erro ao remover chave de API");
@@ -145,12 +101,9 @@ export function useUserApiKeys() {
 
   useEffect(() => {
     fetchKeys();
-    
-    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       fetchKeys();
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
