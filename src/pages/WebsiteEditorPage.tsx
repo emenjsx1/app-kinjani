@@ -215,17 +215,21 @@ export default function WebsiteEditorPage() {
 
       const action: "chat" | "plan" | "edit" = data?.action || (data?.html ? "edit" : "chat");
       const newHtml = action === "edit" && data?.html ? data.html : html;
+      const didChangeHtml = action === "edit" && normalizeHtml(newHtml) !== normalizeHtml(html);
+      const finalAction: "chat" | "plan" | "edit" = didChangeHtml ? action : action === "edit" ? "chat" : action;
       const asst: ChatMsg = {
         role: "assistant",
-        content: data?.message || (action === "edit" ? "Alteração aplicada." : "Pronto."),
+        content: didChangeHtml
+          ? (data?.message || "Alteração aplicada.")
+          : (data?.message || "Não encontrei uma alteração concreta para aplicar ao site actual."),
         ts: Date.now(),
-        action,
-        htmlSnapshot: action === "edit" ? newHtml : undefined,
+        action: finalAction,
+        htmlSnapshot: didChangeHtml ? newHtml : undefined,
       };
       const final = [...draft, asst];
-      setHtml(newHtml);
+      setHtml(didChangeHtml ? newHtml : html);
       setHistory(final);
-      await persist(newHtml, final);
+      await persist(didChangeHtml ? newHtml : html, final);
     } catch (e: any) {
       const aborted = e?.name === "AbortError" || ctrl.signal.aborted;
       const asst: ChatMsg = {
@@ -334,6 +338,7 @@ export default function WebsiteEditorPage() {
   if (!website) return null;
 
   const deviceWidth = device === "mobile" ? 390 : device === "tablet" ? 768 : "100%";
+  const elapsedLabel = busySeconds > 0 ? ` · ${busySeconds}s` : "";
 
   return (
     <div className="h-screen flex flex-col bg-background">
@@ -375,6 +380,47 @@ export default function WebsiteEditorPage() {
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium">Assistente Kinjani</span>
           </div>
+          {(busy || versions.length > 0) && (
+            <div className="border-b px-4 py-3 space-y-3">
+              {busy && (
+                <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                  <div className="min-w-0">
+                    <p className="font-medium text-foreground">A processar pedido{elapsedLabel}</p>
+                    <p className="truncate">{busyLabel || "A pensar..."}</p>
+                  </div>
+                  <Button size="sm" variant="destructive" className="h-7 px-2.5 shrink-0" onClick={stop}>
+                    <Square className="h-3 w-3 mr-1.5" />Pausar
+                  </Button>
+                </div>
+              )}
+
+              {versions.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-foreground">Reverter versões</span>
+                    <span className="text-[11px] text-muted-foreground">{versions.length} guardada{versions.length > 1 ? "s" : ""}</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {versions.slice(0, 3).map(({ message, index }, versionIndex) => (
+                      <button
+                        key={`${message.ts}-${index}`}
+                        onClick={() => revertTo(message.htmlSnapshot!, index)}
+                        className="w-full flex items-start justify-between gap-3 rounded-lg border px-2.5 py-2 text-left hover:bg-muted/50 transition"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-foreground">Versão {versions.length - versionIndex}</p>
+                          <p className="text-[11px] text-muted-foreground line-clamp-2">{message.content}</p>
+                        </div>
+                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
+                          <Undo2 className="h-3 w-3" /> Reverter
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
             {history.length === 0 && !busy && (
               <div className="text-sm text-muted-foreground">
@@ -384,12 +430,14 @@ export default function WebsiteEditorPage() {
             )}
             {history.map((m, i) => (
               <div key={i} className={m.role === "user" ? "flex justify-end" : "group"}>
-                <div className={m.role === "user"
-                  ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-3 py-2 text-sm max-w-[85%]"
-                  : "text-sm text-foreground max-w-[95%] whitespace-pre-wrap"
-                }>
+                <div className={cn(
+                  m.role === "user"
+                    ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-3 py-2 text-sm max-w-[85%]"
+                    : "text-sm text-foreground max-w-[95%] whitespace-pre-wrap",
+                  m.role === "assistant" && m.content.startsWith("⚠️") && "text-destructive"
+                )}>
                   {m.content}
-                  {m.role === "assistant" && m.action === "edit" && m.htmlSnapshot && i < history.length - 1 && (
+                  {m.role === "assistant" && m.action === "edit" && m.htmlSnapshot && (
                     <button
                       onClick={() => revertTo(m.htmlSnapshot!, i)}
                       className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition"
@@ -407,7 +455,7 @@ export default function WebsiteEditorPage() {
             {busy && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>{busyLabel || "A pensar..."}</span>
+                <span>{busyLabel || "A pensar..."}{elapsedLabel}</span>
               </div>
             )}
           </div>
