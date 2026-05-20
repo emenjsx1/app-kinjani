@@ -95,6 +95,7 @@ export function EditorShell({
     () => [...tpl.template.sections].filter((s) => s.enabled).sort((a, b) => a.order - b.order),
     [tpl.template.sections],
   );
+  const shouldRenderTemplate = orderedSections.length > 0;
   const orderedIds = useMemo(() => orderedSections.map((s) => s.id), [orderedSections]);
   const sectionLabels = useMemo(() => {
     const m: Record<string, string> = {};
@@ -145,7 +146,7 @@ export function EditorShell({
               onToggleVisible={tpl.toggleSection}
               onAIEdit={handleAIEdit}
             >
-              {compositionGraph ? (
+              {compositionGraph && !shouldRenderTemplate ? (
                 <CompositionRenderer graph={compositionGraph} />
               ) : (
                 <WebsitePreview
