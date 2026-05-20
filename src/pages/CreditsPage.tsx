@@ -191,6 +191,7 @@ export default function CreditsPage() {
           </CardContent>
         </Card>
       </div>
+      <CheckoutDialog open={!!checkoutPkg} onOpenChange={(o) => !o && setCheckoutPkg(null)} pkg={checkoutPkg} />
     </AppLayout>
   );
 }
