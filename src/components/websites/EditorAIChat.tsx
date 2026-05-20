@@ -10,6 +10,8 @@ import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { VisualAIContextBuilder, type VisualAttachment } from "@/core/ai/context/VisualAIContextBuilder";
+import { runCreativeSession } from "@/core/ai/creative-os";
+import { AgentActivityPanel } from "@/components/ai/AgentActivityPanel";
 
 interface Message {
   id: string;
@@ -145,6 +147,20 @@ export function EditorAIChat({
 
     await deductCredits(1, "ai_website_edit", "Edição visual com IA");
 
+    // Kick off multi-agent creative session in parallel — live agent activity surfaces in the studio panel.
+    void runCreativeSession({
+      intent: instruction,
+      visual: {
+        canvasImage: attachments[0]?.url,
+        graph: (compositionGraph as never) ?? null,
+        viewport:
+          typeof window !== "undefined"
+            ? { width: window.innerWidth, height: window.innerHeight }
+            : undefined,
+      },
+    });
+
+
     try {
       const graphSummary = VisualAIContextBuilder.summarizeGraph(compositionGraph);
       const viewport =
@@ -242,6 +258,12 @@ export function EditorAIChat({
           </Button>
         </div>
       </div>
+
+      <div className="px-3 pt-3">
+        <AgentActivityPanel className="!max-h-40" limit={20} />
+      </div>
+
+
 
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         <div className="space-y-4">
