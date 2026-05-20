@@ -133,7 +133,7 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
         updateStage("finalize", { status: "done", detail: "Projecto criado" });
         toast.success("Projecto criado ✨ O chat vai começar a gerar o site...");
         onOpenChange(false);
-        navigate(`/websites/${result.id}/edit`);
+        navigate(`/websites/${result.id}/edit?fresh=1`);
         return;
       }
       throw new Error("persist failed");
