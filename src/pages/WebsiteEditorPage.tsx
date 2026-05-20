@@ -11,7 +11,14 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-type ChatMsg = { role: "user" | "assistant"; content: string; ts: number };
+type ChatMsg = {
+  role: "user" | "assistant";
+  content: string;
+  ts: number;
+  action?: "chat" | "plan" | "edit";
+  /** HTML snapshot APÓS esta mensagem (só em assistant com edit). Clica para reverter aqui. */
+  htmlSnapshot?: string;
+};
 
 export default function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
