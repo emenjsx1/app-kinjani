@@ -178,26 +178,47 @@ serve(async (req) => {
       });
     }
 
-    // ---------- Legacy template mode (back-compat) ----------
-    const { instruction, template, websiteName } = body;
-    const systemPrompt = `És um assistente que edita templates de websites.
-Devolves APENAS JSON: {"message": string, "template": <template alterado>}.
-Cores em HSL "H S% L%". Português europeu.`;
-    const userPrompt = `Template "${websiteName}":
-${JSON.stringify(template)}
+    // ---------- Legacy template mode + Phase E multimodal vision ----------
+    const { instruction, template, websiteName, images, visualContext } = body as {
+      instruction: string;
+      template: unknown;
+      websiteName: string;
+      images?: string[]; // data: URLs or https URLs
+      visualContext?: string; // pre-built graph/viewport/token summary
+    };
 
+    const hasVision = Array.isArray(images) && images.length > 0;
+
+    const systemPrompt = `És o Kinjani Visual Creative Copilot.
+Tens visão: quando o utilizador anexa imagens (screenshots, canvas, referências, moodboards), analisa hierarquia, ritmo, espaçamento, tipografia, cor, densidade e direção emocional ANTES de editar.
+Nunca copies — extrai padrões e gera composições ORIGINAIS inspiradas.
+Devolves APENAS JSON: {"message": string, "template": <template alterado>, "critique"?: string}.
+"critique" é opcional: análise visual curta em português europeu (ritmo, breathing room, hierarquia, equilíbrio).
+Cores em HSL "H S% L%". Português europeu.`;
+
+    const textBlock = `Template "${websiteName}":
+${JSON.stringify(template)}
+${visualContext ? `\nCONTEXTO VISUAL:\n${visualContext}\n` : ""}
 Instrução: "${instruction}"
 
 Devolve o JSON.`;
+
+    const userContent: any = hasVision
+      ? [
+          { type: "text", text: textBlock },
+          ...images!.map((url) => ({ type: "image_url", image_url: { url } })),
+        ]
+      : textBlock;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        // Use a vision-capable model when images are present.
+        model: hasVision ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
+          { role: "user", content: userContent },
         ],
         response_format: { type: "json_object" },
         max_tokens: 8000,
@@ -214,7 +235,12 @@ Devolve o JSON.`;
     const result = JSON.parse(content);
 
     return new Response(
-      JSON.stringify({ success: true, message: result.message, template: result.template }),
+      JSON.stringify({
+        success: true,
+        message: result.message,
+        template: result.template,
+        critique: result.critique,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
