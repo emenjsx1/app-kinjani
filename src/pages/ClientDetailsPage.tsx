@@ -241,7 +241,7 @@ export default function ClientDetailsPage() {
                   )}
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <DollarSign className="h-4 w-4" />
-                    <span>€{Number(client.monthly_value).toFixed(2)}/mês</span>
+                    <span>{Number(client.monthly_value).toLocaleString('pt-PT', { maximumFractionDigits: 0 })} MZN/mês</span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Calendar className="h-4 w-4" />
