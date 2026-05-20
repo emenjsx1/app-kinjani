@@ -21,33 +21,41 @@ Deno.serve(async (req) => {
     const audioMime = (mimeType || "audio/webm").split(";")[0];
 
     // 1) Try Gemini API directly first (user has GEMINI_API_KEY).
+    // Cascata de modelos: cada um tem quota separada no free-tier.
     if (geminiKey) {
-      const gRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { text: promptText },
-                { inline_data: { mime_type: audioMime, data: audioBase64 } },
-              ],
-            }],
-          }),
-        },
-      );
-      if (gRes.ok) {
-        const data = await gRes.json();
-        const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join(" ").trim() ?? "";
-        return new Response(JSON.stringify({ text, provider: "gemini" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      const models = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-2.0-flash-lite"];
+      let lastErr = "";
+      for (const model of models) {
+        const gRes = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{
+                parts: [
+                  { text: promptText },
+                  { inline_data: { mime_type: audioMime, data: audioBase64 } },
+                ],
+              }],
+            }),
+          },
+        );
+        if (gRes.ok) {
+          const data = await gRes.json();
+          const text = data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).filter(Boolean).join(" ").trim() ?? "";
+          return new Response(JSON.stringify({ text, provider: "gemini", model }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        lastErr = await gRes.text();
+        console.error(`Gemini ${model} error`, gRes.status, lastErr);
+        // Se não for quota/rate-limit, não vale a pena tentar outros modelos
+        if (gRes.status !== 429 && gRes.status !== 503) break;
       }
-      const errTxt = await gRes.text();
-      console.error("Gemini direct error", gRes.status, errTxt);
       // fall through to Lovable AI gateway
     }
+
 
     // 2) Fallback: Lovable AI Gateway
     if (lovableKey) {
@@ -75,12 +83,13 @@ Deno.serve(async (req) => {
       const err = await res.text();
       console.error("Lovable AI gateway error", res.status, err);
       const reason = res.status === 402
-        ? "Sem créditos de IA disponíveis. Configure a sua GEMINI_API_KEY em Integrações."
+        ? "Quota Gemini esgotada hoje. Active a facturação no Google AI Studio para a sua GEMINI_API_KEY ou tente novamente daqui a alguns minutos."
         : "Não foi possível transcrever o áudio agora.";
       return new Response(JSON.stringify({ error: reason, fallback: true }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     return new Response(JSON.stringify({ error: "Nenhuma chave de IA configurada (GEMINI_API_KEY ou LOVABLE_API_KEY).", fallback: true }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
