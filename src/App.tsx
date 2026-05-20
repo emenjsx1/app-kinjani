@@ -28,6 +28,8 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import Phase6ShowcasePage from "./pages/Phase6ShowcasePage";
 import CloudPage from "./pages/CloudPage";
 import DomainsPage from "./pages/DomainsPage";
+import WhatsAppSettingsPage from "./pages/WhatsAppSettingsPage";
+import EmailSettingsPage from "./pages/EmailSettingsPage";
 
 const queryClient = new QueryClient();
 
