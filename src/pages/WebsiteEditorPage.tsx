@@ -389,6 +389,8 @@ export default function WebsiteEditorPage() {
             setWebsite({ ...website, status: "active", published_url, ...(slug !== undefined ? { slug } : {}) } as Website)
           }
         />
+      )}
+
 
       <div className="flex-1 flex min-h-0">
         {/* Chat */}
