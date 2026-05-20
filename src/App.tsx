@@ -11,6 +11,7 @@ import DashboardPage from "./pages/DashboardPage";
 import AgentsPage from "./pages/AgentsPage";
 import AgentDetailsPage from "./pages/AgentDetailsPage";
 import WebsitesPage from "./pages/WebsitesPage";
+import GenesisPreviewPage from "./pages/GenesisPreviewPage";
 import WebsiteEditorPage from "./pages/WebsiteEditorPage";
 import DemoPage from "./pages/DemoPage";
 import CreditsPage from "./pages/CreditsPage";
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/phase6" element={<Phase6ShowcasePage />} />
             <Route path="/connect/:token" element={<ClientConnectPage />} />
             <Route path="/site/:siteId" element={<PublicWebsitePage />} />
+            <Route path="/genesis-preview" element={<GenesisPreviewPage />} />
             
             {/* Protected routes */}
             <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
