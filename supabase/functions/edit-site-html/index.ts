@@ -137,8 +137,44 @@ Deno.serve(async (req) => {
       const stream = new ReadableStream({
         async start(controller) {
           const reader = resp.body!.getReader();
+          const settleCharge = async () => {
+            // Adjust pricing based on real output size. tokens ≈ chars / 4.
+            const approxTokens = Math.ceil(fullText.length / 4);
+            const realAction = classifyEditByTokens(approxTokens);
+            const realCost = CREDIT_COSTS[realAction];
+            const alreadyCharged = CREDIT_COSTS["site_edit_small"]; // 5
+            const diff = realCost - alreadyCharged;
+            if (diff > 0 && userId) {
+              try {
+                const svc = createClient(
+                  Deno.env.get("SUPABASE_URL")!,
+                  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+                  { auth: { persistSession: false } },
+                );
+                await svc.rpc("deduct_credits", {
+                  _user_id: userId,
+                  _action: realAction,
+                  _amount: diff,
+                  _description: `Edição site (ajuste para ${realAction})`,
+                });
+              } catch (e) { console.error("edit top-up failed", e); }
+            } else if (diff < 0 && userId) {
+              try {
+                const svc = createClient(
+                  Deno.env.get("SUPABASE_URL")!,
+                  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+                  { auth: { persistSession: false } },
+                );
+                await svc.rpc("add_credits", {
+                  _user_id: userId,
+                  _amount: -diff,
+                  _action: "refund_edit",
+                  _description: `Reembolso edição (real: ${realAction})`,
+                });
+              } catch (e) { console.error("edit refund failed", e); }
+            }
+          };
           const flushFinal = () => {
-            // Send a final marker with full accumulated raw JSON so client can parse safely
             controller.enqueue(encoder.encode(`\n__KINJANI_END__${JSON.stringify({ raw: fullText })}\n`));
           };
           try {
@@ -163,6 +199,7 @@ Deno.serve(async (req) => {
                 } catch { /* skip */ }
               }
             }
+            await settleCharge();
             flushFinal();
           } catch (e) {
             controller.enqueue(encoder.encode(`\n__KINJANI_ERROR__${(e as Error).message}\n`));
