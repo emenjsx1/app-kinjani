@@ -38,8 +38,13 @@ Deno.serve(async (req) => {
     if (!res.ok) {
       const err = await res.text();
       console.error("AI gateway error", res.status, err);
-      return new Response(JSON.stringify({ error: "Transcription failed", details: err }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      const reason = res.status === 402
+        ? "Sem créditos de IA disponíveis para transcrição. Adicione créditos em Settings → Workspace."
+        : res.status === 429
+        ? "Limite de requisições atingido. Tente novamente em instantes."
+        : "Não foi possível transcrever o áudio agora.";
+      return new Response(JSON.stringify({ error: reason, code: res.status, fallback: true }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
     const data = await res.json();
