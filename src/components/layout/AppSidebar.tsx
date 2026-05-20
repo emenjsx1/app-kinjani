@@ -3,7 +3,6 @@ import {
   LayoutDashboard,
   Bot,
   Globe,
-  MessageSquare,
   Coins,
   Plug,
   Settings,
@@ -12,7 +11,6 @@ import {
   ChevronRight,
   Users,
   BarChart3,
-  Cloud,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
