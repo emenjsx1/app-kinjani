@@ -317,6 +317,7 @@ export default function ClientDetailsPage() {
                         <Badge variant={agent.status === "active" ? "default" : "secondary"}>
                           {agent.status}
                         </Badge>
+                        <AssetPriceInput clientId={client.id} assetType="agent" assetId={agent.id} />
                         <Button
                           variant="ghost"
                           size="sm"
