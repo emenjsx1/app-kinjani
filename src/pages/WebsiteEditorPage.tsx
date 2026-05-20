@@ -426,7 +426,7 @@ export default function WebsiteEditorPage() {
               )}
             </div>
           )}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 min-w-0">
             {history.length === 0 && !busy && (
               <div className="text-sm text-muted-foreground">
                 <p className="mb-2">Olá! Descreve o site que queres ou peça uma alteração.</p>
