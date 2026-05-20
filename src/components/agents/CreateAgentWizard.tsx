@@ -162,8 +162,8 @@ const CREATION_METHODS = [
 ];
 
 export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: CreateAgentWizardProps) {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [creationMethod, setCreationMethod] = useState<"manual" | "ai" | null>(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [creationMethod, setCreationMethod] = useState<"manual" | "ai" | null>("ai");
   const [agentType, setAgentType] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<PromptTemplate | null>(null);
   const [prompt, setPrompt] = useState("");
