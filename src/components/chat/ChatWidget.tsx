@@ -30,7 +30,7 @@ export function ChatWidget({
   ]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, _attachments?: { type: string; name: string; dataUrl: string; size?: number }[]) => {
     const userMessage: Message = {
       id: Date.now().toString(),
       content,
