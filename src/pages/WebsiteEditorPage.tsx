@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, Globe, ExternalLink, Loader2, Sparkles, Monitor, Smartphone, Tablet } from "lucide-react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Send, Globe, ExternalLink, Loader2, Sparkles, Monitor, Smartphone, Tablet, Paperclip, Mic, Square, Lightbulb, Hammer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -9,12 +9,14 @@ import { toast } from "@/hooks/use-toast";
 import { useWebsites, Website } from "@/hooks/useWebsites";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 type ChatMsg = { role: "user" | "assistant"; content: string; ts: number };
 
 export default function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { getWebsite, updateWebsite } = useWebsites();
   const [website, setWebsite] = useState<Website | null>(null);
   const [html, setHtml] = useState<string>("");
@@ -24,8 +26,15 @@ export default function WebsiteEditorPage() {
   const [busy, setBusy] = useState(false);
   const [busyLabel, setBusyLabel] = useState("");
   const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [mode, setMode] = useState<"build" | "plan">("build");
+  const [attachments, setAttachments] = useState<{ name: string; type: string; dataUrl: string }[]>([]);
+  const [recording, setRecording] = useState(false);
+  const mediaRecRef = useRef<MediaRecorder | null>(null);
+  const recChunksRef = useRef<Blob[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const didAutoRunRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -33,12 +42,19 @@ export default function WebsiteEditorPage() {
       const w = await getWebsite(id);
       if (!w) return navigate("/websites");
       setWebsite(w);
-      setHtml((w as any).generated_html || "");
-      setHistory(Array.isArray((w as any).chat_history) ? (w as any).chat_history : []);
+      const existingHtml = (w as any).generated_html || "";
+      const existingHistory = Array.isArray((w as any).chat_history) ? (w as any).chat_history : [];
+      setHtml(existingHtml);
+      setHistory(existingHistory);
       setLoading(false);
 
-      // Auto-generate if empty and there's a prompt
-      if (!(w as any).generated_html && w.config?.prompt) {
+      // Auto-generate APENAS uma vez, e só se vier com ?fresh=1 (recém-criado)
+      const isFresh = searchParams.get("fresh") === "1";
+      if (isFresh && !didAutoRunRef.current && !existingHtml && existingHistory.length === 0 && w.config?.prompt) {
+        didAutoRunRef.current = true;
+        // Limpa o param para nunca repetir em refresh
+        searchParams.delete("fresh");
+        setSearchParams(searchParams, { replace: true });
         runGenerate(w.config.prompt, w.name);
       }
     })();
@@ -83,38 +99,105 @@ export default function WebsiteEditorPage() {
     }
   };
 
+  const buildPayload = (text: string) => {
+    const parts: string[] = [];
+    if (mode === "plan") parts.push("[MODO PLANO — apenas descrever o plano de alterações em texto, NÃO alterar o HTML]");
+    parts.push(text);
+    if (attachments.length) {
+      parts.push(`\n\nAnexos do utilizador (${attachments.length}): ${attachments.map(a => a.name).join(", ")}`);
+    }
+    return parts.join("\n");
+  };
+
   const send = async () => {
     const text = input.trim();
-    if (!text || busy) return;
+    if ((!text && attachments.length === 0) || busy) return;
+    const finalText = text || "(ver anexos)";
     setInput("");
+    const sentAttachments = attachments;
+    setAttachments([]);
 
     if (!html) {
-      // first generation
-      await runGenerate(text, website?.name);
+      await runGenerate(buildPayload(finalText), website?.name);
       return;
     }
 
     setBusy(true);
-    setBusyLabel("A aplicar alteração...");
-    const userMsg: ChatMsg = { role: "user", content: text, ts: Date.now() };
+    setBusyLabel(mode === "plan" ? "A elaborar plano..." : "A aplicar alteração...");
+    const userMsg: ChatMsg = { role: "user", content: finalText + (sentAttachments.length ? ` 📎 ${sentAttachments.length}` : ""), ts: Date.now() };
     const draft = [...history, userMsg];
     setHistory(draft);
     try {
       const { data, error } = await supabase.functions.invoke("edit-site-html", {
-        body: { html, instruction: text, history: draft.slice(-8) },
+        body: {
+          html,
+          instruction: buildPayload(finalText),
+          history: draft.slice(-8),
+          mode,
+          attachments: sentAttachments,
+        },
       });
-      if (error || !data?.html) throw new Error(error?.message || data?.error || "Falha");
-      const asst: ChatMsg = { role: "assistant", content: data.message || "Pronto!", ts: Date.now() };
+      if (error) throw new Error(error.message || "Falha");
+      const newHtml = mode === "plan" ? html : (data?.html || html);
+      const asst: ChatMsg = { role: "assistant", content: data?.message || "Pronto!", ts: Date.now() };
       const final = [...draft, asst];
-      setHtml(data.html);
+      setHtml(newHtml);
       setHistory(final);
-      await persist(data.html, final);
+      await persist(newHtml, final);
     } catch (e: any) {
       toast({ title: "Erro", description: e.message || "Falha.", variant: "destructive" });
       setHistory(history);
     } finally {
       setBusy(false);
       setBusyLabel("");
+    }
+  };
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files) return;
+    const arr = Array.from(files).slice(0, 4);
+    const out: { name: string; type: string; dataUrl: string }[] = [];
+    for (const f of arr) {
+      if (f.size > 8 * 1024 * 1024) {
+        toast({ title: "Ficheiro muito grande", description: `${f.name} > 8MB`, variant: "destructive" });
+        continue;
+      }
+      const dataUrl: string = await new Promise((res) => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result));
+        r.readAsDataURL(f);
+      });
+      out.push({ name: f.name, type: f.type, dataUrl });
+    }
+    setAttachments((p) => [...p, ...out].slice(0, 6));
+  };
+
+  const toggleRecord = async () => {
+    if (recording) {
+      mediaRecRef.current?.stop();
+      setRecording(false);
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      recChunksRef.current = [];
+      rec.ondataavailable = (e) => e.data.size && recChunksRef.current.push(e.data);
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(recChunksRef.current, { type: "audio/webm" });
+        const dataUrl: string = await new Promise((res) => {
+          const r = new FileReader();
+          r.onload = () => res(String(r.result));
+          r.readAsDataURL(blob);
+        });
+        setAttachments((p) => [...p, { name: `audio-${Date.now()}.webm`, type: "audio/webm", dataUrl }]);
+      };
+      rec.start();
+      mediaRecRef.current = rec;
+      setRecording(true);
+    } catch {
+      toast({ title: "Microfone indisponível", variant: "destructive" });
     }
   };
 
@@ -198,18 +281,64 @@ export default function WebsiteEditorPage() {
               </div>
             )}
           </div>
-          <div className="p-3 border-t">
+          <div className="p-3 border-t space-y-2">
+            {/* Mode toggle */}
+            <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5 w-fit">
+              <button
+                onClick={() => setMode("build")}
+                className={cn("flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md transition", mode === "build" ? "bg-background shadow-sm font-medium" : "text-muted-foreground")}
+              >
+                <Hammer className="h-3 w-3" /> Construir
+              </button>
+              <button
+                onClick={() => setMode("plan")}
+                className={cn("flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md transition", mode === "plan" ? "bg-background shadow-sm font-medium" : "text-muted-foreground")}
+              >
+                <Lightbulb className="h-3 w-3" /> Planear
+              </button>
+            </div>
+
+            {/* Attachments preview */}
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {attachments.map((a, i) => (
+                  <div key={i} className="flex items-center gap-1 bg-muted rounded-md px-2 py-1 text-xs">
+                    <span className="truncate max-w-[140px]">{a.name}</span>
+                    <button onClick={() => setAttachments(p => p.filter((_, j) => j !== i))} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="relative">
               <Textarea
                 ref={textareaRef}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-                placeholder={html ? "Descreve a alteração..." : "Descreve o site que queres criar..."}
-                className="min-h-[80px] pr-12 resize-none"
+                placeholder={html ? (mode === "plan" ? "Pede um plano..." : "Descreve a alteração...") : "Descreve o site que queres criar..."}
+                className="min-h-[80px] pr-12 pb-10 resize-none"
                 disabled={busy}
               />
-              <Button size="icon" className="absolute bottom-2 right-2 h-8 w-8" onClick={send} disabled={busy || !input.trim()}>
+              <div className="absolute bottom-2 left-2 flex items-center gap-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*,audio/*,.pdf,.txt"
+                  className="hidden"
+                  onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }}
+                />
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => fileInputRef.current?.click()} disabled={busy} title="Anexar ficheiro">
+                  <Paperclip className="h-3.5 w-3.5" />
+                </Button>
+                <Button size="icon" variant={recording ? "destructive" : "ghost"} className="h-7 w-7" onClick={toggleRecord} disabled={busy} title="Gravar áudio">
+                  {recording ? <Square className="h-3.5 w-3.5" /> : <Mic className="h-3.5 w-3.5" />}
+                </Button>
+              </div>
+              <Button size="icon" className="absolute bottom-2 right-2 h-8 w-8" onClick={send} disabled={busy || (!input.trim() && attachments.length === 0)}>
                 <Send className="h-3.5 w-3.5" />
               </Button>
             </div>
