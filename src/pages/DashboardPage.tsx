@@ -129,20 +129,20 @@ export default function DashboardPage() {
             value={agents.length}
             icon={Bot}
             variant="primary"
-            description="agentes criados"
+            description={`${activeAgents} ativos`}
           />
           <StatCard
-            title="Agentes Ativos"
-            value={activeAgents}
-            icon={Bot}
+            title="Sites Criados"
+            value={totalSites}
+            icon={Globe}
             variant="success"
-            description="a funcionar agora"
+            description="websites gerados"
           />
           <StatCard
-            title="Mensagens Totais"
+            title="Mensagens Processadas"
             value={totalMessages.toLocaleString()}
             icon={TrendingUp}
-            description="mensagens processadas"
+            description="total no histórico"
           />
           <StatCard
             title="Créditos Restantes"
