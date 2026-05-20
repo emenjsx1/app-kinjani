@@ -29,7 +29,7 @@ describe("Genesis — 5 outputs structural divergence proof", () => {
       spatial: r.plan.beats.map((b) => b.spatial.slice(0, 3)).join("-"),
       kinds: r.plan.beats.map((b) => b.kind.slice(0, 4)).join("-"),
       rhythm: r.plan.beats.map((b) => b.emphasis.toFixed(2)).join(","),
-      root: r.graph.root.kind,
+      root: r.graph.root.type,
       energy: r.energy.label,
       score: r.critique?.overall.toFixed(2),
     }));
