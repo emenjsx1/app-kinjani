@@ -26,6 +26,33 @@ const AGENT_SYSTEM_PROMPTS: Record<string, string> = {
 
 const BASE_RULES = `\n\nRegras gerais:\n- Responde em Português europeu (PT-PT) por defeito, espelhando a língua do utilizador se for diferente.\n- Mantém respostas concisas, profissionais e úteis.\n- Usa o histórico recente da conversa para preservar contexto, nomes, pedidos e continuidade.\n- Se o utilizador pedir algo que exija um humano, encaminha de forma clara.`;
 
+function extractIncomingWhatsAppText(message: Record<string, any> | undefined): string | null {
+  if (!message) return null;
+
+  return (
+    message.conversation ||
+    message.extendedTextMessage?.text ||
+    message.imageMessage?.caption ||
+    message.videoMessage?.caption ||
+    message.documentMessage?.caption ||
+    message.buttonsResponseMessage?.selectedButtonId ||
+    message.listResponseMessage?.title ||
+    null
+  );
+}
+
+function describeIncomingMedia(message: Record<string, any> | undefined): string[] {
+  if (!message) return [];
+  const descriptions: string[] = [];
+
+  if (message.audioMessage) descriptions.push('O utilizador enviou um áudio no WhatsApp. Se o texto não vier transcrito ainda, informa de forma breve que o processamento multimodal completo do áudio está a ser ligado ao canal WhatsApp.');
+  if (message.imageMessage) descriptions.push(`O utilizador enviou uma imagem${message.imageMessage.caption ? ` com legenda: "${message.imageMessage.caption}"` : ''}.`);
+  if (message.documentMessage) descriptions.push(`O utilizador enviou um documento${message.documentMessage.fileName ? ` chamado "${message.documentMessage.fileName}"` : ''}.`);
+  if (message.videoMessage) descriptions.push(`O utilizador enviou um vídeo${message.videoMessage.caption ? ` com legenda: "${message.videoMessage.caption}"` : ''}.`);
+
+  return descriptions;
+}
+
 // Send message via Evolution API using the correct instance name
 async function sendWhatsAppMessage(instanceKey: string, phone: string, message: string): Promise<boolean> {
   const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
@@ -193,11 +220,12 @@ serve(async (req) => {
       }
 
       // Extract user message
-      const userMessage = payload.data?.message?.conversation || 
-                         payload.data?.message?.extendedTextMessage?.text;
+      const rawMessage = payload.data?.message;
+      const userMessage = extractIncomingWhatsAppText(rawMessage);
+      const mediaHints = describeIncomingMedia(rawMessage);
 
-      if (!userMessage) {
-        console.log('No text message in payload');
+      if (!userMessage && mediaHints.length === 0) {
+        console.log('No supported content in payload');
         return new Response(JSON.stringify({ status: 'no_text' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -205,7 +233,8 @@ serve(async (req) => {
 
       const remoteJid = payload.data.key.remoteJid;
       const senderPhone = remoteJid.replace('@s.whatsapp.net', '');
-      console.log(`Message from ${senderPhone}: "${userMessage}"`);
+      const normalizedUserMessage = [userMessage, ...mediaHints].filter(Boolean).join('\n');
+      console.log(`Message from ${senderPhone}: "${normalizedUserMessage}"`);
 
       // Look up the instance and linked agent in the database
       const supabase = getServiceClient();
@@ -268,7 +297,7 @@ serve(async (req) => {
 
       const priorHistory = await loadConversationHistory(instanceKey!, remoteJid);
       const trimmedHistory = priorHistory.slice(-12);
-      const convo: ChatMsg[] = [...trimmedHistory, { role: 'user', content: userMessage }];
+      const convo: ChatMsg[] = [...trimmedHistory, { role: 'user', content: normalizedUserMessage }];
 
       // Generate AI response
       const agentResponse = await generateAgentResponse(convo, agentPrompt, agentType);
