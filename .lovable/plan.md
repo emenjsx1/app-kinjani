@@ -1,144 +1,114 @@
-# PHASE 2 — Open Builder Editor Migration
 
-Approved scope: apply 11 architectural improvements, then migrate the visual editor off `WebsiteEditor.tsx` onto the new modular shell. Maintain `?legacy=1` rollback. Preserve visual parity, responsive behavior, and all current functionality.
+# Phase I — AI-First Generation Core Rewrite
 
-## Stage A — Pre-flight architectural hardening (types & interfaces only, zero runtime regression)
+Goal: replace the section-first, template-mutation generation brain with an intention-first creative reasoning pipeline that invents composition from zero, critiques itself visually, and regenerates until quality passes.
 
-Type-only extensions; no behavioral changes to existing flows. Each item lists files.
+## 1. Audit & remove hidden template DNA
 
-### A1. Filesystem foundation extension
-Files: `src/core/filesystem/types.ts`, `src/core/filesystem/InMemoryFileSystem.ts` (additive only).
-Add:
-- `FileDependency` — `{ from: string; to: string; kind: 'import'|'asset'|'style'|'component' }`
-- `ImportReference` — `{ path: string; specifiers: string[]; isDefault: boolean; isTypeOnly?: boolean }`
-- `GeneratedArtifact` — `{ id: string; sourcePath: string; generator: string; componentId?: string; checksum: string; createdAt: string }`
-- `FileVersion` — `{ path: string; versionId: string; hash: string; createdAt: string; authorAgent?: string }`
-- Extend `FileSystem` interface with **optional** `dependencies?()`, `versions?(path)`, `artifacts?()` returning empty by default in `InMemoryFileSystem`.
+Sweep the generation paths and strip baked-in section/layout/hero/CTA assumptions:
 
-### A2. Component Registry evolution
-Files: `src/core/registry/types.ts`, `src/core/registry/sections.ts`, `src/core/registry/widgets.ts` (extend defaults, do not break consumers).
-Extend `ComponentDefinition`:
-- `slots?: Array<{ id: string; accepts: ComponentCategory[]; min?: number; max?: number }>` (composition/nested)
-- `dynamicProps?: boolean`
-- `responsiveRules?: Record<string, { hidden?: boolean; props?: Record<string, unknown> }>` (sm/md/lg/xl)
-- `designTokens?: { surface?: string; text?: string; accent?: string }`
-- `inherits?: string` (style inheritance)
-- `generationPrompt?: string`
-- `editableFields?: string[]` (canonicalize prior `aiHints.promptableFields`)
-- `runtimeCompatibility?: Array<'react-template'|'sandpack'|'webcontainer'|'export-tsx'>`
-- `exportCompatibility?: { tsx: boolean; html?: boolean }`
+- `src/core/render/buildBrief.ts`, `CompositionGenerator.ts`, `templateToGraph.ts`
+- `src/lib/website-templates.ts`, `src/lib/creative-composition.ts`
+- `src/components/websites/sections/*` (Hero/Features/CTA/FAQ defaults)
+- `src/core/registry/sections.ts`, `registry/widgets.ts`
+- `OpenCreator.tsx`, `CreateWebsiteWizard.tsx` default flows
 
-Set sensible defaults for the existing 11 sections + 10 widgets (all `runtimeCompatibility: ['react-template','export-tsx']`).
+Action: mark the section registry as a *fallback render adapter only*, not a generation source. Remove hero-first / features-then-CTA ordering, fixed spacing, default grids, default typography scales.
 
-### A3. AI Operations metadata + chains
-Files: `src/core/ai/types.ts`, `src/core/ai/operations.ts`, `src/core/ai/applier.ts`.
-Add `OperationMeta`:
+## 2. New module: `src/core/genesis/` (Generative Composition Engine)
+
+Replaces template-driven generation. Layers (intention → composition → critique → regeneration):
+
+```text
+Intent  →  Semantics  →  CreativeBrief  →  EnergyProfile
+   →  CompositionPlan  →  HierarchyPlan  →  RhythmPlan
+   →  SpatialPlan  →  TypographyLogic  →  InteractionPlan
+   →  GenerativeGraph  →  Render  →  VisualCritique
+   →  RegenerationLoop  →  FinalComposition
 ```
-operationId, parentOperationId?, sourceAgent, operationGroup?,
-rollbackable, affectedFiles[], affectedComponents[], createdAt, dependsOn?: string[]
+
+Files:
+
+- `genesis/types.ts` — `Intent`, `EnergyProfile`, `CompositionPlan`, `HierarchyNode`, `RhythmSpec`, `SpatialSpec`, `InteractionSpec`, `CritiqueReport`, `GenerativeGraph`
+- `genesis/IntentInterpreter.ts` — semantic parse of user prompt → goals, audience, emotion, domain, references
+- `genesis/EnergyEngine.ts` — picks visual energy (cinematic, editorial, brutalist, luxurious, fintech-premium, experimental, playful…) seeded by DNA + intent
+- `genesis/CompositionPlanner.ts` — invents an abstract scene graph: focal moments, narrative beats, tension points. Never emits "hero/features/cta" — emits beats like `opening-statement`, `proof-moment`, `quiet-pause`, `decision-call`
+- `genesis/HierarchyPlanner.ts` — emphasis weights, focal density, breathing zones
+- `genesis/RhythmPlanner.ts` — pacing curve across the page (dense/loose alternation, asymmetry bias from DNA)
+- `genesis/SpatialPlanner.ts` — invents grid system per project (not 12-col default); supports broken/overlap/editorial/bento/asymmetric
+- `genesis/TypographyLogic.ts` — invented scale + voice cadence per project
+- `genesis/InteractionPlanner.ts` — motion personality, reveal flow, scroll choreography
+- `genesis/GenerativeGraphBuilder.ts` — turns plans into a `GenerativeGraph` of arbitrary nodes (not bound to section types)
+- `genesis/index.ts` — `generateExperience(intent, dna) → GenerativeGraph`
+
+## 3. Visual Reasoning + Critique loop
+
+New module `src/core/critique/`:
+
+- `VisualCritiqueEngine.ts` — renders current graph offscreen, captures canvas via the existing visual context builder, sends to multimodal model (Gemini 2.5 Pro vision) with a critique rubric: template-feeling, repeated rhythm, weak hierarchy, generic SaaS sameness, spacing monotony, focal collapse
+- `CritiqueRubric.ts` — scored axes (originality, hierarchy, rhythm, tension, density, focal clarity, predictability)
+- `RegenerationScheduler.ts` (extend existing one in `core/runtime/`) — on critique fail, target the weak region(s) and request the planner to re-invent only those beats; loop until threshold or N rounds
+- Wire into `CreativeOrchestrator` from `src/core/ai/creative-os/`
+
+## 4. Agent role shift: authors, not editors
+
+Update `src/core/ai/creative-os/agents/`:
+
+- `CreativeDirectorAgent` → now drives `genesis.generateExperience` end-to-end, not section selection
+- New specialist agents: `CompositionAuthorAgent`, `HierarchyAuthorAgent`, `RhythmAuthorAgent`, `TypographyAuthorAgent`, `InteractionAuthorAgent`, `CritiqueAgent`, `RegenerationAgent`
+- Remove "edit existing section" code paths from agent prompts; replace with "invent / re-invent" instructions
+- Agents communicate via existing `AgentCommunicationBus`
+
+## 5. Renderer adapts to GenerativeGraph
+
+`CompositionRenderer.tsx` already DNA-aware. Extend:
+
+- Render arbitrary node types from `GenerativeGraph` (not just known section components)
+- Add a `FreeformBlockRenderer` that maps invented nodes → freeform TSX via existing `core/freeform/` pipeline
+- Existing section components become *one possible adapter*, used only when the planner explicitly chooses a conventional beat
+
+## 6. AI-first UX
+
+- `WebsitesPage` + `CreateWebsiteWizard`: collapse manual block flow; promote a single conversational intent input ("Describe the experience you want to create")
+- New page/section in `WebsiteEditor`: "Creative Session" panel showing live agent thinking, critique scores, regeneration events (reuse `AgentActivityPanel`)
+- Manual editing remains accessible but moved to a secondary "Refine" tab
+- `OpenCreator.tsx` becomes the default; guided template mode is demoted to "Quick start" tucked behind a link
+
+## 7. Energy + variability guarantees
+
+- `EnergyEngine` + DNA must produce visibly different outputs for two prompts in the same niche (success criterion). Add `tests/genesis-divergence.test.ts` (vitest) that generates two graphs from the same niche prompt and asserts structural divergence on rhythm, hierarchy weights, spatial grid kind, energy label, node count and ordering
+
+## 8. Edge function updates
+
+- `supabase/functions/generate-website-content/index.ts` — replace section-list prompt with intention/composition prompt; output a `GenerativeGraph` JSON via structured output (AI SDK `Output.object`)
+- `supabase/functions/ai-edit-website/index.ts` — accept critique reports and regenerate targeted regions instead of editing flat section JSON
+
+## Technical details
+
+- Keep `CompositionGraph` as the *runtime* graph; `GenerativeGraph` is its authored superset (invented node types resolve to composition nodes via a resolver)
+- DNA from `core/dna` feeds every planner as a seed, ensuring per-project uniqueness already enforced
+- Multimodal critique reuses `core/ai/context/VisualAIContextBuilder` for canvas capture
+- Model defaults: `google/gemini-2.5-pro` for critique (vision), `openai/gpt-5.4` for planning, `google/gemini-3.5-flash` for fast regeneration passes
+- All model calls server-side via Lovable AI Gateway with AI SDK `streamText` / `generateObject`
+- Backwards-compat: existing websites keep rendering through the section adapter; new generations go through `genesis`
+
+## Out of scope (this phase)
+
+- Removing section components from disk (kept as render adapters)
+- Changing auth, billing, WhatsApp, agents-non-creative subsystems
+- Migrating already-saved websites to the new graph
+
+## Deliverable shape
+
+```text
+src/core/genesis/*           ← new generative engine
+src/core/critique/*          ← visual self-critique loop
+src/core/ai/creative-os/agents/* ← rewritten as authors
+src/core/render/CompositionRenderer.tsx ← generative-graph aware
+src/components/websites/CreativeSessionPanel.tsx ← live thinking UI
+supabase/functions/generate-website-content/ ← intention-first prompt
+supabase/functions/ai-edit-website/ ← regeneration-first
+tests/genesis-divergence.test.ts
 ```
-Wrap existing `AIOperation` union into `AIOperationEnvelope = { meta: OperationMeta; op: AIOperation }`.
-Add:
-- `OperationPlan = { id; envelopes: AIOperationEnvelope[]; strategy: 'sequential'|'parallel' }`
-- `OperationResult = { operationId; ok; error?; rollbackOp?: AIOperation }`
-- `OperationConflict` resolver stub (interface only).
-Applier accepts both raw `AIOperation` (legacy) and `AIOperationEnvelope[]` (new); produces `OperationResult[]`.
 
-### A4. Preview Engine expansion
-Files: `src/core/preview/PreviewEngine.ts`, `src/core/preview/ReactTemplatePreviewEngine.tsx`, new `src/core/preview/diagnostics.ts`.
-Extend interface:
-- `capabilities: { interactive: boolean; isolated: boolean; supportsConsole: boolean; supportsNetwork: boolean }`
-- `health(): { status: 'idle'|'rendering'|'ready'|'error'; lastError?: string }`
-- `diagnostics(): { logs: RuntimeLog[]; errors: RuntimeError[] }`
-- `dispose?(): void`
-Add `PreviewEngineRegistry` (id → factory) for future Sandpack/WebContainer/Remote engines.
-
-### A5. History engine — operation-aware + groups
-Files: `src/core/history/HistoryEngine.ts`, `src/features/editor/store/historyStore.ts`.
-Add:
-- `pushOperation(envelope: AIOperationEnvelope)` alongside existing `pushSnapshot`
-- `beginGroup(label, sourceAgent?) / endGroup()` returning groupId (already partially present — formalize)
-- `undoTo(operationId)` and `redoTo(operationId)` (selective undo)
-- `serialize() / hydrate()` for future collab/persistence
-- Internal mode flag: `mode: 'snapshot'|'operation'|'hybrid'` (default hybrid)
-
-### A6. Project model — universal builder entity
-Files: `src/core/projects/types.ts`, `src/core/projects/repository.ts`.
-Extend `Project`:
-- `pages: ProjectPage[]` (default single page wraps current website sections)
-- `layouts: ProjectLayout[]`
-- `routes: { path: string; pageId: string; layoutId?: string }[]`
-- `assets: { id; path; type; refs: string[] }[]` (assets graph)
-- `seo: { title?; description?; ogImage?; canonical?; jsonLd?: unknown }`
-- `deployment?: { target?: 'vercel'|'netlify'|'lovable'; lastDeployedAt?: string }`
-- `env?: Record<string, string>` (non-secret)
-Repository: add `getPage`, `addPage`, `updateSeo` no-op stubs backed by in-memory.
-
-### A7. Editor engine prep
-Files: new under `src/core/editor/`:
-- `dnd.ts` — `DndController` interface (`begin/over/drop/cancel`), no impl
-- `selection.ts` — `SelectionOverlay` types (`bbox`, `handles`, `label`)
-- `spacing.ts` — `SpacingModel` (`m/p` per side, breakpoint-aware)
-- `breakpoints.ts` — `Breakpoint = 'sm'|'md'|'lg'|'xl'`, default map
-- `keymap.ts` — `KeyBinding` registry (extends current shortcuts)
-- `canvas.ts` — `CanvasAdapter` interface for future canvas-rendered editing
-Wire types into `src/core/editor/index.ts`. No UI yet.
-
-### A8. Performance pre-work
-- Convert `SectionsPanel`, `LayersPanel`, `PropertiesPanel`, `AIChatPanel` to `React.memo` with stable selectors via Zustand `useShallow`.
-- `EditorSidebar` panels lazy-loaded with `React.lazy` + `Suspense` fallback (skeleton).
-- `AIChatPanel` dynamic import only when AI tab is opened.
-- Add `useStableCallback` util in `src/shared/hooks`.
-
-## Stage B — Editor surface migration (Phase 2 core)
-
-### B1. EditorShell becomes primary
-`src/pages/WebsiteEditorPage.tsx`: read `?legacy=1` query param.
-- `legacy=1` → render existing `WebsiteEditor` (unchanged).
-- default → render new `EditorShell` mounted full-screen with `WebsitePreview` inside `EditorCanvas`.
-
-### B2. Wire real data into the new shell
-- `EditorShell` loads the website via existing `useWebsites` hook by `id`.
-- Initializes `editorStore` (project id, mode='edit', device='desktop').
-- Initializes `historyStore` with first snapshot.
-- Save button (header) calls existing `useWebsites().updateWebsite` with serialized state from store (visual parity with legacy save).
-
-### B3. Panels feature parity
-Iterate each legacy panel and port to new components:
-- **SectionsPanel** — list from `componentRegistry.byCategory('section')` + drag-to-add via simple click-add (DnD wire stub only).
-- **LayersPanel** — tree from current project sections; click selects → updates `editorStore.selectedId`.
-- **PropertiesPanel** — render fields from `ComponentDefinition.schema` for the selected section/widget; on change emits `setSectionProp` envelope through applier + history.
-- **AIChatPanel** — wraps existing `EditorAIChat` logic via `useEditorAI`, dynamic-imported.
-- **EditorToolbar** — device switcher, undo/redo (bound to `historyStore`), preview mode toggle.
-- **EditorHeader** — title, save, exit, legacy-mode link (`?legacy=1`).
-- **EditorCanvas/Preview** — hosts `WebsitePreview` (unchanged renderer for visual parity). Selection overlay (Stage A7 types) added as absolutely-positioned outline only.
-- **FloatingActions** — quick-add, ai-edit shortcut.
-
-### B4. Keyboard + history wiring
-`useEditorShortcuts`: Ctrl/Cmd+Z, Shift+Z/Y, Cmd+S (save), Esc (deselect), Arrow nav between layers.
-
-### B5. Migrate `WebsiteEditor.tsx` to compatibility wrapper
-After parity reached & smoke-tested, reduce `src/components/websites/WebsiteEditor.tsx` to a thin wrapper that warns once and renders the new `EditorShell`. Keep file (legacy route still imports it under `?legacy=1`).
-
-## Stage C — Validation
-
-- `tsc --noEmit` green.
-- All existing routes load; `/websites/:id/edit` renders new shell.
-- `?legacy=1` renders prior editor identically.
-- Save round-trip writes same payload shape (verified by reading `useWebsites.updateWebsite` body).
-- Undo/redo works across prop edits.
-- AI chat edit produces an `AIOperationEnvelope`, runs through applier, recorded in history.
-- No console errors, no network regressions.
-
-## Out of scope (later phases)
-- Real drag-and-drop runtime (Stage A7 ships types only)
-- Sandpack engine (Phase 6)
-- New DB tables / migrations (Phase 4)
-- Edge function rewrite for structured outputs (Phase 3) — adapter remains
-- Code generation emit to TSX files (Phase 5)
-- verify_jwt rollout (Phase 7)
-
-## Execution order
-A1 → A2 → A3 → A4 → A5 → A6 → A7 → A8 → B1 → B2 → B3 → B4 → B5 → C.
-
-Estimated files touched: ~25 edited, ~8 created. Risk: low (additive types + new surface gated by feature flag).
+After this phase: two prompts in the same niche must produce structurally different experiences, the AI must render → critique → regenerate without user action, and manual section insertion is no longer the primary creation path.
