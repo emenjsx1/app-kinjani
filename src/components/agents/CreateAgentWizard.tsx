@@ -43,66 +43,91 @@ interface CreateAgentWizardProps {
 const STEPS = ["Método", "Tipo", "Template", "Prompt", "Nome", "Canal", "Concluído"];
 const AI_STEPS = ["Método", "IA", "A Gerar...", "Nome", "Canal", "Concluído"];
 
-const AGENT_TYPES = [
+type AgentTypeDef = {
+  id: string;
+  title: string;
+  description: string;
+  icon: JSX.Element;
+  category: "conversational" | "automation";
+  comingSoon?: boolean;
+};
+
+const AGENT_TYPES: AgentTypeDef[] = [
+  // Conversacionais
   {
     id: "atendimento-faq",
     title: "Atendimento / FAQ",
     description: "Responde dúvidas frequentes e atende clientes",
     icon: <MessageSquare className="h-5 w-5" />,
+    category: "conversational",
   },
   {
     id: "captura-leads",
     title: "Captura de Leads",
-    description: "Captura informações de contacto e qualifica leads",
+    description: "Captura contactos numa conversa natural",
     icon: <Users className="h-5 w-5" />,
+    category: "conversational",
   },
   {
     id: "qualificacao",
     title: "Qualificação",
-    description: "Qualifica leads como Hot, Warm ou Cold",
+    description: "Qualifica leads como Hot, Warm ou Cold via conversa",
     icon: <Sparkles className="h-5 w-5" />,
+    category: "conversational",
   },
   {
     id: "follow-up",
     title: "Follow-up",
-    description: "Acompanha e faz seguimento de contactos",
+    description: "Mensagens de seguimento personalizadas",
     icon: <ArrowRight className="h-5 w-5" />,
+    category: "conversational",
   },
-  {
-    id: "agendamento",
-    title: "Agendamento Simples",
-    description: "Agenda reuniões e compromissos",
-    icon: <Calendar className="h-5 w-5" />,
-  },
-  {
-    id: "controlo-gastos",
-    title: "Controlo de Gastos",
-    description: "Regista gastos, guarda em Sheets e envia relatórios",
-    icon: <Coins className="h-5 w-5" />,
-  },
+  // Automação
   {
     id: "scrapper-leads",
     title: "Scrapper de Leads",
-    description: "Pesquisa empresas no Google Maps e guarda contactos",
+    description: "Pesquisa empresas e gera lista de contactos",
     icon: <Users className="h-5 w-5" />,
+    category: "automation",
   },
   {
     id: "disparo-whatsapp",
     title: "Disparo WhatsApp",
     description: "Envia mensagens em massa com controlo de limites",
     icon: <MessageSquare className="h-5 w-5" />,
+    category: "automation",
   },
   {
     id: "disparo-email",
     title: "Disparo de Email",
-    description: "Envia emails em massa via Resend API",
+    description: "Envia campanhas de email em massa",
     icon: <FileText className="h-5 w-5" />,
+    category: "automation",
+  },
+  // Em breve
+  {
+    id: "agendamento",
+    title: "Agendamento",
+    description: "Agenda reuniões via Google Calendar",
+    icon: <Calendar className="h-5 w-5" />,
+    category: "automation",
+    comingSoon: true,
+  },
+  {
+    id: "controlo-gastos",
+    title: "Controlo de Gastos",
+    description: "Regista gastos em Google Sheets",
+    icon: <Coins className="h-5 w-5" />,
+    category: "automation",
+    comingSoon: true,
   },
   {
     id: "gmail-contacts",
     title: "Gmail → Contactos",
-    description: "Extrai remetentes de emails para contactos",
+    description: "Extrai remetentes do Gmail para contactos",
     icon: <Users className="h-5 w-5" />,
+    category: "automation",
+    comingSoon: true,
   },
 ];
 
@@ -116,7 +141,7 @@ const CHANNEL_OPTIONS = [
   {
     id: "whatsapp",
     title: "WhatsApp",
-    description: "Ligar ao WhatsApp Business (Em breve)",
+    description: "Liga a uma instância WhatsApp conectada",
     icon: <MessageSquare className="h-5 w-5" />,
   },
 ];
