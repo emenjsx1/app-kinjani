@@ -89,7 +89,7 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
     stagesRef.current = next;
     setStages(next);
   };
-  const advanceStage = (id: string, status: StageStatus) => updateStage(id, { status });
+  
 
   const inferName = (p: string) => {
     const firstWords = p.trim().split(/\s+/).slice(0, 4).join(" ");
