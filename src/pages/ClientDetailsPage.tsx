@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ClientBrandingForm } from "@/components/clients/ClientBrandingForm";
 import { LinkAgentDialog } from "@/components/clients/LinkAgentDialog";
 import { LinkWebsiteDialog } from "@/components/clients/LinkWebsiteDialog";
+import { AssetPriceInput } from "@/components/clients/AssetPriceInput";
 import {
   ArrowLeft,
   Building2,
