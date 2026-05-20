@@ -57,7 +57,7 @@ export default function ClientsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Receita Mensal"
-            value={`€${stats.totalMonthlyRevenue.toFixed(2)}`}
+            value={`${stats.totalMonthlyRevenue.toLocaleString('pt-PT', { maximumFractionDigits: 0 })} MZN`}
             icon={DollarSign}
             trend={{ value: 12, isPositive: true }}
             description="Total de todos os clientes"
