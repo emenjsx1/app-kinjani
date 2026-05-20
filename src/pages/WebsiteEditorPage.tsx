@@ -130,23 +130,31 @@ export default function WebsiteEditorPage() {
     }
 
     setBusy(true);
-    setBusyLabel(mode === "plan" ? "A elaborar plano..." : "A aplicar alteração...");
-    const userMsg: ChatMsg = { role: "user", content: finalText + (sentAttachments.length ? ` 📎 ${sentAttachments.length}` : ""), ts: Date.now() };
+    setBusyLabel(mode === "plan" ? "A elaborar plano..." : "A pensar...");
+    const userMsg: ChatMsg = { role: "user", content: finalText + (sentAttachments.length ? `  📎 ${sentAttachments.length}` : ""), ts: Date.now() };
     const draft = [...history, userMsg];
     setHistory(draft);
     try {
       const { data, error } = await supabase.functions.invoke("edit-site-html", {
         body: {
           html,
-          instruction: buildPayload(finalText),
+          instruction: finalText,
           history: draft.slice(-8),
           mode,
           attachments: sentAttachments,
         },
       });
       if (error) throw new Error(error.message || "Falha");
-      const newHtml = mode === "plan" ? html : (data?.html || html);
-      const asst: ChatMsg = { role: "assistant", content: data?.message || "Pronto!", ts: Date.now() };
+
+      const action: "chat" | "plan" | "edit" = data?.action || (data?.html ? "edit" : "chat");
+      const newHtml = action === "edit" && data?.html ? data.html : html;
+      const asst: ChatMsg = {
+        role: "assistant",
+        content: data?.message || (action === "edit" ? "Alteração aplicada." : "Pronto."),
+        ts: Date.now(),
+        action,
+        htmlSnapshot: action === "edit" ? newHtml : undefined,
+      };
       const final = [...draft, asst];
       setHtml(newHtml);
       setHistory(final);
@@ -158,6 +166,28 @@ export default function WebsiteEditorPage() {
       setBusy(false);
       setBusyLabel("");
     }
+  };
+
+  const revertTo = async (snapshot: string, idx: number) => {
+    if (!snapshot) return;
+    const trimmed = history.slice(0, idx + 1);
+    setHtml(snapshot);
+    setHistory(trimmed);
+    await persist(snapshot, trimmed);
+    toast({ title: "Revertido", description: "Site restaurado para este ponto." });
+  };
+
+  const downloadHtml = () => {
+    if (!html) return;
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(website?.name || "site").replace(/[^a-z0-9-_]+/gi, "-").toLowerCase()}.html`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   const handleFiles = async (files: FileList | null) => {
