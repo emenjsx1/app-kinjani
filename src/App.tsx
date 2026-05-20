@@ -25,6 +25,7 @@ import ReportsPage from "./pages/ReportsPage";
 import AuthPage from "./pages/AuthPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Phase6ShowcasePage from "./pages/Phase6ShowcasePage";
+import CloudPage from "./pages/CloudPage";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+            <Route path="/cloud" element={<ProtectedRoute><CloudPage /></ProtectedRoute>} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
