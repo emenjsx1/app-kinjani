@@ -21,13 +21,68 @@ const MAX_FILES = 4;
 
 const ACCEPT = "image/*,audio/*,application/pdf";
 
-const fileToDataUrl = (f: File) =>
+const fileToDataUrl = (f: Blob) =>
   new Promise<string>((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(String(r.result));
     r.onerror = reject;
     r.readAsDataURL(f);
   });
+
+const blobToArrayBuffer = (blob: Blob) =>
+  new Promise<ArrayBuffer>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as ArrayBuffer);
+    reader.onerror = reject;
+    reader.readAsArrayBuffer(blob);
+  });
+
+const audioBufferToWav = async (blob: Blob): Promise<Blob> => {
+  const AudioCtx = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioCtx) return blob;
+
+  const ctx = new AudioCtx();
+  try {
+    const input = await blobToArrayBuffer(blob);
+    const audioBuffer = await ctx.decodeAudioData(input.slice(0));
+    const channelCount = Math.min(audioBuffer.numberOfChannels, 1);
+    const sampleRate = audioBuffer.sampleRate;
+    const samples = audioBuffer.length;
+    const bytesPerSample = 2;
+    const dataSize = samples * channelCount * bytesPerSample;
+    const wavBuffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(wavBuffer);
+
+    const writeString = (offset: number, value: string) => {
+      for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i));
+    };
+
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, channelCount, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * channelCount * bytesPerSample, true);
+    view.setUint16(32, channelCount * bytesPerSample, true);
+    view.setUint16(34, 16, true);
+    writeString(36, "data");
+    view.setUint32(40, dataSize, true);
+
+    let offset = 44;
+    const channel = audioBuffer.getChannelData(0);
+    for (let i = 0; i < channel.length; i++, offset += 2) {
+      const sample = Math.max(-1, Math.min(1, channel[i]));
+      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+    }
+
+    return new Blob([view], { type: "audio/wav" });
+  } finally {
+    await ctx.close();
+  }
+};
 
 function attachmentIcon(type: string) {
   if (type.startsWith("image/")) return <ImageIcon className="h-3.5 w-3.5" />;
@@ -100,23 +155,36 @@ export function ChatInput({
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const rec = new MediaRecorder(stream);
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : MediaRecorder.isTypeSupported("audio/mp4")
+        ? "audio/mp4"
+        : undefined;
+      const rec = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
       recChunksRef.current = [];
       rec.ondataavailable = (ev) => ev.data.size > 0 && recChunksRef.current.push(ev.data);
       rec.onstop = async () => {
-        const blob = new Blob(recChunksRef.current, { type: rec.mimeType || "audio/webm" });
+        const rawBlob = new Blob(recChunksRef.current, { type: rec.mimeType || "audio/webm" });
         stream.getTracks().forEach((t) => t.stop());
-        const reader = new FileReader();
-        reader.onload = () => {
-          const dataUrl = String(reader.result);
+        try {
+          const wavBlob = await audioBufferToWav(rawBlob);
+          const dataUrl = await fileToDataUrl(wavBlob);
           setAttachments((prev) =>
             [
               ...prev,
-              { type: blob.type, name: `voz-${new Date().toISOString().slice(11, 19)}.webm`, dataUrl, size: blob.size },
+              { type: wavBlob.type, name: `voz-${new Date().toISOString().slice(11, 19)}.wav`, dataUrl, size: wavBlob.size },
             ].slice(0, MAX_FILES),
           );
-        };
-        reader.readAsDataURL(blob);
+        } catch {
+          const dataUrl = await fileToDataUrl(rawBlob);
+          setAttachments((prev) =>
+            [
+              ...prev,
+              { type: rawBlob.type || "audio/webm", name: `voz-${new Date().toISOString().slice(11, 19)}.webm`, dataUrl, size: rawBlob.size },
+            ].slice(0, MAX_FILES),
+          );
+          toast.warning("Áudio enviado no formato original; se falhar, tente uma gravação mais curta.");
+        }
       };
       mediaRecRef.current = rec;
       rec.start();
