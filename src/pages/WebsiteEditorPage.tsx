@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Send, Globe, ExternalLink, Loader2, Sparkles, Monitor, Smartphone, Tablet } from "lucide-react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowLeft, Send, Globe, ExternalLink, Loader2, Sparkles, Monitor, Smartphone, Tablet, Paperclip, Mic, Square, Lightbulb, Hammer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { useWebsites, Website } from "@/hooks/useWebsites";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
 
 type ChatMsg = { role: "user" | "assistant"; content: string; ts: number };
 
