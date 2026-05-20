@@ -111,7 +111,28 @@ export function useProfile() {
       fetchProfile();
     });
 
-    return () => subscription.unsubscribe();
+    // Realtime subscription: refresh balance whenever the profile changes (cobranças do backend)
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      channel = supabase
+        .channel(`profile-${user.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            const next = payload.new as Profile;
+            setProfile((prev) => (prev && next.id === prev.id ? { ...prev, ...next } : next));
+          },
+        )
+        .subscribe();
+    })();
+
+    return () => {
+      subscription.unsubscribe();
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   return {

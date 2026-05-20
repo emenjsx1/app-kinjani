@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { chargeCredits, insufficientCreditsResponse } from "../_shared/credits.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -114,6 +115,10 @@ serve(async (req) => {
     if (!GEMINI_API_KEY) {
       throw new Error("GEMINI_API_KEY is not configured");
     }
+
+    // Cobra 5 créditos antes de gerar o agente.
+    const charge = await chargeCredits(req, "agent_create_ai", `Criação agente AI: ${businessName}`);
+    if (!charge.ok) return insufficientCreditsResponse(corsHeaders, charge);
 
     const userPrompt = `
 Cria um agente de IA para o seguinte negócio:

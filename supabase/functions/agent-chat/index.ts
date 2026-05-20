@@ -1,5 +1,6 @@
 // Multimodal agent chat — text + image + audio + PDF via Gemini native API
-// Streams SSE back to the client.
+// Streams SSE back to the client. Cobra créditos antes de chamar o modelo.
+import { chargeCredits, classifyChatMessage, insufficientCreditsResponse } from "../_shared/credits.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -89,6 +90,11 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Charge credits up-front based on attachment type (text vs image/audio/pdf).
+    const chargeAction = classifyChatMessage(attachments, 0);
+    const charge = await chargeCredits(req, chargeAction, `Mensagem agente (${agentType || "geral"})`);
+    if (!charge.ok) return insufficientCreditsResponse(corsHeaders, charge);
 
     const baseSystem = AGENT_SYSTEM_PROMPTS[agentType || ""] || AGENT_SYSTEM_PROMPTS["atendimento-faq"];
     const systemText = (agentPrompt ? `${baseSystem}\n\nInstruções específicas:\n${agentPrompt}` : baseSystem) + BASE_RULES;

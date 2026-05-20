@@ -42,6 +42,10 @@ export function useAgentAI() {
 
       if (functionError) {
         console.error("Function error:", functionError);
+        const { handleCreditError } = await import("@/lib/credit-error");
+        if (handleCreditError(functionError)) {
+          throw new Error("Créditos insuficientes");
+        }
         throw new Error(functionError.message || "Erro ao criar agente");
       }
 
