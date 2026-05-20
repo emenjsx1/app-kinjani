@@ -19,6 +19,7 @@ import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
 
 export default function AgentDetailsPage() {
@@ -126,10 +127,10 @@ export default function AgentDetailsPage() {
         const selectedInstance = instances.find(i => i.id === selectedInstanceId);
         if (selectedInstance?.instance_key) {
           try {
-            const res = await fetch(
-              `https://mpxsivfiltwvnvqtixuo.supabase.co/functions/v1/whatsapp-agent?action=setup-webhook&instance=${selectedInstance.instance_key}`
-            );
-            const webhookResult = await res.json();
+            const { data: webhookResult, error: webhookError } = await supabase.functions.invoke("whatsapp-agent?action=setup-webhook&instance=" + selectedInstance.instance_key, {
+              method: "GET",
+            });
+            if (webhookError) throw webhookError;
             console.log('Webhook reconfigured:', webhookResult);
             if (webhookResult.success) {
               toast.success("Instância WhatsApp e webhook configurados com sucesso");
