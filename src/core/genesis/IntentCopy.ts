@@ -22,6 +22,18 @@ interface DomainVoice {
 }
 
 const DOMAIN_VOICE: Record<string, DomainVoice> = {
+  tourism: {
+    nouns: ["coastline", "horizon", "journey", "island", "dawn", "lodge", "wilderness", "ocean", "savannah"],
+    verbs: ["wander", "drift", "arrive", "discover", "breathe", "unplug"],
+    promises: [
+      "Travel that leaves a mark, not a footprint.",
+      "Designed slowly. Lived in once.",
+      "Where the map ends, the story begins.",
+    ],
+    proofWords: ["12 private camps", "guided by locals", "carbon-positive stays", "since 2014"],
+    ctaWords: ["Plan your journey", "Talk to a guide", "Reserve the experience"],
+    imageQueries: ["luxury safari lodge", "tropical coastline aerial", "remote beach sunrise", "infinity pool ocean", "boat lagoon", "wild horizon landscape"],
+  },
   finance: {
     nouns: ["capital", "wealth", "portfolio", "markets", "yield", "trust"],
     verbs: ["compound", "allocate", "protect", "grow", "deploy"],
