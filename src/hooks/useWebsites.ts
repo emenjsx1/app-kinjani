@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { WebsiteTemplate } from '@/lib/website-templates';
 import { EmbedConfig } from '@/components/websites/WebsiteEditor';
 import { Json } from '@/integrations/supabase/types';
+import type { GenerativeResult } from '@/core/genesis';
 
 export interface Website {
   id: string;
@@ -20,6 +21,7 @@ export interface Website {
     customTemplate?: WebsiteTemplate;
     embedConfig?: EmbedConfig;
     compositionGraph?: any;
+    generationSession?: GenerativeResult;
   } | null;
   created_at: string;
   updated_at: string;
