@@ -82,6 +82,26 @@ const DOMAIN_VOICE: Record<string, DomainVoice> = {
     ctaWords: ["Book a session", "Meet the team", "Plan your visit"],
     imageQueries: ["serene spa light", "hands wellness", "plants therapy room", "white architecture"],
   },
+  dental: {
+    nouns: ["smile", "confidence", "detail", "precision", "care", "result", "transformation"],
+    verbs: ["transform", "restore", "design", "reveal", "refine", "rebuild"],
+    promises: [
+      "Smiles designed, not just treated.",
+      "Precision dentistry, quietly perfected.",
+      "The smile you'd choose, made permanent.",
+    ],
+    proofWords: ["1,200+ smiles restored", "in-house ceramist", "digital scan in 4 min", "10-year guarantee"],
+    ctaWords: ["Book a consultation", "Plan your smile", "Talk to a specialist"],
+    imageQueries: ["dental clinic interior", "modern dentist chair", "smile portrait close up", "dental ceramic detail", "minimal medical interior", "calm portrait warm light"],
+  },
+  beauty: {
+    nouns: ["skin", "ritual", "glow", "form", "tone", "result"],
+    verbs: ["refine", "renew", "sculpt", "soften", "reveal"],
+    promises: ["Treatments that age with you, not against you.", "Quiet beauty, made on purpose."],
+    proofWords: ["medical-grade only", "12 protocols", "consultations 60 min"],
+    ctaWords: ["Book a consultation", "Plan your protocol", "Meet your specialist"],
+    imageQueries: ["minimal spa interior", "skincare close up", "calm portrait soft light", "marble bath warm"],
+  },
   realestate: {
     nouns: ["address", "view", "estate", "residence", "neighborhood"],
     verbs: ["live", "settle", "acquire", "discover", "tour"],
