@@ -123,8 +123,8 @@ serve(async (req) => {
     const { prompt, websiteName } = await req.json() as { prompt: string; websiteName?: string };
     if (!prompt || prompt.trim().length < 8) throw new Error("Prompt demasiado curto");
 
-    const KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!KEY) throw new Error("LOVABLE_API_KEY missing");
+    const KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!KEY) throw new Error("GEMINI_API_KEY missing");
 
     const userMessage = `PEDIDO DO UTILIZADOR:
 """
@@ -135,11 +135,11 @@ Nome sugerido (se quiseres ignorar e inventar melhor, ignora): ${websiteName ?? 
 
 Devolve o plano completo conforme schema. Lembra-te: nome de marca real e curto, paleta sofisticada do setor, 6-9 secções variadas, copy completa e profissional, imagens Unsplash relevantes em cada slot de imagem.`;
 
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const resp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "gemini-2.5-pro",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userMessage },
