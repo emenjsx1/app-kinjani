@@ -147,6 +147,20 @@ export function EditorAIChat({
 
     await deductCredits(1, "ai_website_edit", "Edição visual com IA");
 
+    // Kick off multi-agent creative session in parallel — live agent activity surfaces in the studio panel.
+    void runCreativeSession({
+      intent: instruction,
+      visual: {
+        canvasImage: attachments[0]?.url,
+        graph: (compositionGraph as never) ?? null,
+        viewport:
+          typeof window !== "undefined"
+            ? { width: window.innerWidth, height: window.innerHeight }
+            : undefined,
+      },
+    });
+
+
     try {
       const graphSummary = VisualAIContextBuilder.summarizeGraph(compositionGraph);
       const viewport =
