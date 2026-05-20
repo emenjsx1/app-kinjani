@@ -374,11 +374,21 @@ export default function WebsiteEditorPage() {
               <a href={website.published_url} target="_blank" rel="noreferrer"><ExternalLink className="h-3.5 w-3.5 mr-1.5" />Ver Online</a>
             </Button>
           )}
-          <Button size="sm" onClick={publish} disabled={!html}>
+          <Button size="sm" onClick={() => setPublishOpen(true)} disabled={!html}>
             <Globe className="h-3.5 w-3.5 mr-1.5" />Publicar
           </Button>
         </div>
       </header>
+      {website && (
+        <PublishDialog
+          open={publishOpen}
+          onOpenChange={setPublishOpen}
+          websiteId={website.id}
+          currentSlug={(website as any).slug ?? null}
+          onPublished={({ slug, published_url }) =>
+            setWebsite({ ...website, status: "active", published_url, ...(slug !== undefined ? { slug } : {}) } as Website)
+          }
+        />
 
       <div className="flex-1 flex min-h-0">
         {/* Chat */}
