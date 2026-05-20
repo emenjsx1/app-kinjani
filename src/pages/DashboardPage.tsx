@@ -36,12 +36,14 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { profile, isLoading: profileLoading } = useProfile();
   const { agents, isLoading: agentsLoading } = useAgents();
+  const { websites } = useWebsites();
   const { getUsageThisMonth, getUsageByCategory } = useCredits();
 
   const isLoading = profileLoading || agentsLoading;
 
   const activeAgents = agents.filter(a => a.status === 'active').length;
   const totalMessages = agents.reduce((sum, a) => sum + a.messages_handled, 0);
+  const totalSites = websites.length;
   const usageThisMonth = getUsageThisMonth();
   const usageByCategory = getUsageByCategory();
 
