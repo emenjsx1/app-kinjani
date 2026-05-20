@@ -259,6 +259,12 @@ export function EditorAIChat({
         </div>
       </div>
 
+      <div className="px-3 pt-3">
+        <AgentActivityPanel className="!max-h-40" limit={20} />
+      </div>
+
+
+
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
         <div className="space-y-4">
           {messages.map((msg) => (
