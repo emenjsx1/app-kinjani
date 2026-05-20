@@ -6,6 +6,7 @@
 import { CREATIVE_PALETTES } from "@/lib/creative-composition";
 import type { CreativeBrief } from "@/core/render/CompositionGenerator";
 import type { GraphTheme } from "@/core/render/composition-graph";
+import { generateVisualDNA } from "@/core/dna";
 
 const MOOD_FONTS: Record<GraphTheme["mood"], string[]> = {
   editorial:  ["Instrument Serif", "Fraunces", "Cormorant Garamond", "DM Serif Display"],
@@ -70,6 +71,12 @@ export function buildBrief(input: {
   const fontPool = MOOD_FONTS[mood];
   const font = fontPool[seed % fontPool.length];
 
+  const dna = generateVisualDNA({
+    prompt: input.prompt,
+    websiteName: input.websiteName,
+    uniqueSalt: seed,
+  });
+
   return {
     prompt: input.prompt,
     websiteName: input.websiteName,
@@ -77,6 +84,7 @@ export function buildBrief(input: {
     palette,
     font,
     seed,
+    dna,
     whatsappNumber: input.whatsappNumber,
   };
 }
