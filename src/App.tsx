@@ -47,6 +47,7 @@ const App = () => (
             <Route path="/phase6" element={<Phase6ShowcasePage />} />
             <Route path="/connect/:token" element={<ClientConnectPage />} />
             <Route path="/site/:siteId" element={<PublicWebsitePage />} />
+            <Route path="/s/:slug" element={<PublicWebsitePage />} />
             <Route path="/genesis-preview" element={<GenesisPreviewPage />} />
             
             {/* Protected routes */}
