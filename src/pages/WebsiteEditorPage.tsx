@@ -512,42 +512,12 @@ export default function WebsiteEditorPage() {
             <Sparkles className="h-4 w-4 text-primary" />
             <span className="text-sm font-medium">Assistente Kinjani</span>
           </div>
-          {(busy || versions.length > 0) && (
-            <div className="border-b px-4 py-3 space-y-3">
-              {busy && (
-                <div className="flex items-center justify-between gap-3">
-                  <ThinkingIndicator label={busyLabel || undefined} elapsed={elapsedLabel} />
-                  <Button size="sm" variant="ghost" className="h-7 px-2 text-xs shrink-0 text-muted-foreground hover:text-destructive" onClick={stop}>
-                    <Square className="h-3 w-3 mr-1" />Pausar
-                  </Button>
-                </div>
-              )}
-
-              {versions.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-foreground">Reverter versões</span>
-                    <span className="text-[11px] text-muted-foreground">{versions.length} guardada{versions.length > 1 ? "s" : ""}</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    {versions.slice(0, 3).map(({ message, index }, versionIndex) => (
-                      <button
-                        key={`${message.ts}-${index}`}
-                        onClick={() => revertTo(message.htmlSnapshot!, index)}
-                        className="w-full flex items-start justify-between gap-3 rounded-lg border px-2.5 py-2 text-left hover:bg-muted/50 transition"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-foreground">Versão {versions.length - versionIndex}</p>
-                          <p className="text-[11px] text-muted-foreground line-clamp-2">{message.content}</p>
-                        </div>
-                        <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground shrink-0">
-                          <Undo2 className="h-3 w-3" /> Reverter
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+          {busy && (
+            <div className="border-b px-4 py-3 flex items-center justify-between gap-3">
+              <ThinkingIndicator label={busyLabel || undefined} elapsed={elapsedLabel} />
+              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs shrink-0 text-muted-foreground hover:text-destructive" onClick={stop}>
+                <Square className="h-3 w-3 mr-1" />Pausar
+              </Button>
             </div>
           )}
           <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 min-w-0">
