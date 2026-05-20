@@ -22,6 +22,18 @@ interface DomainVoice {
 }
 
 const DOMAIN_VOICE: Record<string, DomainVoice> = {
+  tourism: {
+    nouns: ["coastline", "horizon", "journey", "island", "dawn", "lodge", "wilderness", "ocean", "savannah"],
+    verbs: ["wander", "drift", "arrive", "discover", "breathe", "unplug"],
+    promises: [
+      "Travel that leaves a mark, not a footprint.",
+      "Designed slowly. Lived in once.",
+      "Where the map ends, the story begins.",
+    ],
+    proofWords: ["12 private camps", "guided by locals", "carbon-positive stays", "since 2014"],
+    ctaWords: ["Plan your journey", "Talk to a guide", "Reserve the experience"],
+    imageQueries: ["luxury safari lodge", "tropical coastline aerial", "remote beach sunrise", "infinity pool ocean", "boat lagoon", "wild horizon landscape"],
+  },
   finance: {
     nouns: ["capital", "wealth", "portfolio", "markets", "yield", "trust"],
     verbs: ["compound", "allocate", "protect", "grow", "deploy"],
@@ -131,18 +143,23 @@ export function makeHeadline(kind: BeatKind, ctx: CopyContext): string {
   const noun = pick(v.nouns, ctx.rand);
   const verb = pick(v.verbs, ctx.rand);
   const promise = pick(v.promises, ctx.rand);
+  const loc = ctx.intent.location;
 
   switch (kind) {
     case "opening-statement":
-      return capitalize(`${verb} ${noun}, properly.`);
+      return loc
+        ? capitalize(`${verb} ${loc}, properly.`)
+        : capitalize(`${verb} ${noun}, properly.`);
     case "atmospheric-pause":
       return EMOTION_TINT[ctx.intent.emotion] ?? promise;
     case "proof-moment":
       return `The proof isn't a promise — it's ${pick(v.proofWords, ctx.rand)}.`;
     case "narrative-shift":
-      return `Then everything about ${noun} changed.`;
+      return loc
+        ? `Then everything about ${loc} changed.`
+        : `Then everything about ${noun} changed.`;
     case "quiet-pause":
-      return `${capitalize(noun)}.`;
+      return `${capitalize(loc ?? noun)}.`;
     case "revelation":
       return `This is how we ${verb}.`;
     case "tension-build":
@@ -163,11 +180,15 @@ export function makeHeadline(kind: BeatKind, ctx: CopyContext): string {
 export function makeBody(kind: BeatKind, ctx: CopyContext): string {
   const v = DOMAIN_VOICE[ctx.intent.domain] ?? DOMAIN_VOICE.general;
   const promise = pick(v.promises, ctx.rand);
+  const loc = ctx.intent.location;
+  const audience = ctx.intent.audience;
   switch (kind) {
     case "opening-statement":
-      return `${promise} A studio-built experience for ${ctx.intent.audience}.`;
+      return loc
+        ? `${promise} A ${ctx.intent.emotion} experience in ${loc}, made for ${audience}.`
+        : `${promise} A studio-built experience for ${audience}.`;
     case "atmospheric-pause":
-      return `${pick(v.nouns, ctx.rand)}, ${pick(v.verbs, ctx.rand)}d on purpose.`;
+      return `${pick(v.nouns, ctx.rand)}, ${pick(v.verbs, ctx.rand)}ed on purpose.`;
     case "proof-moment":
       return v.proofWords.slice(0, 3).join(" · ");
     case "narrative-shift":
@@ -175,7 +196,7 @@ export function makeBody(kind: BeatKind, ctx: CopyContext): string {
     case "evidence":
       return `${pick(v.verbs, ctx.rand)} ${pick(v.nouns, ctx.rand)}. ${pick(v.verbs, ctx.rand)} ${pick(v.nouns, ctx.rand)}. No filler.`;
     case "voice-of-customer":
-      return `— A founder we work with, two years in.`;
+      return `— A traveller we hosted, two seasons in.`;
     case "decision-call":
       return `${promise} Talk to us.`;
     default:

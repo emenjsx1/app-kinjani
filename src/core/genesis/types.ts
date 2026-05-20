@@ -21,6 +21,8 @@ export interface Intent {
   references: string[];
   /** Words/phrases that bias generation toward originality. */
   keywords: string[];
+  /** Optional location/place extracted from prompt (e.g. "Mozambique", "Lisbon"). */
+  location?: string;
 }
 
 /* ---------- Energy ---------- */

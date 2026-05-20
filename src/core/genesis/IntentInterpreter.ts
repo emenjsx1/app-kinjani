@@ -7,6 +7,7 @@ import type { Intent } from "./types";
  */
 
 const DOMAIN_HINTS: Record<string, string[]> = {
+  tourism: ["tourism", "travel", "destination", "safari", "resort", "hotel", "lodge", "tour", "trip", "journey", "expedition", "getaway", "voyage", "hospitality"],
   finance: ["bank", "fintech", "invest", "trading", "wealth", "crypto", "loan"],
   fashion: ["fashion", "boutique", "atelier", "couture", "runway", "style"],
   food: ["restaurant", "menu", "cafe", "bistro", "kitchen", "chef", "bar"],
@@ -18,6 +19,9 @@ const DOMAIN_HINTS: Record<string, string[]> = {
   portfolio: ["portfolio", "designer", "photographer", "artist", "writer"],
   ecommerce: ["shop", "store", "product", "ecommerce", "checkout"],
 };
+
+// Quick location detector — adds "place" awareness to copy without an LLM call.
+const LOCATION_RE = /\b(?:in|to|across|from)\s+([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)?)\b/;
 
 const EMOTION_HINTS: Record<string, string[]> = {
   bold: ["bold", "loud", "powerful", "energetic", "kinetic"],
@@ -68,6 +72,9 @@ export function interpretIntent(prompt: string): Intent {
     ),
   );
 
+  const locMatch = clean.match(LOCATION_RE);
+  const location = locMatch ? locMatch[1] : undefined;
+
   return {
     prompt: clean,
     goal,
@@ -76,5 +83,6 @@ export function interpretIntent(prompt: string): Intent {
     domain,
     references: [],
     keywords,
+    location,
   };
 }
