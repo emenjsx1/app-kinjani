@@ -307,11 +307,25 @@ export default function WebsiteEditorPage() {
               </div>
             )}
             {history.map((m, i) => (
-              <div key={i} className={m.role === "user" ? "flex justify-end" : ""}>
+              <div key={i} className={m.role === "user" ? "flex justify-end" : "group"}>
                 <div className={m.role === "user"
                   ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-3 py-2 text-sm max-w-[85%]"
                   : "text-sm text-foreground max-w-[95%] whitespace-pre-wrap"
-                }>{m.content}</div>
+                }>
+                  {m.content}
+                  {m.role === "assistant" && m.action === "edit" && m.htmlSnapshot && i < history.length - 1 && (
+                    <button
+                      onClick={() => revertTo(m.htmlSnapshot!, i)}
+                      className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition"
+                      title="Reverter o site para este ponto"
+                    >
+                      <Undo2 className="h-3 w-3" /> Reverter para aqui
+                    </button>
+                  )}
+                  {m.role === "assistant" && m.action === "plan" && (
+                    <span className="ml-2 text-[10px] uppercase tracking-wider text-muted-foreground">· plano</span>
+                  )}
+                </div>
               </div>
             ))}
             {busy && (
