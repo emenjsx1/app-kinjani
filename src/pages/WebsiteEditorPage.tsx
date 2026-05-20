@@ -15,6 +15,30 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useWebsites, Website } from "@/hooks/useWebsites";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useProfile } from "@/hooks/useProfile";
+import { CompositionRenderer } from "@/core/render/CompositionRenderer";
+
+function buildRuntimeTemplate(website: Website): WebsiteTemplate | null {
+  const graph = website.config?.compositionGraph;
+  if (!graph) return null;
+  return {
+    id: "graph-runtime-template",
+    name: website.name,
+    description: "Runtime graph container",
+    category: "Generated",
+    categoryId: "generated",
+    type: website.config?.type || "landing",
+    thumbnail: "/placeholder.svg",
+    colors: {
+      primary: graph.theme.primary,
+      secondary: graph.theme.secondary,
+      accent: graph.theme.accent,
+      background: graph.theme.background,
+      text: graph.theme.text,
+    },
+    font: graph.theme.font,
+    sections: [],
+  };
+}
 
 export default function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -42,8 +66,7 @@ export default function WebsiteEditorPage() {
       
       if (found) {
         setWebsite(found);
-        // Use custom template if exists, otherwise get from catalog
-        const tmpl = found.config?.customTemplate || getTemplateById(found.config?.templateId || '');
+        const tmpl = found.config?.customTemplate || getTemplateById(found.config?.templateId || '') || buildRuntimeTemplate(found);
         if (tmpl) {
           setTemplate(tmpl);
         }
@@ -66,7 +89,7 @@ export default function WebsiteEditorPage() {
     );
   }
 
-  if (!website || !template) {
+  if (!website || (!template && !website.config?.compositionGraph)) {
     return (
       <AppLayout pageTitle="Site não encontrado" credits={profile?.credits_balance ?? 0}>
         <div className="flex items-center justify-center h-64">
@@ -164,6 +187,7 @@ export default function WebsiteEditorPage() {
             websiteName={website.name}
             template={template}
             prompt={website.config?.prompt || ""}
+            compositionGraph={website.config?.compositionGraph}
             onBack={() => setIsEditing(false)}
             onSave={handleSaveTemplate}
             initialEmbedConfig={website.config?.embedConfig}
@@ -260,11 +284,15 @@ export default function WebsiteEditorPage() {
                   </span>
                 </div>
               </div>
-              <WebsitePreview 
-                template={template} 
-                websiteName={website.name}
-                embedConfig={website.config?.embedConfig}
-              />
+              {website.config?.compositionGraph ? (
+                <CompositionRenderer graph={website.config.compositionGraph} />
+              ) : (
+                <WebsitePreview 
+                  template={template} 
+                  websiteName={website.name}
+                  embedConfig={website.config?.embedConfig}
+                />
+              )}
             </div>
           </TabsContent>
 
