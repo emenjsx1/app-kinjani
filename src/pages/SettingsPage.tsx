@@ -94,16 +94,18 @@ export default function SettingsPage() {
 
   const getPlanCredits = (plan: string) => {
     switch (plan) {
-      case 'pro': return '2.000 créditos/mês';
-      case 'business': return '5.000 créditos/mês';
-      default: return '500 créditos/mês';
+      case 'pro': return '1.500 créditos/mês • 5 instâncias WhatsApp';
+      case 'business': return '5.000 créditos/mês • 15 instâncias WhatsApp';
+      case 'starter': return '0 créditos (usa as suas APIs) • 1 instância';
+      default: return '100 créditos grátis • 1 instância';
     }
   };
 
   const getPlanPrice = (plan: string) => {
     switch (plan) {
-      case 'pro': return '49€/mês';
-      case 'business': return '99€/mês';
+      case 'starter': return '999 MZN/mês';
+      case 'pro': return '2.999 MZN/mês';
+      case 'business': return '7.999 MZN/mês';
       default: return 'Gratuito';
     }
   };
