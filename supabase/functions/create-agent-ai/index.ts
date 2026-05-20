@@ -11,6 +11,70 @@ interface CreateAgentRequest {
   niche: string;
 }
 
+const CREATE_AGENT_JSON_SCHEMA = {
+  name: "create_agent_response",
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      name: { type: "string" },
+      type: {
+        type: "string",
+        enum: ["faq", "leads", "qualificacao", "follow-up", "agendamento"],
+      },
+      typeLabel: { type: "string" },
+      prompt: { type: "string" },
+      description: { type: "string" },
+    },
+    required: ["name", "type", "typeLabel", "prompt", "description"],
+  },
+  strict: true,
+};
+
+function extractJsonObject(raw: string) {
+  const cleaned = raw
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const firstBrace = cleaned.indexOf("{");
+    const lastBrace = cleaned.lastIndexOf("}");
+
+    if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+      throw new Error("No JSON found in response");
+    }
+
+    return JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
+  }
+}
+
+function normalizeAgentPayload(payload: Record<string, unknown>, businessName: string, niche: string) {
+  const allowedTypes = new Set(["faq", "leads", "qualificacao", "follow-up", "agendamento"]);
+  const rawType = String(payload.type ?? "faq").trim().toLowerCase();
+  const type = allowedTypes.has(rawType) ? rawType : "faq";
+
+  const fallbackLabels: Record<string, string> = {
+    faq: "FAQ",
+    leads: "Captação de Leads",
+    qualificacao: "Qualificação",
+    "follow-up": "Follow-up",
+    agendamento: "Agendamento",
+  };
+
+  return {
+    name: String(payload.name ?? `${businessName} AI`).trim() || `${businessName} AI`,
+    type,
+    typeLabel: String(payload.typeLabel ?? fallbackLabels[type]).trim() || fallbackLabels[type],
+    prompt: String(payload.prompt ?? "").trim(),
+    description:
+      String(payload.description ?? "").trim() ||
+      `Agente de IA para ${businessName} no setor de ${niche}.`,
+  };
+}
+
 const SYSTEM_PROMPT = `Tu és um especialista em criar prompts para agentes de IA conversacionais.
 A tua tarefa é criar um prompt completo e profissional para um agente de chatbot baseado na descrição do utilizador.
 
@@ -38,6 +102,13 @@ serve(async (req) => {
 
   try {
     const { description, businessName, niche } = await req.json() as CreateAgentRequest;
+
+    if (!description?.trim() || !businessName?.trim() || !niche?.trim()) {
+      return new Response(
+        JSON.stringify({ error: "description, businessName e niche são obrigatórios", success: false }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) {
@@ -77,8 +148,9 @@ Responde apenas com JSON válido.
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.7,
-        max_tokens: 2000,
+        temperature: 0.6,
+        response_format: { type: "json_schema", json_schema: CREATE_AGENT_JSON_SCHEMA },
+        max_tokens: 4000,
       }),
     });
 
@@ -95,28 +167,46 @@ Responde apenas com JSON válido.
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      throw new Error(`AI Gateway error: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`AI Gateway error: ${response.status} ${errorText}`);
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
+    const finishReason = data.choices?.[0]?.finish_reason;
+
+    if (finishReason === "length" || finishReason === "MAX_TOKENS") {
+      throw new Error("A resposta da IA foi truncada antes de terminar.");
+    }
 
     if (!content) {
       throw new Error("No content received from AI");
     }
 
-    // Parse JSON from response
+    let rawContent = "";
+    if (typeof content === "string") {
+      rawContent = content;
+    } else if (Array.isArray(content)) {
+      rawContent = content
+        .map((part) => typeof part?.text === "string" ? part.text : "")
+        .join("\n")
+        .trim();
+    }
+
+    if (!rawContent) {
+      throw new Error("Empty AI response content");
+    }
+
     let parsedContent;
     try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsedContent = JSON.parse(jsonMatch[0]);
-      } else {
-        throw new Error("No JSON found in response");
-      }
+      parsedContent = normalizeAgentPayload(extractJsonObject(rawContent), businessName, niche);
     } catch (parseError) {
-      console.error("Failed to parse AI response:", parseError);
+      console.error("Failed to parse AI response:", parseError, rawContent);
       throw new Error("Failed to parse AI response as JSON");
+    }
+
+    if (!parsedContent.prompt) {
+      throw new Error("AI response did not include a valid prompt");
     }
 
     console.log(`Successfully created agent configuration for ${businessName}`);
