@@ -1,5 +1,6 @@
 // Generates a full standalone HTML page from a prompt using Lovable AI Gateway (Gemini 2.5 Pro).
-// Returns: { html: string }
+// Returns: { html: string }. Cobra créditos (site_create = 50) antes de chamar o modelo.
+import { chargeCredits, insufficientCreditsResponse } from "../_shared/credits.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,6 +59,12 @@ Deno.serve(async (req) => {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Charge 50 credits before generating.
+    const charge = await chargeCredits(req, "site_create", `Geração de site${websiteName ? `: ${websiteName}` : ""}`);
+    if (!charge.ok) return insufficientCreditsResponse(corsHeaders, charge);
+    {
     }
 
     const userMsg = `Nome do projecto: ${websiteName || "Sem nome"}\n\nPedido do utilizador:\n${prompt}\n\nGera agora a página HTML completa, premium e única.`;
