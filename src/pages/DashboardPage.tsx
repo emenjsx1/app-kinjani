@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { PremiumCard } from "@/components/ui/premium-card";
 import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
+import { SoftwareTimeline } from "@/components/ai/SoftwareTimeline";
+import { AgentActivityPanel } from "@/components/ai/AgentActivityPanel";
 import { staggerContainer, staggerItem } from "@/lib/motion";
 import { useProfile } from "@/hooks/useProfile";
 import { useAgents } from "@/hooks/useAgents";
