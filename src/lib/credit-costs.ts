@@ -17,7 +17,11 @@ export type CreditAction =
   | "lead_scraper"
   | "email_blast"
   | "whatsapp_blast"
-  | "whatsapp_instance_monthly";
+  | "whatsapp_instance_monthly"
+  | "wa_message_text"
+  | "wa_message_image"
+  | "wa_message_audio"
+  | "wa_message_document";
 
 export const CREDIT_COSTS: Record<CreditAction, number> = {
   chat_text_short: 1,
@@ -36,6 +40,10 @@ export const CREDIT_COSTS: Record<CreditAction, number> = {
   email_blast: 1,
   whatsapp_blast: 1,
   whatsapp_instance_monthly: 50,
+  wa_message_text: 1, // cobrado a cada 20 msgs (≈0.05 créd/msg)
+  wa_message_image: 3,
+  wa_message_audio: 3,
+  wa_message_document: 5,
 };
 
 export const CREDIT_LABELS: Record<CreditAction, string> = {
@@ -55,6 +63,10 @@ export const CREDIT_LABELS: Record<CreditAction, string> = {
   email_blast: "Email blast (por destinatário)",
   whatsapp_blast: "WhatsApp blast (por destinatário)",
   whatsapp_instance_monthly: "Instância WhatsApp / mês",
+  wa_message_text: "WhatsApp — texto (lote 20)",
+  wa_message_image: "WhatsApp — imagem",
+  wa_message_audio: "WhatsApp — áudio",
+  wa_message_document: "WhatsApp — documento/PDF",
 };
 
 export const LOW_CREDIT_THRESHOLD = 100;

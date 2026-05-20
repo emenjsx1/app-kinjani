@@ -303,6 +303,7 @@ export type Database = {
           plan: string
           updated_at: string
           user_id: string
+          wa_text_unbilled: number
         }
         Insert: {
           company?: string | null
@@ -315,6 +316,7 @@ export type Database = {
           plan?: string
           updated_at?: string
           user_id: string
+          wa_text_unbilled?: number
         }
         Update: {
           company?: string | null
@@ -327,6 +329,7 @@ export type Database = {
           plan?: string
           updated_at?: string
           user_id?: string
+          wa_text_unbilled?: number
         }
         Relationships: []
       }
@@ -583,6 +586,10 @@ export type Database = {
           _description?: string
           _user_id: string
         }
+        Returns: Json
+      }
+      bill_wa_message: {
+        Args: { _kind: string; _user_id: string }
         Returns: Json
       }
       deduct_credits: {

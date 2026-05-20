@@ -367,6 +367,25 @@ serve(async (req) => {
       const trimmedHistory = priorHistory.slice(-12);
       const convo: ChatMsg[] = [...trimmedHistory, { role: 'user', content: normalizedUserMessage }];
 
+      // Bill credits: text aggregated 1/20msgs, image/audio=3, document/pdf=5
+      if (instance?.user_id) {
+        const kind = media?.kind === 'image' ? 'image'
+          : media?.kind === 'audio' ? 'audio'
+          : media?.kind === 'document' ? 'document'
+          : 'text';
+        const { data: billRes } = await supabase.rpc('bill_wa_message', {
+          _user_id: instance.user_id, _kind: kind,
+        });
+        const r = billRes as { success?: boolean; reason?: string };
+        if (r && r.success === false && r.reason === 'insufficient') {
+          await sendWhatsAppMessage(instanceKey!, senderPhone,
+            'Serviço temporariamente indisponível. Por favor tente mais tarde.');
+          return new Response(JSON.stringify({ status: 'insufficient_credits' }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
       // Generate AI response
       const agentResponse = await generateAgentResponse(convo, agentPrompt, agentType, extraParts);
       console.log(`AI response generated (${agentResponse.length} chars)`);
