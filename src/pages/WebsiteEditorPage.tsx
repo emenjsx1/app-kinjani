@@ -16,6 +16,7 @@ type ChatMsg = { role: "user" | "assistant"; content: string; ts: number };
 export default function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { getWebsite, updateWebsite } = useWebsites();
   const [website, setWebsite] = useState<Website | null>(null);
   const [html, setHtml] = useState<string>("");
@@ -25,8 +26,15 @@ export default function WebsiteEditorPage() {
   const [busy, setBusy] = useState(false);
   const [busyLabel, setBusyLabel] = useState("");
   const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [mode, setMode] = useState<"build" | "plan">("build");
+  const [attachments, setAttachments] = useState<{ name: string; type: string; dataUrl: string }[]>([]);
+  const [recording, setRecording] = useState(false);
+  const mediaRecRef = useRef<MediaRecorder | null>(null);
+  const recChunksRef = useRef<Blob[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const didAutoRunRef = useRef(false);
 
   useEffect(() => {
     (async () => {
@@ -34,12 +42,19 @@ export default function WebsiteEditorPage() {
       const w = await getWebsite(id);
       if (!w) return navigate("/websites");
       setWebsite(w);
-      setHtml((w as any).generated_html || "");
-      setHistory(Array.isArray((w as any).chat_history) ? (w as any).chat_history : []);
+      const existingHtml = (w as any).generated_html || "";
+      const existingHistory = Array.isArray((w as any).chat_history) ? (w as any).chat_history : [];
+      setHtml(existingHtml);
+      setHistory(existingHistory);
       setLoading(false);
 
-      // Auto-generate if empty and there's a prompt
-      if (!(w as any).generated_html && w.config?.prompt) {
+      // Auto-generate APENAS uma vez, e só se vier com ?fresh=1 (recém-criado)
+      const isFresh = searchParams.get("fresh") === "1";
+      if (isFresh && !didAutoRunRef.current && !existingHtml && existingHistory.length === 0 && w.config?.prompt) {
+        didAutoRunRef.current = true;
+        // Limpa o param para nunca repetir em refresh
+        searchParams.delete("fresh");
+        setSearchParams(searchParams, { replace: true });
         runGenerate(w.config.prompt, w.name);
       }
     })();
