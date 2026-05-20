@@ -1,9 +1,13 @@
-import { Bot, Globe, Coins, TrendingUp, Loader2 } from "lucide-react";
+import { Bot, Globe, Coins, TrendingUp, Sparkles, Zap, MessageSquare, Plus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { PremiumCard } from "@/components/ui/premium-card";
+import { DashboardSkeleton } from "@/components/ui/dashboard-skeleton";
+import { staggerContainer, staggerItem } from "@/lib/motion";
 import { useProfile } from "@/hooks/useProfile";
 import { useAgents } from "@/hooks/useAgents";
 import { useCredits } from "@/hooks/useCredits";
@@ -69,16 +73,50 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <AppLayout pageTitle="Painel" credits={0}>
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <DashboardSkeleton />
       </AppLayout>
     );
   }
 
+  const quickActions = [
+    { label: "Criar Agente", icon: Bot, onClick: () => navigate("/agents"), variant: "default" as const },
+    { label: "Gerar Site", icon: Globe, onClick: () => navigate("/websites"), variant: "outline" as const },
+    { label: "WhatsApp", icon: MessageSquare, onClick: () => navigate("/integrations"), variant: "outline" as const },
+    { label: "Créditos", icon: Coins, onClick: () => navigate("/credits"), variant: "secondary" as const },
+  ];
+
   return (
     <AppLayout pageTitle="Painel" credits={profile?.credits_balance || 0}>
-      <div className="space-y-6">
+      <motion.div
+        variants={staggerContainer}
+        initial="initial"
+        animate="animate"
+        className="space-y-6"
+      >
+        {/* Hero greeting */}
+        <motion.div variants={staggerItem} className="rounded-2xl border border-border/60 glass elev-2 p-6 relative overflow-hidden">
+          <div className="absolute inset-0 bg-aurora opacity-60 pointer-events-none" />
+          <div className="relative flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <div className="inline-flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                Kinjani AI
+              </div>
+              <h2 className="text-3xl font-bold tracking-tight text-gradient-primary">
+                Bem-vindo de volta
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {activeAgents > 0
+                  ? `${activeAgents} ${activeAgents === 1 ? "agente ativo" : "agentes ativos"} a trabalhar agora.`
+                  : "Crie o seu primeiro agente para começar."}
+              </p>
+            </div>
+            <Button onClick={() => navigate("/websites")} className="hover-lift gap-2">
+              <Zap className="h-4 w-4" /> Novo projeto
+            </Button>
+          </div>
+        </motion.div>
+
         {/* Grid de Estatísticas */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
@@ -205,21 +243,31 @@ export default function DashboardPage() {
         </div>
 
         {/* Ações Rápidas */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Ações Rápidas</CardTitle>
-            <CardDescription>Comece com tarefas comuns</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-3">
-              <Button onClick={() => navigate("/agents")}>Criar Novo Agente</Button>
-              <Button variant="outline" onClick={() => navigate("/websites")}>Gerar Site</Button>
-              <Button variant="outline" onClick={() => navigate("/integrations")}>Configurar WhatsApp</Button>
-              <Button variant="secondary" onClick={() => navigate("/credits")}>Comprar Créditos</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+        <motion.div variants={staggerItem} className="rounded-xl border border-border/60 glass elev-2 p-6">
+          <div className="mb-4">
+            <h3 className="text-base font-semibold">Ações Rápidas</h3>
+            <p className="text-sm text-muted-foreground">Comece com tarefas comuns</p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {quickActions.map((a, i) => (
+              <PremiumCard
+                key={a.label}
+                index={i}
+                onClick={a.onClick}
+                className="cursor-pointer group flex items-center gap-3"
+              >
+                <div className="rounded-lg bg-primary/10 p-2.5 group-hover:bg-primary/20 transition-colors">
+                  <a.icon className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">{a.label}</p>
+                </div>
+                <Plus className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+              </PremiumCard>
+            ))}
+          </div>
+        </motion.div>
+      </motion.div>
     </AppLayout>
   );
 }
