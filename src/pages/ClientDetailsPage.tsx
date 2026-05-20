@@ -382,6 +382,7 @@ export default function ClientDetailsPage() {
                         <Badge variant={website.status === "active" ? "default" : "secondary"}>
                           {website.status}
                         </Badge>
+                        <AssetPriceInput clientId={client.id} assetType="website" assetId={website.id} />
                         <Button
                           variant="ghost"
                           size="sm"
