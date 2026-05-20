@@ -1,5 +1,6 @@
 import { CSSProperties, ReactNode, useCallback } from "react";
 import { CompositionGraph, CompositionNode, GraphTheme } from "@/core/render/composition-graph";
+import { dnaToCSSVars } from "@/core/dna";
 import { cn } from "@/lib/utils";
 
 /* Tailwind-safe lookup maps (so JIT picks them up) */
@@ -60,6 +61,7 @@ interface NodeProps {
 }
 
 function themeVars(theme: GraphTheme): CSSProperties {
+  const dnaVars = theme.dna ? dnaToCSSVars(theme.dna) : {};
   return {
     // Expose theme as CSS variables so deep nodes can reference them
     ["--g-primary" as never]: theme.primary,
@@ -67,9 +69,13 @@ function themeVars(theme: GraphTheme): CSSProperties {
     ["--g-accent" as never]: theme.accent,
     ["--g-bg" as never]: theme.background,
     ["--g-text" as never]: theme.text,
+    ...(dnaVars as CSSProperties),
     fontFamily: theme.font,
     color: `hsl(${theme.text})`,
     background: `hsl(${theme.background})`,
+    // DNA-driven base rhythm — descendants can opt in via var(--dna-*)
+    letterSpacing: theme.dna ? `var(--dna-tracking)` : undefined,
+    lineHeight: theme.dna ? `var(--dna-body-lh)` : undefined,
   };
 }
 
@@ -88,7 +94,11 @@ export function CompositionRenderer({
 }) {
   const ctx: RendererContext = { theme: graph.theme, onCtaClick, onNodeClick, selectedId, legacyRenderer };
   return (
-    <div style={themeVars(graph.theme)} className="min-h-screen w-full">
+    <div
+      data-dna={graph.theme.dna?.signature}
+      style={themeVars(graph.theme)}
+      className="min-h-screen w-full"
+    >
       <RenderNode node={graph.root} ctx={ctx} />
     </div>
   );
