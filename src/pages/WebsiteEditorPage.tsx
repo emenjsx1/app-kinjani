@@ -99,38 +99,105 @@ export default function WebsiteEditorPage() {
     }
   };
 
+  const buildPayload = (text: string) => {
+    const parts: string[] = [];
+    if (mode === "plan") parts.push("[MODO PLANO — apenas descrever o plano de alterações em texto, NÃO alterar o HTML]");
+    parts.push(text);
+    if (attachments.length) {
+      parts.push(`\n\nAnexos do utilizador (${attachments.length}): ${attachments.map(a => a.name).join(", ")}`);
+    }
+    return parts.join("\n");
+  };
+
   const send = async () => {
     const text = input.trim();
-    if (!text || busy) return;
+    if ((!text && attachments.length === 0) || busy) return;
+    const finalText = text || "(ver anexos)";
     setInput("");
+    const sentAttachments = attachments;
+    setAttachments([]);
 
     if (!html) {
-      // first generation
-      await runGenerate(text, website?.name);
+      await runGenerate(buildPayload(finalText), website?.name);
       return;
     }
 
     setBusy(true);
-    setBusyLabel("A aplicar alteração...");
-    const userMsg: ChatMsg = { role: "user", content: text, ts: Date.now() };
+    setBusyLabel(mode === "plan" ? "A elaborar plano..." : "A aplicar alteração...");
+    const userMsg: ChatMsg = { role: "user", content: finalText + (sentAttachments.length ? ` 📎 ${sentAttachments.length}` : ""), ts: Date.now() };
     const draft = [...history, userMsg];
     setHistory(draft);
     try {
       const { data, error } = await supabase.functions.invoke("edit-site-html", {
-        body: { html, instruction: text, history: draft.slice(-8) },
+        body: {
+          html,
+          instruction: buildPayload(finalText),
+          history: draft.slice(-8),
+          mode,
+          attachments: sentAttachments,
+        },
       });
-      if (error || !data?.html) throw new Error(error?.message || data?.error || "Falha");
-      const asst: ChatMsg = { role: "assistant", content: data.message || "Pronto!", ts: Date.now() };
+      if (error) throw new Error(error.message || "Falha");
+      const newHtml = mode === "plan" ? html : (data?.html || html);
+      const asst: ChatMsg = { role: "assistant", content: data?.message || "Pronto!", ts: Date.now() };
       const final = [...draft, asst];
-      setHtml(data.html);
+      setHtml(newHtml);
       setHistory(final);
-      await persist(data.html, final);
+      await persist(newHtml, final);
     } catch (e: any) {
       toast({ title: "Erro", description: e.message || "Falha.", variant: "destructive" });
       setHistory(history);
     } finally {
       setBusy(false);
       setBusyLabel("");
+    }
+  };
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files) return;
+    const arr = Array.from(files).slice(0, 4);
+    const out: { name: string; type: string; dataUrl: string }[] = [];
+    for (const f of arr) {
+      if (f.size > 8 * 1024 * 1024) {
+        toast({ title: "Ficheiro muito grande", description: `${f.name} > 8MB`, variant: "destructive" });
+        continue;
+      }
+      const dataUrl: string = await new Promise((res) => {
+        const r = new FileReader();
+        r.onload = () => res(String(r.result));
+        r.readAsDataURL(f);
+      });
+      out.push({ name: f.name, type: f.type, dataUrl });
+    }
+    setAttachments((p) => [...p, ...out].slice(0, 6));
+  };
+
+  const toggleRecord = async () => {
+    if (recording) {
+      mediaRecRef.current?.stop();
+      setRecording(false);
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const rec = new MediaRecorder(stream);
+      recChunksRef.current = [];
+      rec.ondataavailable = (e) => e.data.size && recChunksRef.current.push(e.data);
+      rec.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        const blob = new Blob(recChunksRef.current, { type: "audio/webm" });
+        const dataUrl: string = await new Promise((res) => {
+          const r = new FileReader();
+          r.onload = () => res(String(r.result));
+          r.readAsDataURL(blob);
+        });
+        setAttachments((p) => [...p, { name: `audio-${Date.now()}.webm`, type: "audio/webm", dataUrl }]);
+      };
+      rec.start();
+      mediaRecRef.current = rec;
+      setRecording(true);
+    } catch {
+      toast({ title: "Microfone indisponível", variant: "destructive" });
     }
   };
 
