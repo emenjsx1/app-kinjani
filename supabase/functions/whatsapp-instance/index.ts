@@ -179,38 +179,17 @@ serve(async (req) => {
         console.error('Error getting QR code:', e);
       }
 
-      // 4. If client mode, deduct credits
-      if (isForClient) {
-        const CREDIT_COST = 5; // 5 credits per client instance
-        
-        // Get current balance
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('credits_balance')
-          .eq('user_id', user.id)
-          .single();
-
-        if (profile) {
-          const newBalance = Math.max(0, profile.credits_balance - CREDIT_COST);
-          
-          // Update balance
-          await supabase
-            .from('profiles')
-            .update({ credits_balance: newBalance })
-            .eq('user_id', user.id);
-
-          // Record transaction
-          await supabase
-            .from('credit_transactions')
-            .insert({
-              user_id: user.id,
-              amount: -CREDIT_COST,
-              action: 'whatsapp_client_instance',
-              description: `Instância WhatsApp cliente: ${instanceName}`,
-            });
-
-          console.log(`Deducted ${CREDIT_COST} credits for client instance`);
-        }
+      // 4. Deduct 50 credits (monthly fee, first month) via RPC
+      try {
+        const service = getServiceClient();
+        await service.rpc('deduct_credits', {
+          _user_id: user.id,
+          _action: 'whatsapp_instance_monthly',
+          _amount: 50,
+          _description: `Instância WhatsApp: ${instanceName}`,
+        });
+      } catch (e) {
+        console.error('deduct_credits failed', e);
       }
 
       // 5. Save instance to Supabase
