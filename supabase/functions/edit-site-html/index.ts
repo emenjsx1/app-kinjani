@@ -94,6 +94,8 @@ Deno.serve(async (req) => {
 
     messages.push({ role: "user", content: imageAtts.length ? userContent : textPart });
 
+    const wantStream = req.headers.get("accept")?.includes("text/event-stream") === true;
+
     const resp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
@@ -105,6 +107,7 @@ Deno.serve(async (req) => {
         temperature: 0.5,
         messages,
         response_format: { type: "json_object" },
+        stream: wantStream,
       }),
     });
 
@@ -116,6 +119,62 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ---------- Streaming branch: forward incremental text to the client ----------
+    if (wantStream && resp.body) {
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullText = "";
+
+      const stream = new ReadableStream({
+        async start(controller) {
+          const reader = resp.body!.getReader();
+          const flushFinal = () => {
+            // Send a final marker with full accumulated raw JSON so client can parse safely
+            controller.enqueue(encoder.encode(`\n__KINJANI_END__${JSON.stringify({ raw: fullText })}\n`));
+          };
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buffer += decoder.decode(value, { stream: true });
+              const lines = buffer.split("\n");
+              buffer = lines.pop() || "";
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed.startsWith("data:")) continue;
+                const payload = trimmed.slice(5).trim();
+                if (payload === "[DONE]") continue;
+                try {
+                  const j = JSON.parse(payload);
+                  const delta = j?.choices?.[0]?.delta?.content || "";
+                  if (delta) {
+                    fullText += delta;
+                    controller.enqueue(encoder.encode(delta));
+                  }
+                } catch { /* skip */ }
+              }
+            }
+            flushFinal();
+          } catch (e) {
+            controller.enqueue(encoder.encode(`\n__KINJANI_ERROR__${(e as Error).message}\n`));
+          } finally {
+            controller.close();
+          }
+        },
+      });
+
+      return new Response(stream, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/plain; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
+
+    // ---------- Non-streaming branch (legacy / fallback) ----------
     const data = await resp.json();
     const raw: string = data?.choices?.[0]?.message?.content || "";
     if (!raw.trim()) {
@@ -129,7 +188,6 @@ Deno.serve(async (req) => {
     try {
       parsed = JSON.parse(raw);
     } catch {
-      // Try to extract first JSON object
       const m = raw.match(/\{[\s\S]*\}/);
       if (m) {
         try { parsed = JSON.parse(m[0]); } catch { /* noop */ }
@@ -171,6 +229,7 @@ Deno.serve(async (req) => {
             : "Posso ajudar-te com alterações, estrutura, conteúdo, imagens e navegação do site.",
       html: newHtml,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return new Response(JSON.stringify({ error: message }), {

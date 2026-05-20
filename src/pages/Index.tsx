@@ -26,6 +26,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import logoLight from "@/assets/logo-light.png";
 import logoDark from "@/assets/logo-dark.png";
+import { HeroLivePreview } from "@/components/landing/HeroLivePreview";
 
 const features = [
   {
@@ -109,56 +110,79 @@ export default function Index() {
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* Hero Section — cinematic */}
       <section className="relative overflow-hidden pt-16">
         <div className="absolute inset-0 bg-gradient-to-br from-rich-black via-dark-green to-bangladesh-green" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--caribbean-green)/0.3),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_80%,hsl(var(--mountain-meadow)/0.2),transparent_40%)]" />
-        
-        <div className="relative max-w-7xl mx-auto px-6 py-24 md:py-32 lg:py-40">
-          <div className="max-w-3xl">
-            
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-anti-flash-white mb-6 leading-tight">
-              Automatize o seu negócio com{" "}
-              <span className="text-gradient-primary">Agentes de IA</span>
+        <div className="absolute -top-32 -left-32 w-[36rem] h-[36rem] rounded-full bg-caribbean-green/25 blur-[120px] animate-pulse" />
+        <div className="absolute top-1/3 -right-32 w-[32rem] h-[32rem] rounded-full bg-mountain-meadow/20 blur-[120px]" style={{ animation: "pulse 6s ease-in-out infinite" }} />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(var(--caribbean-green)/0.25),transparent_55%)]" />
+        <div
+          className="absolute inset-0 opacity-[0.07] pointer-events-none"
+          style={{
+            backgroundImage:
+              "linear-gradient(hsl(var(--pistachio)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--pistachio)) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
+          }}
+        />
+
+        <div className="relative max-w-7xl mx-auto px-6 py-24 md:py-28 lg:py-32 grid lg:grid-cols-[1.1fr_1fr] gap-12 items-center">
+          <div className="max-w-2xl">
+            <Badge className="mb-6 bg-caribbean-green/15 text-caribbean-green border-caribbean-green/30 hover:bg-caribbean-green/20">
+              <Sparkles className="h-3 w-3 mr-1.5" />
+              Plataforma para Agências de IA
+            </Badge>
+
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-anti-flash-white mb-6 leading-[1.05] tracking-tight">
+              A tua agência de{" "}
+              <span className="text-gradient-primary">IA chave-na-mão</span>.
+              <br />
+              Sites e agentes em{" "}
+              <span className="relative inline-block">
+                <span className="text-caribbean-green">segundos.</span>
+                <span className="absolute -bottom-1 left-0 right-0 h-1 bg-caribbean-green/40 rounded-full blur-sm" />
+              </span>
             </h1>
-            
-            <p className="text-lg md:text-xl text-pistachio mb-10 leading-relaxed">
-              Crie agentes inteligentes, gere sites profissionais e conecte tudo ao WhatsApp. 
-              Tudo numa só plataforma, sem precisar de código.
+
+            <p className="text-lg md:text-xl text-pistachio/90 mb-10 leading-relaxed">
+              Cria agentes inteligentes, gera sites profissionais e revende a clientes
+              com a tua marca. Tudo numa só plataforma — sem código, sem fricção.
             </p>
-            
-            <div className="flex flex-wrap gap-4 mb-12">
-              <Button asChild size="lg" className="bg-caribbean-green hover:bg-mountain-meadow text-rich-black font-semibold text-base px-8">
+
+            <div className="flex flex-wrap gap-3 mb-12">
+              <Button asChild size="lg" className="bg-caribbean-green hover:bg-mountain-meadow text-rich-black font-semibold text-base px-8 shadow-lg shadow-caribbean-green/30 hover:shadow-caribbean-green/50 transition-all hover:-translate-y-0.5">
                 <Link to="/auth">
                   Começar Gratuitamente
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="border-pistachio/40 text-anti-flash-white hover:bg-pistachio/10 text-base">
+              <Button asChild variant="outline" size="lg" className="border-pistachio/40 text-anti-flash-white hover:bg-pistachio/10 text-base backdrop-blur-sm">
                 <Link to="/demo">
-                  Ver Demonstração
+                  Ver Demonstração Ao Vivo
                 </Link>
               </Button>
             </div>
 
             {/* Stats */}
-            <div className="flex flex-wrap gap-8">
+            <div className="flex flex-wrap gap-x-8 gap-y-4">
               {stats.map((stat) => (
                 <div key={stat.label} className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-caribbean-green/20 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-caribbean-green/15 border border-caribbean-green/20 flex items-center justify-center">
                     <stat.icon className="h-5 w-5 text-caribbean-green" />
                   </div>
                   <div>
                     <p className="text-2xl font-bold text-anti-flash-white">{stat.value}</p>
-                    <p className="text-sm text-pistachio">{stat.label}</p>
+                    <p className="text-sm text-pistachio/70">{stat.label}</p>
                   </div>
                 </div>
               ))}
             </div>
           </div>
+
+          <HeroLivePreview />
         </div>
       </section>
+
 
       {/* Mockup: Criação de Agentes com 1 Clique */}
       <section className="max-w-7xl mx-auto px-6 py-20 lg:py-28">
