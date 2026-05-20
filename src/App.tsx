@@ -11,6 +11,7 @@ import DashboardPage from "./pages/DashboardPage";
 import AgentsPage from "./pages/AgentsPage";
 import AgentDetailsPage from "./pages/AgentDetailsPage";
 import WebsitesPage from "./pages/WebsitesPage";
+import GenesisPreviewPage from "./pages/GenesisPreviewPage";
 import WebsiteEditorPage from "./pages/WebsiteEditorPage";
 import DemoPage from "./pages/DemoPage";
 import CreditsPage from "./pages/CreditsPage";
