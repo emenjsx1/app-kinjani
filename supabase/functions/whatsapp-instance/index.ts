@@ -84,6 +84,22 @@ serve(async (req) => {
         });
       }
 
+      // Pre-charge: 50 credits per instance (first month). Cron renews monthly.
+      const { data: balanceRow } = await supabase
+        .from('profiles')
+        .select('credits_balance')
+        .eq('user_id', user.id)
+        .single();
+      if (!balanceRow || balanceRow.credits_balance < 50) {
+        return new Response(JSON.stringify({
+          error: 'Créditos insuficientes. Cada instância WhatsApp custa 50 créditos/mês.',
+          reason: 'insufficient',
+          required: 50,
+          balance: balanceRow?.credits_balance ?? 0,
+          action: 'whatsapp_instance_monthly',
+        }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+
       // Generate unique instance key
       const instanceKey = `${instanceName.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
       const clientToken = isForClient ? generateClientToken() : null;
