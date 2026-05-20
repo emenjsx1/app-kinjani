@@ -127,7 +127,7 @@ export function useWebsites() {
 
       const { data, error } = await supabase
         .from('websites')
-        .update(updateData)
+        .update(updateData as any)
         .eq('id', id)
         .select()
         .single();
