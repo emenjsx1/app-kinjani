@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Send, Globe, ExternalLink, Loader2, Sparkles, Monitor, Smartphone, Tablet, Paperclip, Mic, Square, Lightbulb, Hammer, X, Download, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ export default function WebsiteEditorPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [busyLabel, setBusyLabel] = useState("");
+  const [busySeconds, setBusySeconds] = useState(0);
   const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [mode, setMode] = useState<"build" | "plan">("build");
   const [attachments, setAttachments] = useState<{ name: string; type: string; dataUrl: string }[]>([]);
@@ -59,10 +60,16 @@ export default function WebsiteEditorPage() {
       },
       body: JSON.stringify(body),
     });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(json?.error || `Erro ${res.status}`);
+    const rawText = await res.text();
+    const json = rawText ? JSON.parse(rawText) : {};
+    if (!res.ok) {
+      const message = json?.error || json?.message || `Erro ${res.status}`;
+      throw new Error(message);
+    }
     return json;
   };
+
+  const normalizeHtml = (value: string) => value.replace(/\s+/g, " ").trim();
 
   const stop = () => {
     abortRef.current?.abort();
@@ -97,6 +104,27 @@ export default function WebsiteEditorPage() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
     setTimeout(() => textareaRef.current?.focus(), 50);
   }, [history, busy]);
+
+  useEffect(() => {
+    if (!busy) {
+      setBusySeconds(0);
+      return;
+    }
+
+    setBusySeconds(0);
+    const timer = window.setInterval(() => {
+      setBusySeconds((seconds) => seconds + 1);
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [busy]);
+
+  const versions = useMemo(() => {
+    return history
+      .map((message, index) => ({ message, index }))
+      .filter(({ message }) => message.role === "assistant" && message.action === "edit" && !!message.htmlSnapshot)
+      .reverse();
+  }, [history]);
 
   const persist = async (newHtml: string, newHistory: ChatMsg[]) => {
     if (!website) return;
