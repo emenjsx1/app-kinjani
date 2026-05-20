@@ -18,6 +18,10 @@ import {
   buildStructuredTemplateFromPrompt,
   inferWebsiteNameFromPrompt,
 } from "@/core/genesis/StructuredTemplateBuilder";
+import {
+  planWebsiteWithAI,
+  templateFromAIPlan,
+} from "@/core/genesis/AIWebsitePlanner";
 import type { CompositionGraph } from "@/core/render/composition-graph";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -108,16 +112,55 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
     stagesRef.current = INITIAL_STAGES;
 
     try {
-      // 1. Intent — show what the AI understood from the prompt
-      updateStage("intent", { status: "running" });
-      await sleep(380);
+      // 1. Intent — AI analisa o pedido (LLM real, sem keyword guessing)
+      updateStage("intent", { status: "running", detail: "A enviar pedido para análise..." });
+      const aiPlan = await planWebsiteWithAI(prompt, finalName);
       const intentSnapshot = interpretIntent(prompt);
+
+      if (aiPlan) {
+        updateStage("intent", {
+          status: "done",
+          detail: `${aiPlan.domainLabel} · ${aiPlan.sections.length} secções → ${aiPlan.sections.map(s => s.type).join(" · ")}`,
+        });
+
+        // 2. Direction
+        updateStage("direction", {
+          status: "done",
+          detail: `${aiPlan.font} · paleta ${aiPlan.palette.primary} · ${aiPlan.type}`,
+        });
+
+        // 3-6. Composição estruturada vinda da IA
+        const aiTemplate = templateFromAIPlan(aiPlan, finalName);
+        updateStage("composition", { status: "done", detail: `Plano gerado: ${aiTemplate.sections.length} blocos` });
+        updateStage("components", { status: "done", detail: aiTemplate.sections.map(s => s.type).slice(0, 6).join(" → ") });
+        updateStage("content", { status: "done", detail: `"${aiPlan.tagline}"` });
+        updateStage("finalize", { status: "done", detail: `Pronto · ${aiTemplate.sections.length} secções` });
+        await sleep(350);
+
+        const result = await onWebsiteCreated({
+          name: aiTemplate.name,
+          type: aiTemplate.type,
+          niche: aiPlan.domainLabel,
+          nicheId: "ai-planned",
+          templateId: "ai-planned",
+          prompt,
+          customTemplate: aiTemplate,
+        });
+        if (result?.id) {
+          toast.success("Site criado ✨");
+          onOpenChange(false);
+          navigate(`/websites/${result.id}/edit`);
+          return;
+        }
+        throw new Error("persist failed");
+      }
+
+      // ============ FALLBACK: pipeline antigo se a IA falhar ============
       updateStage("intent", {
         status: "done",
-        detail: `${intentSnapshot.domain} · ${intentSnapshot.emotion}${intentSnapshot.location ? ` · ${intentSnapshot.location}` : ""} → ${intentSnapshot.goal} para ${intentSnapshot.audience}`,
+        detail: `${intentSnapshot.domain} · ${intentSnapshot.emotion}${intentSnapshot.location ? ` · ${intentSnapshot.location}` : ""} → ${intentSnapshot.goal} para ${intentSnapshot.audience} (fallback local)`,
       });
 
-      // 2. Direction — paleta + tipografia + mood
       updateStage("direction", { status: "running" });
       await sleep(340);
       const brief = buildBrief({ prompt, websiteName: finalName });
@@ -126,7 +169,6 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
         detail: `Mood ${brief.mood} · ${brief.font} · paleta ${brief.palette.primary.slice(0, 12)}…`,
       });
 
-      // 3. Composition — gera o experience completo (intent + energy + plan + graph + critique)
       updateStage("composition", { status: "running" });
       const generationSeed = crypto.randomUUID();
       const exp = await generateExperience({
@@ -149,36 +191,16 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
       const resolvedType = structuredTemplate?.type ?? (/institucional|empresa|home|sobre|contacto|portfolio|portofolio/i.test(prompt) ? "institutional" : "landing");
       updateStage("composition", {
         status: "done",
-        detail: `Energia ${exp.energy.label} — ${exp.plan.beats.length} batidas · ${[...new Set(exp.plan.beats.map(b => b.spatial))].join(" · ")}`,
+        detail: `Energia ${exp.energy.label} — ${exp.plan.beats.length} batidas`,
       });
-
-      // 4. Components — listar dialetos espaciais visuais
-      updateStage("components", { status: "running" });
-      await sleep(260);
-      updateStage("components", {
-        status: "done",
-        detail: exp.plan.beats.map(b => b.kind.replace(/-/g, " ")).slice(0, 4).join(" → ") + (exp.plan.beats.length > 4 ? " …" : ""),
-      });
-
-      // 5. Content — manifesto da direção criativa
-      updateStage("content", { status: "running" });
-      await sleep(useAI ? 220 : 120);
-      updateStage("content", {
-        status: "done",
-        detail: `"${exp.energy.manifesto}"`,
-      });
-
-      // 6. Finalize — auto-crítica
-      updateStage("finalize", { status: "running" });
-      await sleep(320);
+      updateStage("components", { status: "done", detail: exp.plan.beats.map(b => b.kind).slice(0, 4).join(" → ") });
+      updateStage("content", { status: "done", detail: `"${exp.energy.manifesto}"` });
       const score = exp.critique ? Math.round(exp.critique.overall * 100) : 0;
       updateStage("finalize", {
         status: "done",
-        detail: exp.critique
-          ? `Score ${score}/100 · ${exp.iterations} iteração${exp.iterations > 1 ? "ões" : ""} · ${exp.critique.passed ? "aprovado" : "limite atingido"}`
-          : "Composição finalizada",
+        detail: exp.critique ? `Score ${score}/100` : "Composição finalizada",
       });
-      await sleep(450);
+      await sleep(350);
 
       const result = await onWebsiteCreated({
         name: structuredTemplate?.name ?? finalName,
