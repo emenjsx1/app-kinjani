@@ -479,6 +479,59 @@ export default function WebsiteEditorPage() {
           <Button size="sm" variant={device === "mobile" ? "default" : "ghost"} className="h-7 px-2" onClick={() => setDevice("mobile")}><Smartphone className="h-3.5 w-3.5" /></Button>
         </div>
         <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" disabled={versions.length === 0} title="Histórico de versões">
+                <HistoryIcon className="h-3.5 w-3.5 mr-1.5" />
+                Histórico
+                {versions.length > 0 && (
+                  <span className="ml-1.5 inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-primary/15 text-primary text-[10px] font-semibold">
+                    {versions.length}
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-[380px] p-0">
+              <div className="px-4 py-3 border-b flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Histórico de versões</p>
+                  <p className="text-[11px] text-muted-foreground">{versions.length} guardada{versions.length === 1 ? "" : "s"} · clica para reverter</p>
+                </div>
+                <HistoryIcon className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1">
+                {versions.length === 0 && (
+                  <p className="text-xs text-muted-foreground px-3 py-6 text-center">Ainda sem versões. Cada alteração da IA cria uma versão automaticamente.</p>
+                )}
+                {versions.map(({ message, index }, versionIndex) => {
+                  const date = new Date(message.ts);
+                  const timeLabel = date.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
+                  const dateLabel = date.toLocaleDateString("pt-PT", { day: "2-digit", month: "short" });
+                  return (
+                    <button
+                      key={`${message.ts}-${index}`}
+                      onClick={() => revertTo(message.htmlSnapshot!, index)}
+                      className="group w-full flex items-start gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-muted/60 transition"
+                    >
+                      <div className="mt-0.5 w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center shrink-0">
+                        v{versions.length - versionIndex}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <span className="text-xs font-medium text-foreground">Versão {versions.length - versionIndex}</span>
+                          <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{dateLabel} · {timeLabel}</span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground line-clamp-2">{message.content}</p>
+                      </div>
+                      <span className="opacity-0 group-hover:opacity-100 transition inline-flex items-center gap-1 text-[11px] text-primary shrink-0 self-center">
+                        <Undo2 className="h-3 w-3" /> Reverter
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
           <Button variant="outline" size="sm" onClick={downloadHtml} disabled={!html} title="Descarregar HTML">
             <Download className="h-3.5 w-3.5 mr-1.5" />Download
           </Button>
