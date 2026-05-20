@@ -7,12 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useWebsiteAI } from "@/hooks/useWebsiteAI";
-import { getCreativeComposition } from "@/lib/creative-composition";
 import type { WebsiteTemplate } from "@/lib/website-templates";
-import { generateCompositionGraph } from "@/core/render/CompositionGenerator";
 import { buildBrief } from "@/core/render/buildBrief";
-import { generateExperience } from "@/core/genesis";
+import { generateExperience, type GenerativeResult } from "@/core/genesis";
 import type { CompositionGraph } from "@/core/render/composition-graph";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -26,6 +23,7 @@ export interface OpenCreatorWebsitePayload {
   prompt?: string;
   customTemplate?: WebsiteTemplate;
   compositionGraph?: CompositionGraph;
+  generationSession?: GenerativeResult;
 }
 
 interface OpenCreatorProps {
@@ -60,7 +58,6 @@ const INITIAL_STAGES: Stage[] = [
 
 export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanced }: OpenCreatorProps) {
   const navigate = useNavigate();
-  const { generateContent, applySectionsContent } = useWebsiteAI();
 
   const [prompt, setPrompt] = useState("");
   const [name, setName] = useState("");
@@ -106,65 +103,38 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
       advanceStage("direction", "running");
       await sleep(450);
       const brief = buildBrief({ prompt, websiteName: finalName });
-      const creativeTemplate = getCreativeComposition({
-        prompt, siteType: "open", websiteName: finalName,
-      });
       advanceStage("direction", "done");
 
       advanceStage("composition", "running");
       await sleep(400);
-      // AI-first generative pipeline (intention → energy → beats → critique).
-      // Falls back to legacy composition graph only if Genesis fails.
       let compositionGraph: CompositionGraph;
-      try {
-        const exp = await generateExperience({
-          prompt,
-          theme: {
-            primary: brief.palette.primary,
-            secondary: brief.palette.secondary,
-            accent: brief.palette.accent,
-            background: brief.palette.background,
-            text: brief.palette.text,
-            font: brief.font,
-            mood: brief.mood,
-          },
-          seed: finalName,
-          maxRounds: 2,
-        });
-        compositionGraph = exp.graph;
-      } catch {
-        compositionGraph = generateCompositionGraph(brief);
-      }
+      let generationSession: GenerativeResult | undefined;
+      const generationSeed = crypto.randomUUID();
+      const exp = await generateExperience({
+        prompt,
+        theme: {
+          primary: brief.palette.primary,
+          secondary: brief.palette.secondary,
+          accent: brief.palette.accent,
+          background: brief.palette.background,
+          text: brief.palette.text,
+          font: brief.font,
+          mood: brief.mood,
+        },
+        seed: generationSeed,
+        maxRounds: 4,
+      });
+      compositionGraph = exp.graph;
+      generationSession = exp;
       advanceStage("composition", "done");
 
       advanceStage("components", "running");
       await sleep(300);
       advanceStage("components", "done");
 
-      let customTemplate = creativeTemplate;
-      if (useAI) {
-        advanceStage("content", "running");
-        const generated = await generateContent({
-          websiteType: "landing",
-          niche: "Open Build",
-          templateName: "Composição Criativa",
-          prompt,
-          websiteName: finalName,
-          sections: creativeTemplate.sections.map(s => s.type),
-        });
-        if (generated) {
-          customTemplate = {
-            ...creativeTemplate,
-            sections: applySectionsContent(creativeTemplate.sections, generated).map((s, i) => ({
-              ...s,
-              variant: creativeTemplate.sections[i]?.variant ?? s.variant,
-            })),
-          };
-        }
-        advanceStage("content", "done");
-      } else {
-        advanceStage("content", "done");
-      }
+      advanceStage("content", "running");
+      await sleep(useAI ? 250 : 120);
+      advanceStage("content", "done");
 
       advanceStage("finalize", "running");
       await sleep(350);
@@ -177,8 +147,8 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
         nicheId: "open-build",
         templateId: "open-build-generated",
         prompt,
-        customTemplate,
         compositionGraph,
+        generationSession,
       });
 
       if (result?.id) {
