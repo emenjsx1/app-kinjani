@@ -49,15 +49,21 @@ const EXAMPLES = [
 ];
 
 type StageStatus = "pending" | "running" | "done";
-interface Stage { id: string; label: string; status: StageStatus }
+interface Stage {
+  id: string;
+  label: string;
+  /** Live text discovered by the pipeline for this stage. */
+  detail?: string;
+  status: StageStatus;
+}
 
 const INITIAL_STAGES: Stage[] = [
-  { id: "intent",      label: "A interpretar a sua visão...",            status: "pending" },
-  { id: "direction",   label: "A definir direção visual e paleta...",    status: "pending" },
-  { id: "composition", label: "A construir sistema de composição...",    status: "pending" },
-  { id: "components",  label: "A gerar componentes únicos...",            status: "pending" },
-  { id: "content",     label: "A escrever o conteúdo com IA...",          status: "pending" },
-  { id: "finalize",    label: "A finalizar hierarquia e interações...",  status: "pending" },
+  { id: "intent",      label: "A interpretar a sua visão",            status: "pending" },
+  { id: "direction",   label: "A definir direção visual e paleta",    status: "pending" },
+  { id: "composition", label: "A planear ritmo narrativo",            status: "pending" },
+  { id: "components",  label: "A materializar composição visual",     status: "pending" },
+  { id: "content",     label: "A escrever copy semântica",            status: "pending" },
+  { id: "finalize",    label: "A auto-criticar e refinar",            status: "pending" },
 ];
 
 export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanced }: OpenCreatorProps) {
