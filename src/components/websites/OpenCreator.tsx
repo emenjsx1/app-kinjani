@@ -84,12 +84,6 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
 
   useEffect(() => { if (!open) reset(); }, [open]);
 
-  const advanceStage = (id: string, status: StageStatus) => {
-    const next = stagesRef.current.map(s => s.id === id ? { ...s, status } : s);
-    stagesRef.current = next;
-    setStages(next);
-  };
-
   const updateStage = (id: string, patch: Partial<Stage>) => {
     const next = stagesRef.current.map(s => s.id === id ? { ...s, ...patch } : s);
     stagesRef.current = next;
