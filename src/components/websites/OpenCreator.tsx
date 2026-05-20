@@ -107,19 +107,26 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
     stagesRef.current = INITIAL_STAGES;
 
     try {
-      advanceStage("intent", "running");
-      await sleep(550);
-      advanceStage("intent", "done");
+      // 1. Intent — show what the AI understood from the prompt
+      updateStage("intent", { status: "running" });
+      await sleep(380);
+      const intentSnapshot = interpretIntent(prompt);
+      updateStage("intent", {
+        status: "done",
+        detail: `${intentSnapshot.domain} · ${intentSnapshot.emotion}${intentSnapshot.location ? ` · ${intentSnapshot.location}` : ""} → ${intentSnapshot.goal} para ${intentSnapshot.audience}`,
+      });
 
-      advanceStage("direction", "running");
-      await sleep(450);
+      // 2. Direction — paleta + tipografia + mood
+      updateStage("direction", { status: "running" });
+      await sleep(340);
       const brief = buildBrief({ prompt, websiteName: finalName });
-      advanceStage("direction", "done");
+      updateStage("direction", {
+        status: "done",
+        detail: `Mood ${brief.mood} · ${brief.font} · paleta ${brief.palette.primary.slice(0, 12)}…`,
+      });
 
-      advanceStage("composition", "running");
-      await sleep(400);
-      let compositionGraph: CompositionGraph;
-      let generationSession: GenerativeResult | undefined;
+      // 3. Composition — gera o experience completo (intent + energy + plan + graph + critique)
+      updateStage("composition", { status: "running" });
       const generationSeed = crypto.randomUUID();
       const exp = await generateExperience({
         prompt,
@@ -135,21 +142,40 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
         seed: generationSeed,
         maxRounds: 4,
       });
-      compositionGraph = exp.graph;
-      generationSession = exp;
-      advanceStage("composition", "done");
+      const compositionGraph: CompositionGraph = exp.graph;
+      const generationSession: GenerativeResult = exp;
+      updateStage("composition", {
+        status: "done",
+        detail: `Energia ${exp.energy.label} — ${exp.plan.beats.length} batidas · ${[...new Set(exp.plan.beats.map(b => b.spatial))].join(" · ")}`,
+      });
 
-      advanceStage("components", "running");
-      await sleep(300);
-      advanceStage("components", "done");
+      // 4. Components — listar dialetos espaciais visuais
+      updateStage("components", { status: "running" });
+      await sleep(260);
+      updateStage("components", {
+        status: "done",
+        detail: exp.plan.beats.map(b => b.kind.replace(/-/g, " ")).slice(0, 4).join(" → ") + (exp.plan.beats.length > 4 ? " …" : ""),
+      });
 
-      advanceStage("content", "running");
-      await sleep(useAI ? 250 : 120);
-      advanceStage("content", "done");
+      // 5. Content — manifesto da direção criativa
+      updateStage("content", { status: "running" });
+      await sleep(useAI ? 220 : 120);
+      updateStage("content", {
+        status: "done",
+        detail: `"${exp.energy.manifesto}"`,
+      });
 
-      advanceStage("finalize", "running");
-      await sleep(350);
-      advanceStage("finalize", "done");
+      // 6. Finalize — auto-crítica
+      updateStage("finalize", { status: "running" });
+      await sleep(320);
+      const score = exp.critique ? Math.round(exp.critique.overall * 100) : 0;
+      updateStage("finalize", {
+        status: "done",
+        detail: exp.critique
+          ? `Score ${score}/100 · ${exp.iterations} iteração${exp.iterations > 1 ? "ões" : ""} · ${exp.critique.passed ? "aprovado" : "limite atingido"}`
+          : "Composição finalizada",
+      });
+      await sleep(450);
 
       const result = await onWebsiteCreated({
         name: finalName,
