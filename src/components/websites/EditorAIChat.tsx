@@ -91,9 +91,10 @@ export function EditorAIChat({
     setPending((p) => [...p, ...atts]);
   }, []);
 
-  const handlePaste = useCallback(
-    (e: ClipboardEvent) => {
-      const items = Array.from(e.clipboardData?.items ?? []);
+  const handlePasteEvent = useCallback(
+    (e: ClipboardEvent | React.ClipboardEvent) => {
+      const cd = (e as ClipboardEvent).clipboardData ?? (e as React.ClipboardEvent).clipboardData;
+      const items = Array.from(cd?.items ?? []);
       const files = items
         .filter((i) => i.kind === "file" && i.type.startsWith("image/"))
         .map((i) => i.getAsFile()!)
@@ -108,9 +109,11 @@ export function EditorAIChat({
 
   useEffect(() => {
     if (!isOpen) return;
-    window.addEventListener("paste", handlePaste);
-    return () => window.removeEventListener("paste", handlePaste);
-  }, [isOpen, handlePaste]);
+    const listener = (e: ClipboardEvent) => handlePasteEvent(e);
+    window.addEventListener("paste", listener);
+    return () => window.removeEventListener("paste", listener);
+  }, [isOpen, handlePasteEvent]);
+
 
   const captureCanvas = async () => {
     const el = canvasRef?.current ?? document.querySelector<HTMLElement>("[data-canvas-root]");
@@ -359,6 +362,7 @@ export function EditorAIChat({
         <Input
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
+          onPaste={handlePasteEvent}
           onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && (e.preventDefault(), handleSend())}
           placeholder="Descreve, anexa, ou cola uma referência…"
           disabled={isLoading}
