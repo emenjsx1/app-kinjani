@@ -78,6 +78,9 @@ export function templateFromAIPlan(plan: AIWebsitePlan, fallbackName: string): W
       href: `#${s.id}`,
     }));
 
+  const heroSection = sections.find((s) => s.type === "hero");
+  const bannerUrl = heroSection?.content.bannerUrl || heroSection?.content.imageUrl;
+
   return {
     id: "ai-planned",
     name: plan.brand || fallbackName,
@@ -87,6 +90,7 @@ export function templateFromAIPlan(plan: AIWebsitePlan, fallbackName: string): W
     type: plan.type,
     thumbnail: "/placeholder.svg",
     navItems,
+    bannerUrl,
     colors: {
       primary: plan.palette.primary,
       secondary: plan.palette.secondary,
