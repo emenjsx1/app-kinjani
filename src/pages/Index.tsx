@@ -26,6 +26,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import logoLight from "@/assets/logo-light.png";
 import logoDark from "@/assets/logo-dark.png";
+import { HeroLivePreview } from "@/components/landing/HeroLivePreview";
 
 const features = [
   {
