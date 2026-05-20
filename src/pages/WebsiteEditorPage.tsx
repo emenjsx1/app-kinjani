@@ -463,14 +463,26 @@ export default function WebsiteEditorPage() {
                   </div>
                 </div>
 
-                <Button
-                  size="icon"
-                  className="h-8 w-8 rounded-full shrink-0"
-                  onClick={send}
-                  disabled={busy || (!input.trim() && attachments.length === 0)}
-                >
-                  <Send className="h-3.5 w-3.5" />
-                </Button>
+                {busy ? (
+                  <Button
+                    size="icon"
+                    variant="destructive"
+                    className="h-8 w-8 rounded-full shrink-0"
+                    onClick={stop}
+                    title="Parar"
+                  >
+                    <Square className="h-3.5 w-3.5" />
+                  </Button>
+                ) : (
+                  <Button
+                    size="icon"
+                    className="h-8 w-8 rounded-full shrink-0"
+                    onClick={send}
+                    disabled={!input.trim() && attachments.length === 0}
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
             </div>
             {recording && (
