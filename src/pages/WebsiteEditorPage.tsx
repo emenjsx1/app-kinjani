@@ -170,11 +170,12 @@ export default function WebsiteEditorPage() {
   };
 
   if (isEditing) {
+    const resolvedTemplate = template ?? buildRuntimeTemplate(website);
     return (
       <div className="h-screen">
         {useLegacyEditor ? (
           <WebsiteEditor
-            template={template}
+            template={resolvedTemplate!}
             websiteName={website.name}
             prompt={website.config?.prompt || ""}
             onBack={() => setIsEditing(false)}
@@ -185,7 +186,7 @@ export default function WebsiteEditorPage() {
           <EditorShell
             websiteId={website.id}
             websiteName={website.name}
-            template={template}
+            template={resolvedTemplate!}
             prompt={website.config?.prompt || ""}
             compositionGraph={website.config?.compositionGraph}
             onBack={() => setIsEditing(false)}
@@ -200,6 +201,7 @@ export default function WebsiteEditorPage() {
   const displayUrl = website.published_url || getPreviewUrl();
   const websiteType = website.config?.type;
   const websiteNiche = website.config?.niche;
+  const resolvedTemplate = template ?? buildRuntimeTemplate(website);
 
   return (
     <AppLayout pageTitle={website.name} credits={profile?.credits_balance ?? 0}>
@@ -288,7 +290,7 @@ export default function WebsiteEditorPage() {
                 <CompositionRenderer graph={website.config.compositionGraph} />
               ) : (
                 <WebsitePreview 
-                  template={template} 
+                  template={resolvedTemplate!} 
                   websiteName={website.name}
                   embedConfig={website.config?.embedConfig}
                 />
