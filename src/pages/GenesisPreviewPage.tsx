@@ -66,6 +66,8 @@ export default function GenesisPreviewPage() {
                 <CompositionRenderer graph={r.graph} />
               </div>
             </div>
+          </section>
+        ))}
       </div>
     </div>
   );
