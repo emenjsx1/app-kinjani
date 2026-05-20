@@ -383,6 +383,22 @@ export default function IntegrationsPage() {
             </div>
           </CardHeader>
           <CardContent>
+            {(() => {
+              const limit = (profile as any)?.instance_limit ?? 1;
+              const used = instances.length;
+              return (
+                <div className="mb-4 flex items-center justify-between p-3 rounded-lg bg-muted/40 border text-sm">
+                  <span>
+                    <strong>{used}</strong> de <strong>{limit}</strong> instâncias usadas no seu plano.
+                  </span>
+                  {used >= limit && (
+                    <span className="text-amber-600 text-xs">
+                      Instâncias adicionais custam 500 créditos cada.
+                    </span>
+                  )}
+                </div>
+              );
+            })()}
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
