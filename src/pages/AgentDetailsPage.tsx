@@ -163,8 +163,8 @@ export default function AgentDetailsPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSendMessage = (content: string) => {
-    sendMessage(content);
+  const handleSendMessage = (content: string, attachments?: { type: string; name: string; dataUrl: string; size?: number }[]) => {
+    sendMessage(content, attachments);
   };
 
   const handleClearChat = () => {
