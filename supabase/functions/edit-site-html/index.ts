@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gemini-2.5-pro",
+        model: "gemini-2.5-flash",
         temperature: 0.5,
         messages,
         response_format: { type: "json_object" },

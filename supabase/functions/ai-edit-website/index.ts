@@ -215,7 +215,7 @@ Devolve o JSON.`;
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         // Use a vision-capable model when images are present.
-        model: hasVision ? "gemini-2.5-pro" : "gemini-2.5-flash",
+        model: hasVision ? "gemini-2.5-flash" : "gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },

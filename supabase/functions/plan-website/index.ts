@@ -139,7 +139,7 @@ Devolve o plano completo conforme schema. Lembra-te: nome de marca real e curto,
       method: "POST",
       headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gemini-2.5-pro",
+        model: "gemini-2.5-flash",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userMessage },
