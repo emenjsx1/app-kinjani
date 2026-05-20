@@ -83,12 +83,13 @@ Deno.serve(async (req) => {
       const err = await res.text();
       console.error("Lovable AI gateway error", res.status, err);
       const reason = res.status === 402
-        ? "Sem créditos de IA disponíveis. Configure a sua GEMINI_API_KEY em Integrações."
+        ? "Quota Gemini esgotada hoje. Active a facturação no Google AI Studio para a sua GEMINI_API_KEY ou tente novamente daqui a alguns minutos."
         : "Não foi possível transcrever o áudio agora.";
       return new Response(JSON.stringify({ error: reason, fallback: true }), {
         status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     return new Response(JSON.stringify({ error: "Nenhuma chave de IA configurada (GEMINI_API_KEY ou LOVABLE_API_KEY).", fallback: true }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
