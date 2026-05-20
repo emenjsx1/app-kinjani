@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Coins, CreditCard, TrendingDown, Loader2 } from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { StatCard } from "@/components/ui/stat-card";
@@ -6,8 +7,15 @@ import { Button } from "@/components/ui/button";
 import { UsageBar, UsageTable } from "@/components/ui/usage-bar";
 import { useProfile } from "@/hooks/useProfile";
 import { useCredits } from "@/hooks/useCredits";
+import { CheckoutDialog, CheckoutPackage } from "@/components/credits/CheckoutDialog";
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
+
+const PACKAGES: CheckoutPackage[] = [
+  { credits: 500, amountMzn: 499, label: "Starter" },
+  { credits: 1500, amountMzn: 1299, label: "Popular" },
+  { credits: 5000, amountMzn: 3999, label: "Pro" },
+];
 
 export default function CreditsPage() {
   const { profile, isLoading: profileLoading } = useProfile();
