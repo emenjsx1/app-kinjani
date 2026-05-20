@@ -9,4 +9,5 @@ export { TeamSection } from "./TeamSection";
 export { GallerySection } from "./GallerySection";
 export { PricingSection } from "./PricingSection";
 export { FaqSection } from "./FaqSection";
+export { BookingSection } from "./BookingSection";
 export type { SectionProps } from "./types";

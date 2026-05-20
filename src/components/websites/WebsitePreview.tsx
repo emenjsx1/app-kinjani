@@ -14,6 +14,7 @@ import {
   GallerySection,
   PricingSection,
   FaqSection,
+  BookingSection,
 } from "./sections";
 import { 
   CounterWidget, 
@@ -114,6 +115,7 @@ export const WebsitePreview = forwardRef<HTMLDivElement, WebsitePreviewProps>(fu
       case "gallery": return <GallerySection key={section.id} {...props} />;
       case "pricing": return <PricingSection key={section.id} {...props} />;
       case "faq": return <FaqSection key={section.id} {...props} />;
+      case "booking": return <BookingSection key={section.id} {...props} />;
       case "counter": return <CounterWidget key={section.id} content={section.content} primaryColor={primaryColor} font={template.font} />;
       case "accordion": return <AccordionWidget key={section.id} content={section.content} primaryColor={primaryColor} font={template.font} />;
       case "tabs": return <TabsWidget key={section.id} content={section.content} primaryColor={primaryColor} font={template.font} />;
