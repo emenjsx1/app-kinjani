@@ -202,6 +202,7 @@ export default function WebsiteEditorPage() {
   const websiteType = website.config?.type;
   const websiteNiche = website.config?.niche;
   const resolvedTemplate = template ?? buildRuntimeTemplate(website);
+  const shouldPreferTemplatePreview = !!resolvedTemplate?.sections?.length;
 
   return (
     <AppLayout pageTitle={website.name} credits={profile?.credits_balance ?? 0}>
@@ -286,7 +287,7 @@ export default function WebsiteEditorPage() {
                   </span>
                 </div>
               </div>
-              {website.config?.compositionGraph ? (
+              {website.config?.compositionGraph && !shouldPreferTemplatePreview ? (
                 <CompositionRenderer graph={website.config.compositionGraph} />
               ) : (
                 <WebsitePreview 
