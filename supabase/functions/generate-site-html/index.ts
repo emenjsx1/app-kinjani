@@ -64,8 +64,6 @@ Deno.serve(async (req) => {
     // Charge 50 credits before generating.
     const charge = await chargeCredits(req, "site_create", `Geração de site${websiteName ? `: ${websiteName}` : ""}`);
     if (!charge.ok) return insufficientCreditsResponse(corsHeaders, charge);
-    {
-    }
 
     const userMsg = `Nome do projecto: ${websiteName || "Sem nome"}\n\nPedido do utilizador:\n${prompt}\n\nGera agora a página HTML completa, premium e única.`;
 
