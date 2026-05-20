@@ -90,6 +90,13 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
     setStages(next);
   };
 
+  const updateStage = (id: string, patch: Partial<Stage>) => {
+    const next = stagesRef.current.map(s => s.id === id ? { ...s, ...patch } : s);
+    stagesRef.current = next;
+    setStages(next);
+  };
+  const advanceStage = (id: string, status: StageStatus) => updateStage(id, { status });
+
   const inferName = (p: string) => {
     const firstWords = p.trim().split(/\s+/).slice(0, 4).join(" ");
     return firstWords.charAt(0).toUpperCase() + firstWords.slice(1);
