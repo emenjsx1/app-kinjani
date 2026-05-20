@@ -14,6 +14,18 @@ function getServiceClient() {
   );
 }
 
+type ChatMsg = { role: "user" | "assistant"; content: string };
+
+const AGENT_SYSTEM_PROMPTS: Record<string, string> = {
+  "atendimento-faq": "És um assistente de atendimento ao cliente profissional e amigável. Responde dúvidas de forma clara, curta e empática.",
+  "captura-leads": "És um assistente especializado em captura de leads. Inicia conversas naturais, identifica interesses e recolhe contactos de forma não intrusiva.",
+  qualificacao: "És um assistente de qualificação BANT (Budget, Authority, Need, Timeline). Classifica leads em Hot/Warm/Cold.",
+  "follow-up": "És um assistente de follow-up. Verifica interesse, oferece informação adicional e agenda próximos passos. Persistente mas respeitoso.",
+  agendamento: "És um assistente de agendamento. Confirma data, hora, local/link e envia lembretes quando apropriado.",
+};
+
+const BASE_RULES = `\n\nRegras gerais:\n- Responde em Português europeu (PT-PT) por defeito, espelhando a língua do utilizador se for diferente.\n- Mantém respostas concisas, profissionais e úteis.\n- Usa o histórico recente da conversa para preservar contexto, nomes, pedidos e continuidade.\n- Se o utilizador pedir algo que exija um humano, encaminha de forma clara.`;
+
 // Send message via Evolution API using the correct instance name
 async function sendWhatsAppMessage(instanceKey: string, phone: string, message: string): Promise<boolean> {
   const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
@@ -53,45 +65,84 @@ async function sendWhatsAppMessage(instanceKey: string, phone: string, message: 
   }
 }
 
-// Generate AI response using the agent's prompt
-async function generateAgentResponse(userMessage: string, agentPrompt: string): Promise<string> {
-  const openaiKey = Deno.env.get('OPENAI_API_KEY');
-  
-  if (!openaiKey) {
-    console.error('OPENAI_API_KEY not configured');
+async function generateAgentResponse(messages: ChatMsg[], agentPrompt: string, agentType?: string): Promise<string> {
+  const geminiKey = Deno.env.get('GEMINI_API_KEY');
+
+  if (!geminiKey) {
+    console.error('GEMINI_API_KEY not configured');
     return 'Desculpe, não consigo processar sua mensagem no momento.';
   }
 
+  const baseSystem = AGENT_SYSTEM_PROMPTS[agentType || ''] || AGENT_SYSTEM_PROMPTS['atendimento-faq'];
+  const systemText = (agentPrompt ? `${baseSystem}\n\nInstruções específicas:\n${agentPrompt}` : baseSystem) + BASE_RULES;
+
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${openaiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: agentPrompt },
-          { role: 'user', content: userMessage },
-        ],
-        max_tokens: 500,
-        temperature: 0.7,
+        system_instruction: { parts: [{ text: systemText }] },
+        contents: messages.map((message) => ({
+          role: message.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: message.content }],
+        })),
+        generationConfig: {
+          maxOutputTokens: 700,
+          temperature: 0.7,
+        },
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenAI API error:', errorText);
+      console.error('Gemini API error:', errorText);
       return 'Desculpe, ocorreu um erro ao processar sua mensagem.';
     }
 
     const data = await response.json();
-    return data.choices[0]?.message?.content || 'Não foi possível gerar uma resposta.';
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    const text = parts.map((part: { text?: string }) => part.text || '').join('').trim();
+    return text || 'Não foi possível gerar uma resposta.';
   } catch (error) {
     console.error('Error generating AI response:', error);
     return 'Desculpe, ocorreu um erro ao processar sua mensagem.';
   }
+}
+
+async function loadConversationHistory(instanceKey: string, jid: string): Promise<ChatMsg[]> {
+  const supabase = getServiceClient();
+  const { data } = await supabase
+    .from('wa_conversations')
+    .select('history')
+    .eq('instance_key', instanceKey)
+    .eq('jid', jid)
+    .maybeSingle();
+
+  return Array.isArray(data?.history) ? data.history as ChatMsg[] : [];
+}
+
+async function saveConversationHistory(input: {
+  instanceKey: string;
+  jid: string;
+  phone: string;
+  userId?: string | null;
+  agentId?: string | null;
+  history: ChatMsg[];
+}) {
+  const supabase = getServiceClient();
+  if (!input.userId) return;
+
+  await supabase.from('wa_conversations').upsert({
+    user_id: input.userId,
+    agent_id: input.agentId,
+    instance_key: input.instanceKey,
+    jid: input.jid,
+    phone: input.phone,
+    history: input.history,
+    last_message_at: new Date().toISOString(),
+  }, { onConflict: 'instance_key,jid' });
 }
 
 serve(async (req) => {
@@ -152,7 +203,8 @@ serve(async (req) => {
         });
       }
 
-      const senderPhone = payload.data.key.remoteJid.replace('@s.whatsapp.net', '');
+      const remoteJid = payload.data.key.remoteJid;
+      const senderPhone = remoteJid.replace('@s.whatsapp.net', '');
       console.log(`Message from ${senderPhone}: "${userMessage}"`);
 
       // Look up the instance and linked agent in the database
@@ -165,6 +217,7 @@ serve(async (req) => {
         .single();
 
       let agentPrompt = 'Você é um assistente virtual profissional. Responda de forma amigável e útil em português.';
+      let agentType = 'atendimento-faq';
       let resolvedAgentId = instance?.agent_id || null;
 
       // First try: agent_id from whatsapp_instances
@@ -196,7 +249,7 @@ serve(async (req) => {
       if (resolvedAgentId && agentPrompt === 'Você é um assistente virtual profissional. Responda de forma amigável e útil em português.') {
         const { data: agent } = await supabase
           .from('agents')
-          .select('prompt, name')
+          .select('prompt, name, type_id')
           .eq('id', resolvedAgentId)
           .single();
 
@@ -204,15 +257,31 @@ serve(async (req) => {
           agentPrompt = agent.prompt;
           console.log(`Using agent "${agent.name}" prompt`);
         }
+        if (agent?.type_id) {
+          agentType = agent.type_id;
+        }
       }
       
       if (!resolvedAgentId) {
         console.log('No agent linked to this instance, using default prompt');
       }
 
+      const priorHistory = await loadConversationHistory(instanceKey!, remoteJid);
+      const trimmedHistory = priorHistory.slice(-12);
+      const convo: ChatMsg[] = [...trimmedHistory, { role: 'user', content: userMessage }];
+
       // Generate AI response
-      const agentResponse = await generateAgentResponse(userMessage, agentPrompt);
+      const agentResponse = await generateAgentResponse(convo, agentPrompt, agentType);
       console.log(`AI response generated (${agentResponse.length} chars)`);
+
+      await saveConversationHistory({
+        instanceKey: instanceKey!,
+        jid: remoteJid,
+        phone: senderPhone,
+        userId: instance?.user_id,
+        agentId: resolvedAgentId,
+        history: [...convo, { role: 'assistant', content: agentResponse }].slice(-20),
+      });
 
       // Send response back via WhatsApp
       const sent = await sendWhatsAppMessage(instanceKey!, senderPhone, agentResponse);
