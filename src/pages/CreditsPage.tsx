@@ -140,39 +140,34 @@ export default function CreditsPage() {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 md:grid-cols-3">
-              <Card className="border-2 hover:border-primary/50 cursor-pointer transition-colors">
-                <CardContent className="pt-6 text-center">
-                  <p className="text-3xl font-bold">500</p>
-                  <p className="text-muted-foreground mb-4">créditos</p>
-                  <p className="text-xl font-semibold text-primary">499 MT</p>
-                  <Button className="w-full mt-4" variant="outline">
-                    Comprar
-                  </Button>
-                </CardContent>
-              </Card>
-              <Card className="border-2 border-primary relative hover:shadow-lg cursor-pointer transition-all">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full">
-                  Popular
-                </div>
-                <CardContent className="pt-6 text-center">
-                  <p className="text-3xl font-bold">1.500</p>
-                  <p className="text-muted-foreground mb-4">créditos</p>
-                  <p className="text-xl font-semibold text-primary">1.299 MT</p>
-                  <Button className="w-full mt-4">
-                    Comprar
-                  </Button>
-                </CardContent>
-              </Card>
-              <Card className="border-2 hover:border-primary/50 cursor-pointer transition-colors">
-                <CardContent className="pt-6 text-center">
-                  <p className="text-3xl font-bold">5.000</p>
-                  <p className="text-muted-foreground mb-4">créditos</p>
-                  <p className="text-xl font-semibold text-primary">3.999 MT</p>
-                  <Button className="w-full mt-4" variant="outline">
-                    Comprar
-                  </Button>
-                </CardContent>
-              </Card>
+              {PACKAGES.map((p, i) => {
+                const popular = i === 1;
+                return (
+                  <Card
+                    key={p.credits}
+                    className={`border-2 cursor-pointer transition-all ${popular ? 'border-primary relative hover:shadow-lg' : 'hover:border-primary/50'}`}
+                    onClick={() => setCheckoutPkg(p)}
+                  >
+                    {popular && (
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-full">
+                        Popular
+                      </div>
+                    )}
+                    <CardContent className="pt-6 text-center">
+                      <p className="text-3xl font-bold">{p.credits.toLocaleString('pt-PT')}</p>
+                      <p className="text-muted-foreground mb-4">créditos</p>
+                      <p className="text-xl font-semibold text-primary">{p.amountMzn.toLocaleString('pt-PT')} MZN</p>
+                      <Button
+                        className="w-full mt-4"
+                        variant={popular ? "default" : "outline"}
+                        onClick={(e) => { e.stopPropagation(); setCheckoutPkg(p); }}
+                      >
+                        Comprar
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
