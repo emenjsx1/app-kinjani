@@ -9,6 +9,7 @@ import { Json } from "@/integrations/supabase/types";
 import { CompositionRenderer } from "@/core/render/CompositionRenderer";
 import type { CompositionGraph } from "@/core/render/composition-graph";
 import { templateToGraph } from "@/core/render/templateToGraph";
+import { injectRuntime } from "@/lib/inject-runtime";
 
 interface WebsiteConfig {
   type?: "landing" | "institutional";
@@ -153,7 +154,7 @@ export default function PublicWebsitePage() {
   if (generatedHtml) {
     return (
       <iframe
-        srcDoc={generatedHtml}
+        srcDoc={injectRuntime(generatedHtml)}
         title={websiteName}
         className="fixed inset-0 w-screen h-screen border-0"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups"

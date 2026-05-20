@@ -10,6 +10,7 @@ import { useWebsites, Website } from "@/hooks/useWebsites";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { injectRuntime } from "@/lib/inject-runtime";
 
 type ChatMsg = {
   role: "user" | "assistant";
@@ -438,7 +439,7 @@ export default function WebsiteEditorPage() {
         <main className="flex-1 bg-muted/30 overflow-auto flex items-start justify-center p-6">
           {html ? (
             <div className="bg-white shadow-2xl rounded-lg overflow-hidden transition-all" style={{ width: deviceWidth, maxWidth: "100%", height: "calc(100vh - 7rem)" }}>
-              <iframe srcDoc={html} title="preview" className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" />
+              <iframe srcDoc={injectRuntime(html)} title="preview" className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" />
             </div>
           ) : (
             <div className="text-center text-muted-foreground mt-20">
