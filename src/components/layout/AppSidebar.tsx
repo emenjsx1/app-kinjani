@@ -39,6 +39,7 @@ const mainNavItems = [
   { title: "Painel", url: "/dashboard", icon: LayoutDashboard },
   { title: "Agentes", url: "/agents", icon: Bot },
   { title: "Sites", url: "/websites", icon: Globe },
+  { title: "Domínios", url: "/domains", icon: Globe },
   { title: "Clientes", url: "/clients", icon: Users },
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
   { title: "Cloud", url: "/cloud", icon: Cloud },
