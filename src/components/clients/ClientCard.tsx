@@ -141,7 +141,7 @@ export function ClientCard({ client, onEdit, onDelete, onViewDetails }: ClientCa
           </div>
           <div className="text-right">
             <span className="font-semibold text-foreground">
-              €{Number(client.monthly_value || 0).toFixed(2)}
+              {Number(client.monthly_value || 0).toLocaleString('pt-PT', { maximumFractionDigits: 0 })} MZN
             </span>
             <span className="text-xs text-muted-foreground">/mês</span>
           </div>

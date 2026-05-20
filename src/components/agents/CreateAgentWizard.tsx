@@ -104,27 +104,26 @@ const AGENT_TYPES: AgentTypeDef[] = [
     icon: <FileText className="h-5 w-5" />,
     category: "automation",
   },
-  // Em breve
+  // Funcionais via prompt + agent-chat
   {
     id: "agendamento",
     title: "Agendamento",
-    description: "Agenda reuniões via Google Calendar",
+    description: "Recolhe pedidos de marcação e regista agendamentos",
     icon: <Calendar className="h-5 w-5" />,
     category: "automation",
-    comingSoon: true,
   },
   {
     id: "controlo-gastos",
     title: "Controlo de Gastos",
-    description: "Regista gastos em Google Sheets",
+    description: "Regista despesas e devolve resumos do orçamento",
     icon: <Coins className="h-5 w-5" />,
     category: "automation",
-    comingSoon: true,
   },
+  // Em breve
   {
     id: "gmail-contacts",
     title: "Gmail → Contactos",
-    description: "Extrai remetentes do Gmail para contactos",
+    description: "Extrai remetentes do Gmail para contactos (requer Google)",
     icon: <Users className="h-5 w-5" />,
     category: "automation",
     comingSoon: true,
@@ -163,8 +162,8 @@ const CREATION_METHODS = [
 ];
 
 export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: CreateAgentWizardProps) {
-  const [currentStep, setCurrentStep] = useState(0);
-  const [creationMethod, setCreationMethod] = useState<"manual" | "ai" | null>(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [creationMethod, setCreationMethod] = useState<"manual" | "ai" | null>("ai");
   const [agentType, setAgentType] = useState<string | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<PromptTemplate | null>(null);
   const [prompt, setPrompt] = useState("");
@@ -191,8 +190,8 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
   const availableTemplates = agentType ? getTemplatesForAgentType(agentType) : [];
 
   const resetWizard = () => {
-    setCurrentStep(0);
-    setCreationMethod(null);
+    setCurrentStep(1);
+    setCreationMethod("ai");
     setAgentType(null);
     setSelectedTemplate(null);
     setPrompt("");

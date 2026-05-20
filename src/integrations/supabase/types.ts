@@ -70,6 +70,36 @@ export type Database = {
           },
         ]
       }
+      client_assets: {
+        Row: {
+          asset_id: string
+          asset_type: string
+          client_id: string
+          created_at: string
+          id: string
+          monthly_price: number
+          user_id: string
+        }
+        Insert: {
+          asset_id: string
+          asset_type: string
+          client_id: string
+          created_at?: string
+          id?: string
+          monthly_price?: number
+          user_id: string
+        }
+        Update: {
+          asset_id?: string
+          asset_type?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          monthly_price?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       clients: {
         Row: {
           accent_color: string
@@ -195,6 +225,39 @@ export type Database = {
           },
         ]
       }
+      payment_orders: {
+        Row: {
+          amount_mzn: number
+          created_at: string
+          credits_amount: number
+          id: string
+          method: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_mzn: number
+          created_at?: string
+          credits_amount?: number
+          id?: string
+          method: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_mzn?: number
+          created_at?: string
+          credits_amount?: number
+          id?: string
+          method?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           company: string | null
@@ -203,6 +266,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          instance_limit: number
           plan: string
           updated_at: string
           user_id: string
@@ -214,6 +278,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          instance_limit?: number
           plan?: string
           updated_at?: string
           user_id: string
@@ -225,6 +290,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          instance_limit?: number
           plan?: string
           updated_at?: string
           user_id?: string

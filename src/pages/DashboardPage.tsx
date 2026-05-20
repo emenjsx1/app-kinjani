@@ -12,6 +12,7 @@ import { AgentActivityPanel } from "@/components/ai/AgentActivityPanel";
 import { staggerContainer, staggerItem } from "@/lib/motion";
 import { useProfile } from "@/hooks/useProfile";
 import { useAgents } from "@/hooks/useAgents";
+import { useWebsites } from "@/hooks/useWebsites";
 import { useCredits } from "@/hooks/useCredits";
 import {
   LineChart,
@@ -35,12 +36,14 @@ export default function DashboardPage() {
   const navigate = useNavigate();
   const { profile, isLoading: profileLoading } = useProfile();
   const { agents, isLoading: agentsLoading } = useAgents();
+  const { websites } = useWebsites();
   const { getUsageThisMonth, getUsageByCategory } = useCredits();
 
   const isLoading = profileLoading || agentsLoading;
 
   const activeAgents = agents.filter(a => a.status === 'active').length;
   const totalMessages = agents.reduce((sum, a) => sum + a.messages_handled, 0);
+  const totalSites = websites.length;
   const usageThisMonth = getUsageThisMonth();
   const usageByCategory = getUsageByCategory();
 
@@ -126,20 +129,20 @@ export default function DashboardPage() {
             value={agents.length}
             icon={Bot}
             variant="primary"
-            description="agentes criados"
+            description={`${activeAgents} ativos`}
           />
           <StatCard
-            title="Agentes Ativos"
-            value={activeAgents}
-            icon={Bot}
+            title="Sites Criados"
+            value={totalSites}
+            icon={Globe}
             variant="success"
-            description="a funcionar agora"
+            description="websites gerados"
           />
           <StatCard
-            title="Mensagens Totais"
+            title="Mensagens Processadas"
             value={totalMessages.toLocaleString()}
             icon={TrendingUp}
-            description="mensagens processadas"
+            description="total no histórico"
           />
           <StatCard
             title="Créditos Restantes"

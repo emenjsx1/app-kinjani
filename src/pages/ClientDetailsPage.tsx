@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ClientBrandingForm } from "@/components/clients/ClientBrandingForm";
 import { LinkAgentDialog } from "@/components/clients/LinkAgentDialog";
 import { LinkWebsiteDialog } from "@/components/clients/LinkWebsiteDialog";
+import { AssetPriceInput } from "@/components/clients/AssetPriceInput";
 import {
   ArrowLeft,
   Building2,
@@ -241,7 +242,7 @@ export default function ClientDetailsPage() {
                   )}
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <DollarSign className="h-4 w-4" />
-                    <span>€{Number(client.monthly_value).toFixed(2)}/mês</span>
+                    <span>{Number(client.monthly_value).toLocaleString('pt-PT', { maximumFractionDigits: 0 })} MZN/mês</span>
                   </div>
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Calendar className="h-4 w-4" />
@@ -316,6 +317,7 @@ export default function ClientDetailsPage() {
                         <Badge variant={agent.status === "active" ? "default" : "secondary"}>
                           {agent.status}
                         </Badge>
+                        <AssetPriceInput clientId={client.id} assetType="agent" assetId={agent.id} />
                         <Button
                           variant="ghost"
                           size="sm"
@@ -380,6 +382,7 @@ export default function ClientDetailsPage() {
                         <Badge variant={website.status === "active" ? "default" : "secondary"}>
                           {website.status}
                         </Badge>
+                        <AssetPriceInput clientId={client.id} assetType="website" assetId={website.id} />
                         <Button
                           variant="ghost"
                           size="sm"
