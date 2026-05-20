@@ -42,8 +42,6 @@ const mainNavItems = [
   { title: "Domínios", url: "/domains", icon: Globe },
   { title: "Clientes", url: "/clients", icon: Users },
   { title: "Relatórios", url: "/reports", icon: BarChart3 },
-  { title: "Cloud", url: "/cloud", icon: Cloud },
-  { title: "Demo", url: "/demo", icon: MessageSquare },
 ];
 
 const secondaryNavItems = [
