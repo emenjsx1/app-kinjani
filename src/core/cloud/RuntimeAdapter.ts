@@ -147,7 +147,7 @@ export function pickRuntime(needs: Partial<RuntimeCapabilities>): RuntimeAdapter
   const candidates: RuntimeAdapter[] = [browserRuntime, RemoteNodeRuntime, CloudContainerRuntime];
   for (const c of candidates) {
     const caps = c.describe();
-    const ok = Object.entries(needs).every(([k, v]) => !v || (caps as Record<string, boolean>)[k]);
+    const ok = Object.entries(needs).every(([k, v]) => !v || (caps as unknown as Record<string, boolean>)[k]);
     if (ok) return c;
   }
   return browserRuntime;
