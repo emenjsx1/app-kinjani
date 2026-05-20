@@ -269,12 +269,12 @@ serve(async (req) => {
         });
       }
 
-      // Extract user message
+      // Extract user message + media
       const rawMessage = payload.data?.message;
       const userMessage = extractIncomingWhatsAppText(rawMessage);
-      const mediaHints = describeIncomingMedia(rawMessage);
+      const media = detectIncomingMedia(rawMessage);
 
-      if (!userMessage && mediaHints.length === 0) {
+      if (!userMessage && !media) {
         console.log('No supported content in payload');
         return new Response(JSON.stringify({ status: 'no_text' }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -283,8 +283,26 @@ serve(async (req) => {
 
       const remoteJid = payload.data.key.remoteJid;
       const senderPhone = remoteJid.replace('@s.whatsapp.net', '');
-      const normalizedUserMessage = [userMessage, ...mediaHints].filter(Boolean).join('\n');
-      console.log(`Message from ${senderPhone}: "${normalizedUserMessage}"`);
+
+      // Fetch media base64 (if any) and build extra parts + guidance
+      const extraParts: GeminiPart[] = [];
+      const mediaHints: string[] = [];
+      if (media) {
+        const b64 = await fetchMediaBase64(instanceKey!, payload.data);
+        if (b64) {
+          extraParts.push({ inline_data: { mime_type: media.mimeType, data: b64 } });
+          if (media.kind === 'audio') mediaHints.push('[O utilizador enviou uma mensagem de voz. Transcreve mentalmente e responde ao que ele realmente disse.]');
+          else if (media.kind === 'image') mediaHints.push(`[O utilizador enviou uma imagem${media.caption ? ` com a legenda: "${media.caption}"` : ''}. Analisa o conteúdo visual e responde.]`);
+          else if (media.kind === 'document') mediaHints.push(`[O utilizador enviou um documento${media.fileName ? ` "${media.fileName}"` : ''}. Lê o conteúdo e responde.]`);
+          else if (media.kind === 'video') mediaHints.push(`[O utilizador enviou um vídeo${media.caption ? ` com legenda: "${media.caption}"` : ''}. Considera o conteúdo.]`);
+        } else {
+          mediaHints.push(`[O utilizador enviou um ${media.kind} mas não foi possível descarregar o ficheiro. Pede para reenviar.]`);
+        }
+      }
+
+      const normalizedUserMessage = [userMessage, ...mediaHints].filter(Boolean).join('\n') || '[anexo multimédia]';
+      console.log(`Message from ${senderPhone}: "${normalizedUserMessage}" (media: ${media?.kind || 'none'})`);
+
 
       // Look up the instance and linked agent in the database
       const supabase = getServiceClient();
