@@ -61,11 +61,11 @@ export default function GenesisPreviewPage() {
                 {r.plan.beats.map((b) => `${b.kind.slice(0, 4)}/${b.spatial.slice(0, 3)}`).join(" · ")}
               </span>
             </div>
-            <div className="mx-6 border-2 border-dashed border-border rounded-xl overflow-hidden bg-background">
-              <CompositionRenderer graph={r.graph} />
+            <div className="mx-6 border-2 border-dashed border-border rounded-xl overflow-hidden bg-background" style={{ height: 520 }}>
+              <div style={{ width: 1400, transform: "scale(0.55)", transformOrigin: "top left", height: 945 }}>
+                <CompositionRenderer graph={r.graph} />
+              </div>
             </div>
-          </section>
-        ))}
       </div>
     </div>
   );
