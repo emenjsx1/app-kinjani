@@ -20,6 +20,7 @@ const PACKAGES: CheckoutPackage[] = [
 export default function CreditsPage() {
   const { profile, isLoading: profileLoading } = useProfile();
   const { transactions, isLoading: transactionsLoading, getUsageThisMonth, getUsageByCategory } = useCredits();
+  const [checkoutPkg, setCheckoutPkg] = useState<CheckoutPackage | null>(null);
 
   const isLoading = profileLoading || transactionsLoading;
   const usageThisMonth = getUsageThisMonth();
