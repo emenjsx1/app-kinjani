@@ -72,6 +72,9 @@ export function interpretIntent(prompt: string): Intent {
     ),
   );
 
+  const locMatch = clean.match(LOCATION_RE);
+  const location = locMatch ? locMatch[1] : undefined;
+
   return {
     prompt: clean,
     goal,
@@ -80,5 +83,6 @@ export function interpretIntent(prompt: string): Intent {
     domain,
     references: [],
     keywords,
+    location,
   };
 }
