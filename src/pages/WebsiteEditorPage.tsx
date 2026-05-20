@@ -306,33 +306,46 @@ export default function WebsiteEditorPage() {
     const ctrl = new AbortController();
     abortRef.current = ctrl;
     setBusy(true);
-    setBusyLabel(mode === "plan" ? "A elaborar plano..." : "A pensar...");
+    setBusyLabel(mode === "plan" ? "A elaborar plano..." : "A interpretar pedido");
     const userMsg: ChatMsg = { role: "user", content: finalText + (sentAttachments.length ? `  📎 ${sentAttachments.length}` : ""), ts: Date.now() };
-    const draft = [...history, userMsg];
+    // Insert a live assistant placeholder that we update as tokens arrive.
+    const liveAsst: ChatMsg = { role: "assistant", content: "", ts: Date.now(), action: "chat" };
+    const draft = [...history, userMsg, liveAsst];
     setHistory(draft);
-    try {
-      const data = await callEdge("edit-site-html", {
-        html,
-        instruction: finalText,
-        history: draft.slice(-8),
-        mode,
-        attachments: sentAttachments,
-      }, ctrl.signal);
+    const liveIdx = draft.length - 1;
 
-      const action: "chat" | "plan" | "edit" = data?.action || (data?.html ? "edit" : "chat");
-      const newHtml = action === "edit" && data?.html ? data.html : html;
+    try {
+      const data = await streamEdge(
+        "edit-site-html",
+        { html, instruction: finalText, history: draft.slice(-9, -1), mode, attachments: sentAttachments },
+        ctrl.signal,
+        (partial) => {
+          if (!partial) return;
+          setHistory((cur) => {
+            const next = [...cur];
+            if (next[liveIdx]?.role === "assistant") {
+              next[liveIdx] = { ...next[liveIdx], content: partial };
+            }
+            return next;
+          });
+        },
+        (phase) => setBusyLabel(phase),
+      );
+
+      const action: "chat" | "plan" | "edit" = data.action;
+      const newHtml = action === "edit" && data.html ? data.html : html;
       const didChangeHtml = action === "edit" && normalizeHtml(newHtml) !== normalizeHtml(html);
       const finalAction: "chat" | "plan" | "edit" = didChangeHtml ? action : action === "edit" ? "chat" : action;
       const asst: ChatMsg = {
         role: "assistant",
         content: didChangeHtml
-          ? (data?.message || "Alteração aplicada.")
-          : (data?.message || "Não encontrei uma alteração concreta para aplicar ao site actual."),
+          ? (data.message || "Alteração aplicada.")
+          : (data.message || "Não encontrei uma alteração concreta para aplicar ao site actual."),
         ts: Date.now(),
         action: finalAction,
         htmlSnapshot: didChangeHtml ? newHtml : undefined,
       };
-      const final = [...draft, asst];
+      const final = [...draft.slice(0, liveIdx), asst];
       setHtml(didChangeHtml ? newHtml : html);
       setHistory(final);
       await persist(didChangeHtml ? newHtml : html, final);
@@ -344,7 +357,7 @@ export default function WebsiteEditorPage() {
         ts: Date.now(),
         action: "chat",
       };
-      const final = [...draft, asst];
+      const final = [...draft.slice(0, liveIdx), asst];
       setHistory(final);
       await persist(html, final);
     } finally {
