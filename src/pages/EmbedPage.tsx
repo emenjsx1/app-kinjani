@@ -98,17 +98,25 @@ export default function EmbedPage() {
   if (!isOpen) {
     return (
       <div className={cn("fixed bottom-3", sideClass)}>
-        <Button
+        <button
           onClick={() => setIsOpen(true)}
-          className="h-14 w-14 rounded-full shadow-2xl hover:scale-105 transition-transform"
-          style={{ backgroundColor: primaryColor }}
+          className="h-14 w-14 rounded-full shadow-2xl hover:scale-105 transition-transform flex items-center justify-center"
+          style={{ backgroundColor: primaryColor, border: "none", cursor: "pointer" }}
           aria-label="Abrir chat"
         >
-          <Bot className="h-7 w-7 text-white" />
-        </Button>
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 8V4H8" />
+            <rect width="16" height="12" x="4" y="8" rx="2" />
+            <path d="M2 14h2" />
+            <path d="M20 14h2" />
+            <path d="M15 13v2" />
+            <path d="M9 13v2" />
+          </svg>
+        </button>
       </div>
     );
   }
+
 
   return (
     <div className={cn("fixed bottom-3 w-[400px] h-[580px] flex flex-col rounded-2xl overflow-hidden shadow-2xl bg-white border border-gray-200", sideClass)}>
