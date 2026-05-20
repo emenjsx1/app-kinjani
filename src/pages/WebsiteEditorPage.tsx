@@ -78,6 +78,103 @@ export default function WebsiteEditorPage() {
     return json;
   };
 
+  /** Streaming edge call: emits live "message" deltas + phase hints, returns final parsed payload. */
+  const streamEdge = async (
+    fn: string,
+    body: any,
+    signal: AbortSignal,
+    onDelta: (partialMessage: string) => void,
+    onPhase: (phase: string) => void,
+  ): Promise<{ action: "chat" | "plan" | "edit"; message: string; html?: string }> => {
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fn}`;
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const res = await fetch(url, {
+      method: "POST",
+      signal,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok || !res.body) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(txt || `Erro ${res.status}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let acc = "";
+    let finalRaw = "";
+
+    const extractMessage = (s: string): string => {
+      const i = s.indexOf('"message"');
+      if (i < 0) return "";
+      const colon = s.indexOf(":", i);
+      if (colon < 0) return "";
+      const q = s.indexOf('"', colon + 1);
+      if (q < 0) return "";
+      let out = "";
+      let esc = false;
+      for (let k = q + 1; k < s.length; k++) {
+        const ch = s[k];
+        if (esc) { out += ch; esc = false; continue; }
+        if (ch === "\\") { esc = true; continue; }
+        if (ch === '"') return out;
+        out += ch;
+      }
+      return out;
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      acc += decoder.decode(value, { stream: true });
+
+      const endIdx = acc.indexOf("__KINJANI_END__");
+      if (endIdx >= 0) {
+        const tail = acc.slice(endIdx + "__KINJANI_END__".length).split("\n")[0];
+        try { finalRaw = JSON.parse(tail).raw || ""; } catch { /* noop */ }
+        acc = acc.slice(0, endIdx);
+      }
+      const errIdx = acc.indexOf("__KINJANI_ERROR__");
+      if (errIdx >= 0) {
+        throw new Error(acc.slice(errIdx + "__KINJANI_ERROR__".length).split("\n")[0] || "stream error");
+      }
+
+      let phase = "A interpretar pedido";
+      if (acc.includes('"action":"edit"') || acc.includes('"action": "edit"')) {
+        phase = (acc.includes("<!DOCTYPE") || acc.includes("<html")) ? "A construir o site" : "A escrever resposta";
+      } else if (acc.includes('"action"')) {
+        phase = "A escrever resposta";
+      }
+      onPhase(phase);
+      onDelta(extractMessage(acc));
+    }
+
+    const raw = finalRaw || acc;
+    let parsed: any = null;
+    try { parsed = JSON.parse(raw); } catch {
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (m) { try { parsed = JSON.parse(m[0]); } catch { /* noop */ } }
+    }
+    if (!parsed || typeof parsed !== "object") {
+      return { action: "chat", message: raw.slice(0, 800) || "Não consegui processar a resposta." };
+    }
+    const action = parsed.action === "edit" || parsed.action === "plan" ? parsed.action : "chat";
+    let newHtml: string | undefined;
+    if (action === "edit") {
+      newHtml = String(parsed.html || "").replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+      if (!newHtml.toLowerCase().includes("<html")) {
+        return { action: "chat", message: parsed.message || "Não consegui gerar HTML válido." };
+      }
+    }
+    return { action, message: String(parsed.message || ""), html: newHtml };
+  };
+
   const normalizeHtml = (value: string) => value.replace(/\s+/g, " ").trim();
 
   const stop = () => {
