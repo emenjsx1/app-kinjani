@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Send, Globe, ExternalLink, Loader2, Sparkles, Monitor, Smartphone, Tablet, Paperclip, Mic, Square, Lightbulb, Hammer, X } from "lucide-react";
+import { ArrowLeft, Send, Globe, ExternalLink, Loader2, Sparkles, Monitor, Smartphone, Tablet, Paperclip, Mic, Square, Lightbulb, Hammer, X, Download, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,14 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-type ChatMsg = { role: "user" | "assistant"; content: string; ts: number };
+type ChatMsg = {
+  role: "user" | "assistant";
+  content: string;
+  ts: number;
+  action?: "chat" | "plan" | "edit";
+  /** HTML snapshot APÓS esta mensagem (só em assistant com edit). Clica para reverter aqui. */
+  htmlSnapshot?: string;
+};
 
 export default function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -85,7 +92,7 @@ export default function WebsiteEditorPage() {
         body: { prompt, websiteName: name || website?.name },
       });
       if (error || !data?.html) throw new Error(error?.message || data?.error || "Falha");
-      const asst: ChatMsg = { role: "assistant", content: "Site criado. Pede qualquer alteração — cores, secções, logo, links, botões...", ts: Date.now() };
+      const asst: ChatMsg = { role: "assistant", content: "Site criado ✨ Pede qualquer alteração — cores, secções, logo, links, equipa, contactos. Podes anexar imagens e eu uso-as no site.", ts: Date.now(), action: "edit", htmlSnapshot: data.html };
       const finalHistory = [...draftHistory, asst];
       setHtml(data.html);
       setHistory(finalHistory);
@@ -123,23 +130,31 @@ export default function WebsiteEditorPage() {
     }
 
     setBusy(true);
-    setBusyLabel(mode === "plan" ? "A elaborar plano..." : "A aplicar alteração...");
-    const userMsg: ChatMsg = { role: "user", content: finalText + (sentAttachments.length ? ` 📎 ${sentAttachments.length}` : ""), ts: Date.now() };
+    setBusyLabel(mode === "plan" ? "A elaborar plano..." : "A pensar...");
+    const userMsg: ChatMsg = { role: "user", content: finalText + (sentAttachments.length ? `  📎 ${sentAttachments.length}` : ""), ts: Date.now() };
     const draft = [...history, userMsg];
     setHistory(draft);
     try {
       const { data, error } = await supabase.functions.invoke("edit-site-html", {
         body: {
           html,
-          instruction: buildPayload(finalText),
+          instruction: finalText,
           history: draft.slice(-8),
           mode,
           attachments: sentAttachments,
         },
       });
       if (error) throw new Error(error.message || "Falha");
-      const newHtml = mode === "plan" ? html : (data?.html || html);
-      const asst: ChatMsg = { role: "assistant", content: data?.message || "Pronto!", ts: Date.now() };
+
+      const action: "chat" | "plan" | "edit" = data?.action || (data?.html ? "edit" : "chat");
+      const newHtml = action === "edit" && data?.html ? data.html : html;
+      const asst: ChatMsg = {
+        role: "assistant",
+        content: data?.message || (action === "edit" ? "Alteração aplicada." : "Pronto."),
+        ts: Date.now(),
+        action,
+        htmlSnapshot: action === "edit" ? newHtml : undefined,
+      };
       const final = [...draft, asst];
       setHtml(newHtml);
       setHistory(final);
@@ -151,6 +166,28 @@ export default function WebsiteEditorPage() {
       setBusy(false);
       setBusyLabel("");
     }
+  };
+
+  const revertTo = async (snapshot: string, idx: number) => {
+    if (!snapshot) return;
+    const trimmed = history.slice(0, idx + 1);
+    setHtml(snapshot);
+    setHistory(trimmed);
+    await persist(snapshot, trimmed);
+    toast({ title: "Revertido", description: "Site restaurado para este ponto." });
+  };
+
+  const downloadHtml = () => {
+    if (!html) return;
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${(website?.name || "site").replace(/[^a-z0-9-_]+/gi, "-").toLowerCase()}.html`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
   };
 
   const handleFiles = async (files: FileList | null) => {
@@ -241,6 +278,9 @@ export default function WebsiteEditorPage() {
           <Button size="sm" variant={device === "mobile" ? "default" : "ghost"} className="h-7 px-2" onClick={() => setDevice("mobile")}><Smartphone className="h-3.5 w-3.5" /></Button>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={downloadHtml} disabled={!html} title="Descarregar HTML">
+            <Download className="h-3.5 w-3.5 mr-1.5" />Download
+          </Button>
           {website.status === "active" && website.published_url && (
             <Button variant="outline" size="sm" asChild>
               <a href={website.published_url} target="_blank" rel="noreferrer"><ExternalLink className="h-3.5 w-3.5 mr-1.5" />Ver Online</a>
@@ -267,11 +307,25 @@ export default function WebsiteEditorPage() {
               </div>
             )}
             {history.map((m, i) => (
-              <div key={i} className={m.role === "user" ? "flex justify-end" : ""}>
+              <div key={i} className={m.role === "user" ? "flex justify-end" : "group"}>
                 <div className={m.role === "user"
                   ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-3 py-2 text-sm max-w-[85%]"
                   : "text-sm text-foreground max-w-[95%] whitespace-pre-wrap"
-                }>{m.content}</div>
+                }>
+                  {m.content}
+                  {m.role === "assistant" && m.action === "edit" && m.htmlSnapshot && i < history.length - 1 && (
+                    <button
+                      onClick={() => revertTo(m.htmlSnapshot!, i)}
+                      className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition"
+                      title="Reverter o site para este ponto"
+                    >
+                      <Undo2 className="h-3 w-3" /> Reverter para aqui
+                    </button>
+                  )}
+                  {m.role === "assistant" && m.action === "plan" && (
+                    <span className="ml-2 text-[10px] uppercase tracking-wider text-muted-foreground">· plano</span>
+                  )}
+                </div>
               </div>
             ))}
             {busy && (

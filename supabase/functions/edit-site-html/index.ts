@@ -1,27 +1,47 @@
-// Edits an existing HTML page based on a user instruction. Returns full new HTML.
+// Conversational website editor.
+// Classifies intent (chat / plan / edit), and in edit mode returns full new HTML.
+// Supports image attachments (vision) and embeds uploaded images directly into the page when relevant.
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `És um web developer de elite. Recebes um documento HTML completo e uma instrução do utilizador.
-Aplicas a alteração pedida e devolves O DOCUMENTO HTML COMPLETO atualizado.
+const SYSTEM_PROMPT = `És o Assistente Kinjani, um web developer + designer de elite que conversa naturalmente em Português europeu (PT-PT) com o utilizador sobre o site dele.
 
-REGRAS:
-1. Devolves APENAS HTML puro começando com <!DOCTYPE html>. Sem markdown, sem \`\`\`, sem explicações.
-2. Preserva tudo o que não foi pedido para alterar. NÃO reescrevas do zero. Faz alteração cirúrgica.
-3. Mantém o Tailwind CDN, fonts e estrutura existente.
-4. Se o utilizador pedir para adicionar uma secção/botão/link → adiciona no sítio lógico.
-5. Se pedir para mudar cores/tipografia → muda apenas as classes/styles relevantes.
-6. Se pedir para adicionar logo e disser para usar imagem X → usa o URL fornecido.
-7. Para botões que redireccionam → usa <a href="..."> com target="_blank" se for externo.
-8. Mantém qualidade premium e responsivo.`;
+Tens MEMÓRIA da conversa (vês o histórico). Tens o HTML actual do site. Podes:
+- responder a perguntas ("o que podes fazer", "que cores tem o site", "explica-me isto") → action: "chat"
+- planear alterações em texto sem mexer no código → action: "plan"
+- editar o HTML cirurgicamente quando o utilizador pede uma alteração concreta → action: "edit"
+
+REGRA DE OURO — RESPONDE SEMPRE EM JSON VÁLIDO, sem markdown nem \`\`\`:
+{
+  "action": "chat" | "plan" | "edit",
+  "message": "texto conversacional curto a explicar o que fizeste ou a responder",
+  "html": "<!DOCTYPE html>...documento completo..."   // OBRIGATÓRIO se action="edit", omitido caso contrário
+}
+
+REGRAS DE EDIÇÃO (action="edit"):
+1. Devolve o DOCUMENTO HTML COMPLETO começando com <!DOCTYPE html>.
+2. Preserva tudo o que não foi pedido para alterar. Edição cirúrgica, não reescrever.
+3. Mantém Tailwind CDN, fonts Google e estrutura existente.
+4. Se o utilizador anexar imagens, USA-AS REALMENTE no site (logo, hero, galeria, equipa, etc.) inserindo o data URL fornecido no atributo src de <img>.
+5. Para links externos usa <a href="..." target="_blank" rel="noopener">.
+6. Para e-mails usa mailto:, para telefones tel:, para WhatsApp https://wa.me/NUMERO.
+7. Quando adicionas uma secção (equipa, testemunhos, FAQ, contacto, preços, galeria...), mantém o mesmo sistema visual (cores, espaçamento, tipografia) do resto do site.
+8. message deve ser curto e descrever em PT-PT o que mudaste (ex: "Adicionei a secção Equipa com 3 membros e atualizei o contacto.").
+
+REGRAS DE CHAT (action="chat"):
+- Responde como assistente útil. Lista capacidades, explica decisões, sugere próximos passos. NÃO devolvas html.
+
+REGRAS DE PLANO (action="plan"):
+- Devolve um plano numerado curto em message. NÃO devolvas html.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { html, instruction, history } = await req.json();
+    const { html, instruction, history, mode, attachments } = await req.json();
     if (!html || !instruction) {
       return new Response(JSON.stringify({ error: "html and instruction required" }), {
         status: 400,
@@ -37,20 +57,40 @@ Deno.serve(async (req) => {
       });
     }
 
-    const messages: Array<{ role: string; content: string }> = [
-      { role: "system", content: SYSTEM_PROMPT },
-    ];
+    const messages: any[] = [{ role: "system", content: SYSTEM_PROMPT }];
 
     if (Array.isArray(history)) {
-      for (const h of history.slice(-6)) {
-        if (h?.role && h?.content) messages.push({ role: h.role, content: String(h.content).slice(0, 2000) });
+      for (const h of history.slice(-8)) {
+        if (h?.role && h?.content) {
+          messages.push({ role: h.role, content: String(h.content).slice(0, 1500) });
+        }
       }
     }
 
-    messages.push({
-      role: "user",
-      content: `HTML ACTUAL:\n\`\`\`html\n${html}\n\`\`\`\n\nINSTRUÇÃO:\n${instruction}\n\nDevolve o documento HTML completo actualizado.`,
-    });
+    // Build multimodal user message (text + any image attachments)
+    const imageAtts = Array.isArray(attachments)
+      ? attachments.filter((a: any) => typeof a?.dataUrl === "string" && (a?.type || "").startsWith("image/"))
+      : [];
+
+    const modeHint = mode === "plan"
+      ? "MODO PEDIDO: PLANEAR (não alteres o HTML, apenas devolve action=plan com plano em message)"
+      : "MODO PEDIDO: CONSTRUIR (se for pedido de alteração concreto, action=edit; se for pergunta/conversa, action=chat)";
+
+    const textPart =
+      `${modeHint}\n\nHTML ACTUAL DO SITE:\n\`\`\`html\n${html}\n\`\`\`\n\n` +
+      (imageAtts.length
+        ? `IMAGENS ANEXADAS PELO UTILIZADOR (${imageAtts.length}). Usa-as se fizer sentido para a instrução. Os data URLs estão em baixo na ordem:\n` +
+          imageAtts.map((a: any, i: number) => `Imagem ${i + 1} (${a.name}): ${a.dataUrl}`).join("\n") +
+          `\n\n`
+        : "") +
+      `INSTRUÇÃO DO UTILIZADOR:\n${instruction}\n\nResponde APENAS com o objecto JSON descrito no system prompt.`;
+
+    const userContent: any[] = [{ type: "text", text: textPart }];
+    for (const a of imageAtts.slice(0, 4)) {
+      userContent.push({ type: "image_url", image_url: { url: a.dataUrl } });
+    }
+
+    messages.push({ role: "user", content: imageAtts.length ? userContent : textPart });
 
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -60,8 +100,9 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
-        temperature: 0.6,
+        temperature: 0.5,
         messages,
+        response_format: { type: "json_object" },
       }),
     });
 
@@ -74,19 +115,48 @@ Deno.serve(async (req) => {
     }
 
     const data = await resp.json();
-    let newHtml: string = data?.choices?.[0]?.message?.content || "";
-    newHtml = newHtml.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+    const raw: string = data?.choices?.[0]?.message?.content || "";
 
-    if (!newHtml.toLowerCase().includes("<html")) {
-      return new Response(JSON.stringify({ error: "AI did not return valid HTML", raw: newHtml.slice(0, 500) }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    let parsed: any = null;
+    try {
+      parsed = JSON.parse(raw);
+    } catch {
+      // Try to extract first JSON object
+      const m = raw.match(/\{[\s\S]*\}/);
+      if (m) {
+        try { parsed = JSON.parse(m[0]); } catch { /* noop */ }
+      }
     }
 
-    return new Response(JSON.stringify({ html: newHtml, message: "Pronto! Apliquei a alteração." }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    if (!parsed || typeof parsed !== "object") {
+      return new Response(JSON.stringify({
+        action: "chat",
+        message: raw?.slice(0, 800) || "Não consegui processar a resposta. Reformula o pedido?",
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const action = parsed.action === "edit" || parsed.action === "plan" ? parsed.action : "chat";
+    let newHtml: string | undefined;
+
+    if (action === "edit") {
+      newHtml = String(parsed.html || "")
+        .replace(/^```html\s*/i, "")
+        .replace(/^```\s*/i, "")
+        .replace(/```\s*$/i, "")
+        .trim();
+      if (!newHtml.toLowerCase().includes("<html")) {
+        return new Response(JSON.stringify({
+          action: "chat",
+          message: "Não consegui gerar HTML válido para esta alteração. Podes detalhar mais?",
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+
+    return new Response(JSON.stringify({
+      action,
+      message: parsed.message || (action === "edit" ? "Alteração aplicada." : "Pronto."),
+      html: newHtml,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), {
       status: 500,
