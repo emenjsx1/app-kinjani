@@ -6,7 +6,11 @@ import type { Intent } from "./types";
  * can override this with a true semantic parse.
  */
 
+// Order matters — more specific domains MUST come before generic ones
+// (e.g. "dental" before "health", "fintech" before generic finance).
 const DOMAIN_HINTS: Record<string, string[]> = {
+  dental: ["dental", "dentist", "dentistry", "smile", "implant", "implants", "whitening", "orthodontic", "invisalign", "teeth", "oral care"],
+  beauty: ["aesthetic", "aesthetics", "cosmetic", "skincare", "salon", "beauty", "facial", "botox"],
   tourism: ["tourism", "travel", "destination", "safari", "resort", "hotel", "lodge", "tour", "trip", "journey", "expedition", "getaway", "voyage", "hospitality"],
   finance: ["bank", "fintech", "invest", "trading", "wealth", "crypto", "loan"],
   fashion: ["fashion", "boutique", "atelier", "couture", "runway", "style"],
