@@ -50,17 +50,16 @@ export default function EmbedPage() {
     (async () => {
       const { data } = await supabase
         .from("agents")
-        .select("name,type,prompt,welcome_message")
+        .select("name,type,prompt")
         .eq("id", agentId)
         .maybeSingle();
       if (data) {
         setAgentName(data.name || "Assistente IA");
         setAgentType(data.type || "atendimento-faq");
         setAgentPrompt(data.prompt || "");
-        if (data.welcome_message) setWelcome(data.welcome_message);
       }
       setMessages([
-        { id: "welcome", content: data?.welcome_message || welcome, isUser: false, timestamp: now() },
+        { id: "welcome", content: welcome, isUser: false, timestamp: now() },
       ]);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
