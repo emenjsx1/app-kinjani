@@ -9,6 +9,7 @@
 import {
   CompositionGraph, CompositionNode, GraphTheme,
 } from "./composition-graph";
+import type { VisualDNA } from "@/core/dna";
 
 export interface CreativeBrief {
   prompt: string;
@@ -18,6 +19,8 @@ export interface CreativeBrief {
   font: string;
   /** Seed for determinism within the same prompt */
   seed: number;
+  /** Per-project visual DNA — destroys template repetition. */
+  dna?: VisualDNA;
   /** Optional copy hints */
   headline?: string;
   subheadline?: string;
