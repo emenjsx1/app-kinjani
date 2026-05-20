@@ -27,6 +27,7 @@ import AuthPage from "./pages/AuthPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Phase6ShowcasePage from "./pages/Phase6ShowcasePage";
 import CloudPage from "./pages/CloudPage";
+import DomainsPage from "./pages/DomainsPage";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/phase6" element={<Phase6ShowcasePage />} />
             <Route path="/connect/:token" element={<ClientConnectPage />} />
             <Route path="/site/:siteId" element={<PublicWebsitePage />} />
+            <Route path="/s/:slug" element={<PublicWebsitePage />} />
             <Route path="/genesis-preview" element={<GenesisPreviewPage />} />
             
             {/* Protected routes */}
@@ -62,6 +64,7 @@ const App = () => (
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/cloud" element={<ProtectedRoute><CloudPage /></ProtectedRoute>} />
+            <Route path="/domains" element={<ProtectedRoute><DomainsPage /></ProtectedRoute>} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

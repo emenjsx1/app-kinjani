@@ -82,7 +82,7 @@ function useDocumentHead(template: WebsiteTemplate | null, websiteName: string) 
 }
 
 export default function PublicWebsitePage() {
-  const { siteId } = useParams();
+  const { siteId, slug } = useParams();
   const [websiteName, setWebsiteName] = useState<string>("");
   const [template, setTemplate] = useState<WebsiteTemplate | null>(null);
   const [graph, setGraph] = useState<CompositionGraph | null>(null);
@@ -95,18 +95,37 @@ export default function PublicWebsitePage() {
 
   useEffect(() => {
     const loadWebsite = async () => {
-      if (!siteId) {
-        setNotFound(true);
-        setIsLoading(false);
-        return;
-      }
-
       try {
-        const { data, error } = await supabase
-          .from("websites")
-          .select("*")
-          .eq("id", siteId)
-          .maybeSingle();
+        // Resolution order: 1) custom domain (host header) 2) slug 3) siteId
+        let query = supabase.from("websites").select("*").limit(1);
+        const host = window.location.host;
+        const isAppHost = /lovable(project)?\.app$|localhost/i.test(host);
+
+        if (!isAppHost) {
+          // Custom domain: lookup
+          const { data: dom } = await supabase
+            .from("custom_domains")
+            .select("website_id")
+            .eq("domain", host)
+            .eq("status", "active")
+            .maybeSingle();
+          if (!dom?.website_id) {
+            setNotFound(true);
+            setIsLoading(false);
+            return;
+          }
+          query = query.eq("id", dom.website_id);
+        } else if (slug) {
+          query = query.eq("slug", slug);
+        } else if (siteId) {
+          query = query.eq("id", siteId);
+        } else {
+          setNotFound(true);
+          setIsLoading(false);
+          return;
+        }
+
+        const { data, error } = await query.maybeSingle();
 
         if (error || !data) {
           setNotFound(true);
@@ -122,12 +141,9 @@ export default function PublicWebsitePage() {
         }
         const config = parseConfig(data.config);
 
-        if (config?.compositionGraph) {
-          setGraph(config.compositionGraph);
-        }
-        if (config?.customTemplate) {
-          setTemplate(config.customTemplate);
-        } else if (config?.templateId) {
+        if (config?.compositionGraph) setGraph(config.compositionGraph);
+        if (config?.customTemplate) setTemplate(config.customTemplate);
+        else if (config?.templateId) {
           const baseTemplate = getTemplateById(config.templateId);
           if (baseTemplate) setTemplate(baseTemplate);
         }
@@ -141,7 +157,7 @@ export default function PublicWebsitePage() {
     };
 
     loadWebsite();
-  }, [siteId]);
+  }, [siteId, slug]);
 
   if (isLoading) {
     return (

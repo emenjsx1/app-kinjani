@@ -151,6 +151,50 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_domains: {
+        Row: {
+          created_at: string
+          domain: string
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+          verification_token: string
+          verified_at: string | null
+          website_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          verification_token?: string
+          verified_at?: string | null
+          website_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          verification_token?: string
+          verified_at?: string | null
+          website_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_domains_website_id_fkey"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           company: string | null
@@ -227,6 +271,7 @@ export type Database = {
           id: string
           name: string
           published_url: string | null
+          slug: string | null
           status: string
           template: string | null
           updated_at: string
@@ -241,6 +286,7 @@ export type Database = {
           id?: string
           name: string
           published_url?: string | null
+          slug?: string | null
           status?: string
           template?: string | null
           updated_at?: string
@@ -255,6 +301,7 @@ export type Database = {
           id?: string
           name?: string
           published_url?: string | null
+          slug?: string | null
           status?: string
           template?: string | null
           updated_at?: string
