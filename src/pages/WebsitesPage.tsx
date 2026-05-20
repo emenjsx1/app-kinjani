@@ -22,6 +22,7 @@ import { toast } from "sonner";
 import { useWebsites, Website } from "@/hooks/useWebsites";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useProfile } from "@/hooks/useProfile";
+import type { GenerativeResult } from "@/core/genesis";
 
 export default function WebsitesPage() {
   const navigate = useNavigate();
@@ -42,6 +43,7 @@ export default function WebsitesPage() {
     prompt?: string;
     customTemplate?: unknown;
     compositionGraph?: unknown;
+    generationSession?: GenerativeResult;
   }) => {
     const result = await createWebsite({
       name: newWebsiteData.name,
@@ -55,6 +57,7 @@ export default function WebsitesPage() {
         prompt: newWebsiteData.prompt,
         customTemplate: newWebsiteData.customTemplate as Website['config']['customTemplate'],
         compositionGraph: newWebsiteData.compositionGraph as never,
+        generationSession: newWebsiteData.generationSession as never,
       },
     });
 
