@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Wand2, ArrowRight, Loader2, Check, Settings2, X } from "lucide-react";
+import { Sparkles, Wand2, ArrowRight, Loader2, Check, Settings2 } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,7 +9,11 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import type { WebsiteTemplate } from "@/lib/website-templates";
 import { buildBrief } from "@/core/render/buildBrief";
-import { generateExperience, type GenerativeResult } from "@/core/genesis";
+import {
+  generateExperience,
+  interpretIntent,
+  type GenerativeResult,
+} from "@/core/genesis";
 import type { CompositionGraph } from "@/core/render/composition-graph";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -45,15 +49,21 @@ const EXAMPLES = [
 ];
 
 type StageStatus = "pending" | "running" | "done";
-interface Stage { id: string; label: string; status: StageStatus }
+interface Stage {
+  id: string;
+  label: string;
+  /** Live text discovered by the pipeline for this stage. */
+  detail?: string;
+  status: StageStatus;
+}
 
 const INITIAL_STAGES: Stage[] = [
-  { id: "intent",      label: "A interpretar a sua visão...",            status: "pending" },
-  { id: "direction",   label: "A definir direção visual e paleta...",    status: "pending" },
-  { id: "composition", label: "A construir sistema de composição...",    status: "pending" },
-  { id: "components",  label: "A gerar componentes únicos...",            status: "pending" },
-  { id: "content",     label: "A escrever o conteúdo com IA...",          status: "pending" },
-  { id: "finalize",    label: "A finalizar hierarquia e interações...",  status: "pending" },
+  { id: "intent",      label: "A interpretar a sua visão",            status: "pending" },
+  { id: "direction",   label: "A definir direção visual e paleta",    status: "pending" },
+  { id: "composition", label: "A planear ritmo narrativo",            status: "pending" },
+  { id: "components",  label: "A materializar composição visual",     status: "pending" },
+  { id: "content",     label: "A escrever copy semântica",            status: "pending" },
+  { id: "finalize",    label: "A auto-criticar e refinar",            status: "pending" },
 ];
 
 export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanced }: OpenCreatorProps) {
@@ -74,11 +84,12 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
 
   useEffect(() => { if (!open) reset(); }, [open]);
 
-  const advanceStage = (id: string, status: StageStatus) => {
-    const next = stagesRef.current.map(s => s.id === id ? { ...s, status } : s);
+  const updateStage = (id: string, patch: Partial<Stage>) => {
+    const next = stagesRef.current.map(s => s.id === id ? { ...s, ...patch } : s);
     stagesRef.current = next;
     setStages(next);
   };
+  
 
   const inferName = (p: string) => {
     const firstWords = p.trim().split(/\s+/).slice(0, 4).join(" ");
@@ -96,19 +107,26 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
     stagesRef.current = INITIAL_STAGES;
 
     try {
-      advanceStage("intent", "running");
-      await sleep(550);
-      advanceStage("intent", "done");
+      // 1. Intent — show what the AI understood from the prompt
+      updateStage("intent", { status: "running" });
+      await sleep(380);
+      const intentSnapshot = interpretIntent(prompt);
+      updateStage("intent", {
+        status: "done",
+        detail: `${intentSnapshot.domain} · ${intentSnapshot.emotion}${intentSnapshot.location ? ` · ${intentSnapshot.location}` : ""} → ${intentSnapshot.goal} para ${intentSnapshot.audience}`,
+      });
 
-      advanceStage("direction", "running");
-      await sleep(450);
+      // 2. Direction — paleta + tipografia + mood
+      updateStage("direction", { status: "running" });
+      await sleep(340);
       const brief = buildBrief({ prompt, websiteName: finalName });
-      advanceStage("direction", "done");
+      updateStage("direction", {
+        status: "done",
+        detail: `Mood ${brief.mood} · ${brief.font} · paleta ${brief.palette.primary.slice(0, 12)}…`,
+      });
 
-      advanceStage("composition", "running");
-      await sleep(400);
-      let compositionGraph: CompositionGraph;
-      let generationSession: GenerativeResult | undefined;
+      // 3. Composition — gera o experience completo (intent + energy + plan + graph + critique)
+      updateStage("composition", { status: "running" });
       const generationSeed = crypto.randomUUID();
       const exp = await generateExperience({
         prompt,
@@ -124,21 +142,40 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
         seed: generationSeed,
         maxRounds: 4,
       });
-      compositionGraph = exp.graph;
-      generationSession = exp;
-      advanceStage("composition", "done");
+      const compositionGraph: CompositionGraph = exp.graph;
+      const generationSession: GenerativeResult = exp;
+      updateStage("composition", {
+        status: "done",
+        detail: `Energia ${exp.energy.label} — ${exp.plan.beats.length} batidas · ${[...new Set(exp.plan.beats.map(b => b.spatial))].join(" · ")}`,
+      });
 
-      advanceStage("components", "running");
-      await sleep(300);
-      advanceStage("components", "done");
+      // 4. Components — listar dialetos espaciais visuais
+      updateStage("components", { status: "running" });
+      await sleep(260);
+      updateStage("components", {
+        status: "done",
+        detail: exp.plan.beats.map(b => b.kind.replace(/-/g, " ")).slice(0, 4).join(" → ") + (exp.plan.beats.length > 4 ? " …" : ""),
+      });
 
-      advanceStage("content", "running");
-      await sleep(useAI ? 250 : 120);
-      advanceStage("content", "done");
+      // 5. Content — manifesto da direção criativa
+      updateStage("content", { status: "running" });
+      await sleep(useAI ? 220 : 120);
+      updateStage("content", {
+        status: "done",
+        detail: `"${exp.energy.manifesto}"`,
+      });
 
-      advanceStage("finalize", "running");
-      await sleep(350);
-      advanceStage("finalize", "done");
+      // 6. Finalize — auto-crítica
+      updateStage("finalize", { status: "running" });
+      await sleep(320);
+      const score = exp.critique ? Math.round(exp.critique.overall * 100) : 0;
+      updateStage("finalize", {
+        status: "done",
+        detail: exp.critique
+          ? `Score ${score}/100 · ${exp.iterations} iteração${exp.iterations > 1 ? "ões" : ""} · ${exp.critique.passed ? "aprovado" : "limite atingido"}`
+          : "Composição finalizada",
+      });
+      await sleep(450);
 
       const result = await onWebsiteCreated({
         name: finalName,
@@ -265,33 +302,40 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
           <div className="p-10 md:p-14 min-h-[460px] flex flex-col justify-center">
             <div className="space-y-2 mb-8">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                <Wand2 className="h-3 w-3 animate-pulse" /> A criar
+                <Wand2 className="h-3 w-3 animate-pulse" /> Pensamento criativo em curso
               </div>
               <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-                A compor o seu site...
+                A IA está a raciocinar sobre a sua visão
               </h2>
               <p className="text-sm text-muted-foreground line-clamp-2">{prompt}</p>
             </div>
 
-            <ul className="space-y-3">
+            <ul className="space-y-4">
               {stages.map((s) => (
                 <li
                   key={s.id}
                   className={cn(
-                    "flex items-center gap-3 text-sm transition-all duration-300",
-                    s.status === "pending" && "opacity-40",
+                    "flex items-start gap-3 text-sm transition-all duration-300",
+                    s.status === "pending" && "opacity-30",
                     s.status === "running" && "opacity-100 translate-x-1",
-                    s.status === "done" && "opacity-80",
+                    s.status === "done" && "opacity-90",
                   )}
                 >
-                  <span className="h-6 w-6 flex items-center justify-center rounded-full bg-muted/50">
+                  <span className="h-6 w-6 mt-0.5 flex items-center justify-center rounded-full bg-muted/50 shrink-0">
                     {s.status === "done" && <Check className="h-3.5 w-3.5 text-primary" />}
                     {s.status === "running" && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
                     {s.status === "pending" && <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />}
                   </span>
-                  <span className={cn(s.status === "running" && "text-foreground font-medium")}>
-                    {s.label}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn("leading-tight", s.status === "running" && "text-foreground font-medium")}>
+                      {s.label}
+                    </p>
+                    {s.detail && (
+                      <p className="mt-1 text-xs text-muted-foreground/90 leading-relaxed">
+                        {s.detail}
+                      </p>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
