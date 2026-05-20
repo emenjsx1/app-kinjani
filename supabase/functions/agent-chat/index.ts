@@ -1,123 +1,180 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+// Multimodal agent chat — text + image + audio + PDF via Gemini native API
+// Streams SSE back to the client.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+type ChatMsg = { role: "user" | "assistant"; content: string };
+type Attachment = { type: string; name?: string; dataUrl: string };
+
 interface AgentChatRequest {
-  messages: { role: "user" | "assistant"; content: string }[];
-  agentType: string;
-  agentPrompt: string;
+  messages: ChatMsg[];
+  agentType?: string;
+  agentPrompt?: string;
+  attachments?: Attachment[];
 }
 
-// System prompts por tipo de agente
 const AGENT_SYSTEM_PROMPTS: Record<string, string> = {
-  "atendimento-faq": `Você é um assistente de atendimento ao cliente profissional e amigável.
-Suas responsabilidades:
-- Responder dúvidas frequentes de forma clara e concisa
-- Ser educado e empático com os clientes
-- Oferecer soluções práticas para problemas comuns
-- Encaminhar casos complexos quando necessário
-Mantenha respostas curtas e objetivas.`,
-  
-  "captura-leads": `Você é um assistente especializado em captura de leads.
-Suas responsabilidades:
-- Iniciar conversas de forma amigável e natural
-- Identificar necessidades e interesses do visitante
-- Coletar informações de contacto (nome, email, telefone) de forma não intrusiva
-- Qualificar o interesse do lead
-Seja persuasivo mas não agressivo.`,
-  
-  "qualificacao": `Você é um assistente de qualificação de leads.
-Suas responsabilidades:
-- Fazer perguntas estratégicas para entender o perfil do lead
-- Classificar leads como Hot (pronto para comprar), Warm (interessado) ou Cold (apenas curioso)
-- Identificar orçamento, prazo e necessidades específicas
-- Registrar informações relevantes para a equipa de vendas
-Use técnicas BANT (Budget, Authority, Need, Timeline).`,
-  
-  "follow-up": `Você é um assistente de follow-up automático.
-Suas responsabilidades:
-- Fazer seguimento de contactos anteriores
-- Verificar se o cliente ainda tem interesse
-- Oferecer informações adicionais relevantes
-- Agendar próximos passos quando apropriado
-Seja persistente mas respeitoso.`,
-  
-  "agendamento": `Você é um assistente de agendamento.
-Suas responsabilidades:
-- Ajudar a marcar reuniões e compromissos
-- Verificar disponibilidade e preferências
-- Confirmar detalhes (data, hora, local/link)
-- Enviar lembretes quando necessário
-Seja eficiente e organizado.`,
+  "atendimento-faq":
+    "És um assistente de atendimento ao cliente profissional e amigável. Responde dúvidas de forma clara, curta e empática.",
+  "captura-leads":
+    "És um assistente especializado em captura de leads. Inicia conversas naturais, identifica interesses e recolhe contactos de forma não intrusiva.",
+  "qualificacao":
+    "És um assistente de qualificação BANT (Budget, Authority, Need, Timeline). Classifica leads em Hot/Warm/Cold.",
+  "follow-up":
+    "És um assistente de follow-up. Verifica interesse, oferece informação adicional e agenda próximos passos. Persistente mas respeitoso.",
+  "agendamento":
+    "És um assistente de agendamento. Confirma data, hora, local/link e envia lembretes quando apropriado.",
 };
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+const BASE_RULES = `\n\nRegras gerais:\n- Responde em Português europeu (PT-PT) por defeito, espelhando a língua do utilizador se for diferente.\n- Se receberes uma imagem, descreve-a e age sobre o que vês (ex: recibo, captura de ecrã, documento, produto).\n- Se receberes um áudio, transcreve-o mentalmente e responde ao conteúdo falado.\n- Se receberes um PDF, lê o conteúdo e responde com base nele (resume, extrai, valida).\n- Mantém respostas concisas, profissionais e úteis.`;
+
+function dataUrlToInlineData(dataUrl: string): { mime_type: string; data: string } | null {
+  const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!m) return null;
+  return { mime_type: m[1], data: m[2] };
+}
+
+function isSupportedMime(mime: string): boolean {
+  return (
+    mime.startsWith("image/") ||
+    mime.startsWith("audio/") ||
+    mime === "application/pdf"
+  );
+}
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, agentType, agentPrompt }: AgentChatRequest = await req.json();
-    
+    const body = (await req.json()) as AgentChatRequest;
+    const { messages, agentType, agentPrompt, attachments } = body;
+
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is not configured");
-    }
-
-    // Construir system prompt baseado no tipo + prompt personalizado
-    const baseSystemPrompt = AGENT_SYSTEM_PROMPTS[agentType] || AGENT_SYSTEM_PROMPTS["atendimento-faq"];
-    const systemPrompt = agentPrompt 
-      ? `${baseSystemPrompt}\n\nInstruções adicionais do utilizador:\n${agentPrompt}`
-      : baseSystemPrompt;
-
-    console.log("Agent chat request:", { agentType, messagesCount: messages.length });
-
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GEMINI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
-        stream: true,
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limits exceeded. Por favor, tente novamente em alguns segundos." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos esgotados. Por favor, adicione créditos à sua conta." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "Erro ao processar mensagem" }), {
+      return new Response(JSON.stringify({ error: "GEMINI_API_KEY missing" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(response.body, {
-      headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+    const baseSystem = AGENT_SYSTEM_PROMPTS[agentType || ""] || AGENT_SYSTEM_PROMPTS["atendimento-faq"];
+    const systemText = (agentPrompt ? `${baseSystem}\n\nInstruções específicas:\n${agentPrompt}` : baseSystem) + BASE_RULES;
+
+    // Build contents in Gemini native format.
+    // History messages become text-only `parts`. The LAST user turn carries attachments.
+    const lastUserIdx = (() => {
+      for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === "user") return i;
+      return -1;
+    })();
+
+    const contents = messages.map((m, i) => {
+      const role = m.role === "assistant" ? "model" : "user";
+      const parts: any[] = [];
+      if (m.content && m.content.trim()) parts.push({ text: m.content });
+
+      if (i === lastUserIdx && Array.isArray(attachments) && attachments.length) {
+        for (const att of attachments.slice(0, 6)) {
+          const inline = dataUrlToInlineData(att.dataUrl);
+          if (!inline || !isSupportedMime(inline.mime_type)) continue;
+          parts.push({ inline_data: inline });
+        }
+      }
+
+      if (parts.length === 0) parts.push({ text: "" });
+      return { role, parts };
     });
-  } catch (error) {
-    console.error("Agent chat error:", error);
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Erro desconhecido" }), {
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
+
+    const upstream = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemText }] },
+        contents,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+        },
+      }),
+    });
+
+    if (!upstream.ok) {
+      const txt = await upstream.text();
+      console.error("Gemini error", upstream.status, txt);
+      const status = upstream.status === 429 || upstream.status === 402 ? upstream.status : 500;
+      const msg =
+        upstream.status === 429
+          ? "Limite de pedidos excedido. Tenta novamente em alguns segundos."
+          : upstream.status === 402
+          ? "Créditos esgotados. Adiciona créditos à conta."
+          : `Erro do modelo: ${upstream.status}`;
+      return new Response(JSON.stringify({ error: msg, detail: txt.slice(0, 400) }), {
+        status,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Transform Gemini SSE -> OpenAI-style SSE deltas so the existing client parser keeps working.
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = upstream.body!.getReader();
+        const emit = (text: string) => {
+          const payload = { choices: [{ delta: { content: text } }] };
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+        };
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+            for (const raw of lines) {
+              const line = raw.trim();
+              if (!line.startsWith("data:")) continue;
+              const payload = line.slice(5).trim();
+              if (!payload || payload === "[DONE]") continue;
+              try {
+                const j = JSON.parse(payload);
+                const cand = j?.candidates?.[0];
+                const parts = cand?.content?.parts || [];
+                for (const p of parts) {
+                  if (typeof p?.text === "string" && p.text.length) emit(p.text);
+                }
+              } catch {
+                // skip malformed
+              }
+            }
+          }
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        } catch (e) {
+          console.error("stream error", e);
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: String(e) })}\n\n`));
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        "X-Accel-Buffering": "no",
+      },
+    });
+  } catch (e) {
+    console.error("agent-chat fatal", e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : String(e) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
