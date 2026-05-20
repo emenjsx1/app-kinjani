@@ -278,6 +278,9 @@ export default function WebsiteEditorPage() {
           <Button size="sm" variant={device === "mobile" ? "default" : "ghost"} className="h-7 px-2" onClick={() => setDevice("mobile")}><Smartphone className="h-3.5 w-3.5" /></Button>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={downloadHtml} disabled={!html} title="Descarregar HTML">
+            <Download className="h-3.5 w-3.5 mr-1.5" />Download
+          </Button>
           {website.status === "active" && website.published_url && (
             <Button variant="outline" size="sm" asChild>
               <a href={website.published_url} target="_blank" rel="noreferrer"><ExternalLink className="h-3.5 w-3.5 mr-1.5" />Ver Online</a>
