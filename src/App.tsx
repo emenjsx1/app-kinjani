@@ -27,6 +27,7 @@ import AuthPage from "./pages/AuthPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import Phase6ShowcasePage from "./pages/Phase6ShowcasePage";
 import CloudPage from "./pages/CloudPage";
+import DomainsPage from "./pages/DomainsPage";
 
 const queryClient = new QueryClient();
 
