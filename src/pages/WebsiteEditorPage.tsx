@@ -1,358 +1,235 @@
-import { useState, useEffect, useMemo } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Eye, Globe, Pencil, Trash2, ExternalLink } from "lucide-react";
-import { AppLayout } from "@/components/layout/AppLayout";
+import { useEffect, useRef, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft, Send, Globe, ExternalLink, Loader2, Sparkles, Monitor, Smartphone, Tablet } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { WebsiteEditor, type EmbedConfig } from "@/components/websites/WebsiteEditor";
-import { EditorShell } from "@/features/editor";
-import { WebsitePreview } from "@/components/websites/WebsitePreview";
-import { getTemplateById, WebsiteTemplate } from "@/lib/website-templates";
 import { toast } from "@/hooks/use-toast";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useWebsites, Website } from "@/hooks/useWebsites";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { useProfile } from "@/hooks/useProfile";
-import { CompositionRenderer } from "@/core/render/CompositionRenderer";
+import { supabase } from "@/integrations/supabase/client";
 
-function buildRuntimeTemplate(website: Website): WebsiteTemplate | null {
-  const graph = website.config?.compositionGraph;
-  if (!graph) return null;
-  return {
-    id: "graph-runtime-template",
-    name: website.name,
-    description: "Runtime graph container",
-    category: "Generated",
-    categoryId: "generated",
-    type: website.config?.type || "landing",
-    thumbnail: "/placeholder.svg",
-    colors: {
-      primary: graph.theme.primary,
-      secondary: graph.theme.secondary,
-      accent: graph.theme.accent,
-      background: graph.theme.background,
-      text: graph.theme.text,
-    },
-    font: graph.theme.font,
-    sections: [],
-  };
-}
+type ChatMsg = { role: "user" | "assistant"; content: string; ts: number };
 
 export default function WebsiteEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const useLegacyEditor = searchParams.get("legacy") === "1";
-  const { getWebsite, updateWebsite, deleteWebsite } = useWebsites();
-  const { profile } = useProfile();
+  const { getWebsite, updateWebsite } = useWebsites();
   const [website, setWebsite] = useState<Website | null>(null);
-  const [template, setTemplate] = useState<WebsiteTemplate | null>(null);
-  const [activeTab, setActiveTab] = useState("preview");
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isEditing, setIsEditing] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
+  const [html, setHtml] = useState<string>("");
+  const [history, setHistory] = useState<ChatMsg[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [busyLabel, setBusyLabel] = useState("");
+  const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    const loadWebsite = async () => {
-      if (!id) {
-        navigate("/websites");
-        return;
+    (async () => {
+      if (!id) return navigate("/websites");
+      const w = await getWebsite(id);
+      if (!w) return navigate("/websites");
+      setWebsite(w);
+      setHtml((w as any).generated_html || "");
+      setHistory(Array.isArray((w as any).chat_history) ? (w as any).chat_history : []);
+      setLoading(false);
+
+      // Auto-generate if empty and there's a prompt
+      if (!(w as any).generated_html && w.config?.prompt) {
+        runGenerate(w.config.prompt, w.name);
       }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
-      setIsLoading(true);
-      const found = await getWebsite(id);
-      
-      if (found) {
-        setWebsite(found);
-        const tmpl = found.config?.customTemplate || getTemplateById(found.config?.templateId || '') || buildRuntimeTemplate(found);
-        if (tmpl) {
-          setTemplate(tmpl);
-        }
-      } else {
-        navigate("/websites");
-      }
-      setIsLoading(false);
-    };
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    setTimeout(() => textareaRef.current?.focus(), 50);
+  }, [history, busy]);
 
-    loadWebsite();
-  }, [id, navigate, getWebsite]);
+  const persist = async (newHtml: string, newHistory: ChatMsg[]) => {
+    if (!website) return;
+    await updateWebsite(website.id, {
+      generated_html: newHtml,
+      chat_history: newHistory,
+    } as any);
+  };
 
-  if (isLoading) {
-    return (
-      <AppLayout pageTitle="Carregando..." credits={profile?.credits_balance ?? 0}>
-        <div className="flex items-center justify-center h-64">
-          <LoadingSpinner size="lg" />
-        </div>
-      </AppLayout>
-    );
-  }
-
-  if (!website || (!template && !website.config?.compositionGraph)) {
-    return (
-      <AppLayout pageTitle="Site não encontrado" credits={profile?.credits_balance ?? 0}>
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Site não encontrado</p>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  const handleSaveTemplate = async (updatedTemplate: WebsiteTemplate, embedCfg?: EmbedConfig) => {
-    const updatedConfig = {
-      ...website.config,
-      customTemplate: updatedTemplate,
-      embedConfig: embedCfg,
-    };
-
-    const result = await updateWebsite(website.id, { config: updatedConfig });
-    
-    if (result) {
-      setTemplate(updatedTemplate);
-      setWebsite(result);
-      toast({
-        title: "Site guardado!",
-        description: "As alterações foram guardadas com sucesso.",
+  const runGenerate = async (prompt: string, name?: string) => {
+    setBusy(true);
+    setBusyLabel("A criar o teu site...");
+    const userMsg: ChatMsg = { role: "user", content: prompt, ts: Date.now() };
+    const draftHistory = [...history, userMsg];
+    setHistory(draftHistory);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-site-html", {
+        body: { prompt, websiteName: name || website?.name },
       });
-    } else {
-      toast({
-        title: "Erro",
-        description: "Erro ao guardar o site.",
-        variant: "destructive",
-      });
+      if (error || !data?.html) throw new Error(error?.message || data?.error || "Falha");
+      const asst: ChatMsg = { role: "assistant", content: "Site criado. Pede qualquer alteração — cores, secções, logo, links, botões...", ts: Date.now() };
+      const finalHistory = [...draftHistory, asst];
+      setHtml(data.html);
+      setHistory(finalHistory);
+      await persist(data.html, finalHistory);
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message || "Falha ao gerar.", variant: "destructive" });
+      setHistory(history);
+    } finally {
+      setBusy(false);
+      setBusyLabel("");
     }
   };
 
-  // Generate real preview URL
-  const getPreviewUrl = () => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/site/${website.id}`;
-  };
+  const send = async () => {
+    const text = input.trim();
+    if (!text || busy) return;
+    setInput("");
 
-  const handlePublish = async () => {
-    const realUrl = getPreviewUrl();
-    const result = await updateWebsite(website.id, {
-      status: "active",
-      published_url: realUrl,
-    });
+    if (!html) {
+      // first generation
+      await runGenerate(text, website?.name);
+      return;
+    }
 
-    if (result) {
-      setWebsite(result);
-      toast({
-        title: "Site publicado!",
-        description: "O seu site está agora online.",
+    setBusy(true);
+    setBusyLabel("A aplicar alteração...");
+    const userMsg: ChatMsg = { role: "user", content: text, ts: Date.now() };
+    const draft = [...history, userMsg];
+    setHistory(draft);
+    try {
+      const { data, error } = await supabase.functions.invoke("edit-site-html", {
+        body: { html, instruction: text, history: draft.slice(-8) },
       });
-    } else {
-      toast({
-        title: "Erro",
-        description: "Erro ao publicar o site.",
-        variant: "destructive",
-      });
+      if (error || !data?.html) throw new Error(error?.message || data?.error || "Falha");
+      const asst: ChatMsg = { role: "assistant", content: data.message || "Pronto!", ts: Date.now() };
+      const final = [...draft, asst];
+      setHtml(data.html);
+      setHistory(final);
+      await persist(data.html, final);
+    } catch (e: any) {
+      toast({ title: "Erro", description: e.message || "Falha.", variant: "destructive" });
+      setHistory(history);
+    } finally {
+      setBusy(false);
+      setBusyLabel("");
     }
   };
 
-  const handleDelete = async () => {
-    const success = await deleteWebsite(website.id);
-    if (success) {
-      toast({
-        title: "Site eliminado",
-        description: "O site foi removido com sucesso.",
-      });
-      navigate("/websites");
-    } else {
-      toast({
-        title: "Erro",
-        description: "Erro ao eliminar o site.",
-        variant: "destructive",
-      });
+  const publish = async () => {
+    if (!website) return;
+    const url = `${window.location.origin}/site/${website.id}`;
+    const res = await updateWebsite(website.id, { status: "active", published_url: url });
+    if (res) {
+      setWebsite(res);
+      toast({ title: "Publicado!", description: "Site online." });
     }
   };
 
-  if (isEditing) {
-    const resolvedTemplate = template ?? buildRuntimeTemplate(website);
+  if (loading) {
     return (
-      <div className="h-screen">
-        {useLegacyEditor ? (
-          <WebsiteEditor
-            template={resolvedTemplate!}
-            websiteName={website.name}
-            prompt={website.config?.prompt || ""}
-            onBack={() => setIsEditing(false)}
-            onSave={handleSaveTemplate}
-            initialEmbedConfig={website.config?.embedConfig}
-          />
-        ) : (
-          <EditorShell
-            websiteId={website.id}
-            websiteName={website.name}
-            template={resolvedTemplate!}
-            prompt={website.config?.prompt || ""}
-            compositionGraph={website.config?.compositionGraph}
-            onBack={() => setIsEditing(false)}
-            onSave={handleSaveTemplate}
-            initialEmbedConfig={website.config?.embedConfig}
-          />
-        )}
+      <div className="flex items-center justify-center h-screen">
+        <LoadingSpinner size="lg" />
       </div>
     );
   }
+  if (!website) return null;
 
-  const displayUrl = website.published_url || getPreviewUrl();
-  const websiteType = website.config?.type;
-  const websiteNiche = website.config?.niche;
-  const resolvedTemplate = template ?? buildRuntimeTemplate(website);
-  const shouldPreferTemplatePreview = !!resolvedTemplate?.sections?.length;
+  const deviceWidth = device === "mobile" ? 390 : device === "tablet" ? 768 : "100%";
 
   return (
-    <AppLayout pageTitle={website.name} credits={profile?.credits_balance ?? 0}>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/websites")}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold">{website.name}</h1>
-                <StatusBadge status={website.status} />
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                {websiteType && (
-                  <Badge variant="outline">
-                    {websiteType === "landing" ? "Landing Page" : "Institucional"}
-                  </Badge>
-                )}
-                {websiteNiche && <Badge variant="secondary">{websiteNiche}</Badge>}
-              </div>
-            </div>
-          </div>
+    <div className="h-screen flex flex-col bg-background">
+      {/* Top bar */}
+      <header className="h-14 border-b flex items-center justify-between px-4 shrink-0">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/websites")}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setIsEditing(true)}>
-              <Pencil className="h-4 w-4 mr-2" />
-              Editar
-            </Button>
-            {website.status === "draft" ? (
-              <Button onClick={handlePublish}>
-                <Globe className="h-4 w-4 mr-2" />
-                Publicar
-              </Button>
-            ) : (
-              <Button variant="outline" asChild>
-                <a
-                  href={displayUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Ver Online
-                </a>
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-destructive"
-              onClick={() => setShowDeleteDialog(true)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <h1 className="font-semibold">{website.name}</h1>
+            <StatusBadge status={website.status} />
           </div>
         </div>
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
+          <Button size="sm" variant={device === "desktop" ? "default" : "ghost"} className="h-7 px-2" onClick={() => setDevice("desktop")}><Monitor className="h-3.5 w-3.5" /></Button>
+          <Button size="sm" variant={device === "tablet" ? "default" : "ghost"} className="h-7 px-2" onClick={() => setDevice("tablet")}><Tablet className="h-3.5 w-3.5" /></Button>
+          <Button size="sm" variant={device === "mobile" ? "default" : "ghost"} className="h-7 px-2" onClick={() => setDevice("mobile")}><Smartphone className="h-3.5 w-3.5" /></Button>
+        </div>
+        <div className="flex items-center gap-2">
+          {website.status === "active" && website.published_url && (
+            <Button variant="outline" size="sm" asChild>
+              <a href={website.published_url} target="_blank" rel="noreferrer"><ExternalLink className="h-3.5 w-3.5 mr-1.5" />Ver Online</a>
+            </Button>
+          )}
+          <Button size="sm" onClick={publish} disabled={!html}>
+            <Globe className="h-3.5 w-3.5 mr-1.5" />Publicar
+          </Button>
+        </div>
+      </header>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="preview">
-              <Eye className="h-4 w-4 mr-2" />
-              Pré-visualização
-            </TabsTrigger>
-            <TabsTrigger value="details">
-              Detalhes
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="preview" className="mt-4">
-            <div className="bg-background rounded-lg shadow-lg overflow-hidden border">
-              <div className="flex items-center gap-2 p-3 border-b bg-muted/50">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500" />
-                  <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                  <div className="w-3 h-3 rounded-full bg-green-500" />
-                </div>
-                <div className="flex-1 text-center">
-                  <span className="text-xs text-muted-foreground">
-                    {displayUrl}
-                  </span>
-                </div>
+      <div className="flex-1 flex min-h-0">
+        {/* Chat */}
+        <aside className="w-[380px] border-r flex flex-col min-h-0">
+          <div className="px-4 py-3 border-b flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">Assistente Kinjani</span>
+          </div>
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
+            {history.length === 0 && !busy && (
+              <div className="text-sm text-muted-foreground">
+                <p className="mb-2">Olá! Descreve o site que queres ou peça uma alteração.</p>
+                <p className="text-xs">Exemplos:<br/>• "Cria um site de psicologia, calmo, com booking"<br/>• "Adiciona uma secção de testemunhos"<br/>• "Muda a cor principal para verde-escuro"<br/>• "Coloca botão 'WhatsApp' que abre wa.me/258840000000"</p>
               </div>
-              {website.config?.compositionGraph && !shouldPreferTemplatePreview ? (
-                <CompositionRenderer graph={website.config.compositionGraph} />
-              ) : (
-                <WebsitePreview 
-                  template={resolvedTemplate!} 
-                  websiteName={website.name}
-                  embedConfig={website.config?.embedConfig}
-                />
-              )}
+            )}
+            {history.map((m, i) => (
+              <div key={i} className={m.role === "user" ? "flex justify-end" : ""}>
+                <div className={m.role === "user"
+                  ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-3 py-2 text-sm max-w-[85%]"
+                  : "text-sm text-foreground max-w-[95%] whitespace-pre-wrap"
+                }>{m.content}</div>
+              </div>
+            ))}
+            {busy && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>{busyLabel || "A pensar..."}</span>
+              </div>
+            )}
+          </div>
+          <div className="p-3 border-t">
+            <div className="relative">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+                placeholder={html ? "Descreve a alteração..." : "Descreve o site que queres criar..."}
+                className="min-h-[80px] pr-12 resize-none"
+                disabled={busy}
+              />
+              <Button size="icon" className="absolute bottom-2 right-2 h-8 w-8" onClick={send} disabled={busy || !input.trim()}>
+                <Send className="h-3.5 w-3.5" />
+              </Button>
             </div>
-          </TabsContent>
+          </div>
+        </aside>
 
-          <TabsContent value="details" className="mt-4">
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="space-y-4 p-6 rounded-lg border bg-card">
-                <h3 className="font-semibold">Informações do Site</h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Nome</p>
-                    <p className="font-medium">{website.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Tipo</p>
-                    <p className="font-medium">
-                      {websiteType === "landing" ? "Landing Page" : "Site Institucional"}
-                    </p>
-                  </div>
-                  {websiteNiche && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Nicho</p>
-                      <p className="font-medium">{websiteNiche}</p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm text-muted-foreground">Template</p>
-                    <p className="font-medium">{template.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Data de Criação</p>
-                    <p className="font-medium">
-                      {new Date(website.created_at).toLocaleDateString("pt-PT")}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4 p-6 rounded-lg border bg-card">
-                <h3 className="font-semibold">Prompt de Geração</h3>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {website.config?.prompt || "Nenhum prompt especificado."}
-                </p>
-              </div>
+        {/* Preview */}
+        <main className="flex-1 bg-muted/30 overflow-auto flex items-start justify-center p-6">
+          {html ? (
+            <div className="bg-white shadow-2xl rounded-lg overflow-hidden transition-all" style={{ width: deviceWidth, maxWidth: "100%", height: "calc(100vh - 7rem)" }}>
+              <iframe srcDoc={html} title="preview" className="w-full h-full border-0" sandbox="allow-scripts allow-same-origin allow-forms allow-popups" />
             </div>
-          </TabsContent>
-        </Tabs>
+          ) : (
+            <div className="text-center text-muted-foreground mt-20">
+              <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Escreve um pedido no chat para começar.</p>
+            </div>
+          )}
+        </main>
       </div>
-
-      <ConfirmDialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        title="Eliminar Site"
-        description={`Tem a certeza que deseja eliminar o site "${website.name}"? Esta ação não pode ser revertida.`}
-        confirmLabel="Eliminar"
-        onConfirm={handleDelete}
-        variant="destructive"
-      />
-    </AppLayout>
+    </div>
   );
 }

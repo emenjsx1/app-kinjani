@@ -86,6 +86,7 @@ export default function PublicWebsitePage() {
   const [template, setTemplate] = useState<WebsiteTemplate | null>(null);
   const [graph, setGraph] = useState<CompositionGraph | null>(null);
   const [embedConfig, setEmbedConfig] = useState<EmbedConfig | undefined>();
+  const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -113,6 +114,11 @@ export default function PublicWebsitePage() {
         }
 
         setWebsiteName(data.name);
+        if ((data as any).generated_html) {
+          setGeneratedHtml((data as any).generated_html);
+          setIsLoading(false);
+          return;
+        }
         const config = parseConfig(data.config);
 
         if (config?.compositionGraph) {
@@ -141,6 +147,17 @@ export default function PublicWebsitePage() {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <LoadingSpinner size="lg" />
       </div>
+    );
+  }
+
+  if (generatedHtml) {
+    return (
+      <iframe
+        srcDoc={generatedHtml}
+        title={websiteName}
+        className="fixed inset-0 w-screen h-screen border-0"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+      />
     );
   }
 

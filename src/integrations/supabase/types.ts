@@ -219,9 +219,11 @@ export type Database = {
       }
       websites: {
         Row: {
+          chat_history: Json
           client_id: string | null
           config: Json | null
           created_at: string
+          generated_html: string | null
           id: string
           name: string
           published_url: string | null
@@ -231,9 +233,11 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          chat_history?: Json
           client_id?: string | null
           config?: Json | null
           created_at?: string
+          generated_html?: string | null
           id?: string
           name: string
           published_url?: string | null
@@ -243,9 +247,11 @@ export type Database = {
           user_id: string
         }
         Update: {
+          chat_history?: Json
           client_id?: string | null
           config?: Json | null
           created_at?: string
+          generated_html?: string | null
           id?: string
           name?: string
           published_url?: string | null
