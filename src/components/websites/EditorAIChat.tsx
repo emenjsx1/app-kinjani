@@ -10,6 +10,8 @@ import { useProfile } from "@/hooks/useProfile";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { VisualAIContextBuilder, type VisualAttachment } from "@/core/ai/context/VisualAIContextBuilder";
+import { runCreativeSession } from "@/core/ai/creative-os";
+import { AgentActivityPanel } from "@/components/ai/AgentActivityPanel";
 
 interface Message {
   id: string;
