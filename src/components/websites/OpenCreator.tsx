@@ -302,33 +302,40 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
           <div className="p-10 md:p-14 min-h-[460px] flex flex-col justify-center">
             <div className="space-y-2 mb-8">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                <Wand2 className="h-3 w-3 animate-pulse" /> A criar
+                <Wand2 className="h-3 w-3 animate-pulse" /> Pensamento criativo em curso
               </div>
               <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-                A compor o seu site...
+                A IA está a raciocinar sobre a sua visão
               </h2>
               <p className="text-sm text-muted-foreground line-clamp-2">{prompt}</p>
             </div>
 
-            <ul className="space-y-3">
+            <ul className="space-y-4">
               {stages.map((s) => (
                 <li
                   key={s.id}
                   className={cn(
-                    "flex items-center gap-3 text-sm transition-all duration-300",
-                    s.status === "pending" && "opacity-40",
+                    "flex items-start gap-3 text-sm transition-all duration-300",
+                    s.status === "pending" && "opacity-30",
                     s.status === "running" && "opacity-100 translate-x-1",
-                    s.status === "done" && "opacity-80",
+                    s.status === "done" && "opacity-90",
                   )}
                 >
-                  <span className="h-6 w-6 flex items-center justify-center rounded-full bg-muted/50">
+                  <span className="h-6 w-6 mt-0.5 flex items-center justify-center rounded-full bg-muted/50 shrink-0">
                     {s.status === "done" && <Check className="h-3.5 w-3.5 text-primary" />}
                     {s.status === "running" && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
                     {s.status === "pending" && <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40" />}
                   </span>
-                  <span className={cn(s.status === "running" && "text-foreground font-medium")}>
-                    {s.label}
-                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn("leading-tight", s.status === "running" && "text-foreground font-medium")}>
+                      {s.label}
+                    </p>
+                    {s.detail && (
+                      <p className="mt-1 text-xs text-muted-foreground/90 leading-relaxed">
+                        {s.detail}
+                      </p>
+                    )}
+                  </div>
                 </li>
               ))}
             </ul>
