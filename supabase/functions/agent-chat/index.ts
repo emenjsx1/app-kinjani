@@ -45,6 +45,36 @@ function isSupportedMime(mime: string): boolean {
   );
 }
 
+function normalizeMime(mime: string): string {
+  const clean = mime.toLowerCase().trim();
+  if (clean.startsWith("audio/webm")) return "audio/wav";
+  if (clean === "audio/mpga") return "audio/mpeg";
+  return clean;
+}
+
+function buildAttachmentGuidance(attachments: Attachment[] | undefined): string | null {
+  if (!attachments?.length) return null;
+
+  const notes = attachments
+    .slice(0, 6)
+    .map((att, index) => {
+      const mime = normalizeMime(att.type || "application/octet-stream");
+      if (mime.startsWith("audio/")) {
+        return `Anexo ${index + 1}: áudio (${att.name || mime}). Primeiro compreende/transcreve o conteúdo falado; depois responde com base nele.`;
+      }
+      if (mime === "application/pdf") {
+        return `Anexo ${index + 1}: PDF (${att.name || "documento"}). Lê o conteúdo antes de responder.`;
+      }
+      if (mime.startsWith("image/")) {
+        return `Anexo ${index + 1}: imagem (${att.name || mime}). Observa os detalhes visuais relevantes antes de responder.`;
+      }
+      return null;
+    })
+    .filter(Boolean);
+
+  return notes.length ? notes.join("\n") : null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -76,9 +106,14 @@ Deno.serve(async (req) => {
       if (m.content && m.content.trim()) parts.push({ text: m.content });
 
       if (i === lastUserIdx && Array.isArray(attachments) && attachments.length) {
+        const attachmentGuidance = buildAttachmentGuidance(attachments);
+        if (attachmentGuidance) parts.unshift({ text: `${attachmentGuidance}\n\nMensagem do utilizador: ${m.content || "(ver anexos)"}` });
         for (const att of attachments.slice(0, 6)) {
           const inline = dataUrlToInlineData(att.dataUrl);
-          if (!inline || !isSupportedMime(inline.mime_type)) continue;
+          if (!inline) continue;
+          const normalizedMime = normalizeMime(inline.mime_type);
+          if (!isSupportedMime(normalizedMime)) continue;
+          inline.mime_type = normalizedMime;
           parts.push({ inline_data: inline });
         }
       }
