@@ -258,16 +258,10 @@ export default function IntegrationsPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            {(() => {
-              const limit = (profile as any)?.instance_limit ?? 1;
-              const used = instances.length;
-              return (
-                <div className="mb-3 text-xs text-muted-foreground">
-                  <strong>{used}</strong> / <strong>{limit}</strong> instâncias usadas
-                  {used >= limit && <span className="text-amber-600 ml-2">+ instâncias = 500 créditos</span>}
-                </div>
-              );
-            })()}
+            <div className="mb-3 text-xs text-muted-foreground">
+              <strong>{instances.length}</strong> instância(s) ativa(s) ·{" "}
+              <span className="text-foreground">50 créditos/mês por instância</span>
+            </div>
             {isLoading ? (
               <div className="flex items-center justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
             ) : instances.length === 0 ? (
