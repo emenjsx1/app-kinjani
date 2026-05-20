@@ -131,41 +131,6 @@ async function sendWhatsAppMessage(instanceKey: string, phone: string, message: 
   }
 }
 
-async function generateAgentResponse(messages: ChatMsg[], agentPrompt: string, agentType?: string): Promise<string> {
-  const geminiKey = Deno.env.get('GEMINI_API_KEY');
-
-  if (!geminiKey) {
-    console.error('GEMINI_API_KEY not configured');
-    return 'Desculpe, não consigo processar sua mensagem no momento.';
-  }
-
-  const baseSystem = AGENT_SYSTEM_PROMPTS[agentType || ''] || AGENT_SYSTEM_PROMPTS['atendimento-faq'];
-  const systemText = (agentPrompt ? `${baseSystem}\n\nInstruções específicas:\n${agentPrompt}` : baseSystem) + BASE_RULES;
-
-  try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemText }] },
-        contents: messages.map((message) => ({
-          role: message.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: message.content }],
-        })),
-        generationConfig: {
-          maxOutputTokens: 700,
-          temperature: 0.7,
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Gemini API error:', errorText);
-      return 'Desculpe, ocorreu um erro ao processar sua mensagem.';
-    }
 
 type GeminiPart = { text?: string; inline_data?: { mime_type: string; data: string } };
 
