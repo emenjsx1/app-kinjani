@@ -327,6 +327,66 @@ export type Database = {
         }
         Relationships: []
       }
+      user_integration_settings: {
+        Row: {
+          created_at: string
+          email_daily_limit: number
+          email_default_recipients: string | null
+          email_default_sender_address: string | null
+          email_default_sender_name: string | null
+          email_provider: string
+          email_smtp_host: string | null
+          email_smtp_password: string | null
+          email_smtp_port: number | null
+          email_smtp_user: string | null
+          id: string
+          updated_at: string
+          user_id: string
+          whatsapp_daily_limit: number
+          whatsapp_default_instance_key: string | null
+          whatsapp_delay_max_seconds: number
+          whatsapp_delay_min_seconds: number
+        }
+        Insert: {
+          created_at?: string
+          email_daily_limit?: number
+          email_default_recipients?: string | null
+          email_default_sender_address?: string | null
+          email_default_sender_name?: string | null
+          email_provider?: string
+          email_smtp_host?: string | null
+          email_smtp_password?: string | null
+          email_smtp_port?: number | null
+          email_smtp_user?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+          whatsapp_daily_limit?: number
+          whatsapp_default_instance_key?: string | null
+          whatsapp_delay_max_seconds?: number
+          whatsapp_delay_min_seconds?: number
+        }
+        Update: {
+          created_at?: string
+          email_daily_limit?: number
+          email_default_recipients?: string | null
+          email_default_sender_address?: string | null
+          email_default_sender_name?: string | null
+          email_provider?: string
+          email_smtp_host?: string | null
+          email_smtp_password?: string | null
+          email_smtp_port?: number | null
+          email_smtp_user?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+          whatsapp_daily_limit?: number
+          whatsapp_default_instance_key?: string | null
+          whatsapp_delay_max_seconds?: number
+          whatsapp_delay_min_seconds?: number
+        }
+        Relationships: []
+      }
       websites: {
         Row: {
           chat_history: Json
