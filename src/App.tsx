@@ -28,6 +28,8 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import Phase6ShowcasePage from "./pages/Phase6ShowcasePage";
 import CloudPage from "./pages/CloudPage";
 import DomainsPage from "./pages/DomainsPage";
+import WhatsAppSettingsPage from "./pages/WhatsAppSettingsPage";
+import EmailSettingsPage from "./pages/EmailSettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +63,8 @@ const App = () => (
             <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
             <Route path="/credits" element={<ProtectedRoute><CreditsPage /></ProtectedRoute>} />
             <Route path="/integrations" element={<ProtectedRoute><IntegrationsPage /></ProtectedRoute>} />
+            <Route path="/integrations/whatsapp" element={<ProtectedRoute><WhatsAppSettingsPage /></ProtectedRoute>} />
+            <Route path="/integrations/email" element={<ProtectedRoute><EmailSettingsPage /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/cloud" element={<ProtectedRoute><CloudPage /></ProtectedRoute>} />
