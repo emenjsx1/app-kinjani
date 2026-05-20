@@ -159,7 +159,7 @@ Devolve o plano completo conforme schema. Lembra-te: nome de marca real e curto,
 
     const data = await resp.json();
     const raw = data?.choices?.[0]?.message?.content;
-    if (!raw) throw new Error("Resposta vazia");
+    if (!raw) throw new Error("Resposta vazia do modelo ao planear o website");
     const plan = typeof raw === "string" ? JSON.parse(raw) : raw;
 
     console.log("plan-website OK:", plan.brand, "→", plan.sections?.length, "secções");
