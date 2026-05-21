@@ -1,6 +1,7 @@
-// Generates a full standalone HTML page from a prompt using Lovable AI Gateway (Gemini 2.5 Pro).
+// Generates a full standalone HTML page from a prompt using Gemini.
 // Returns: { html: string }. Cobra créditos (site_create = 50) antes de chamar o modelo.
 import { chargeCredits, insufficientCreditsResponse } from "../_shared/credits.ts";
+import { callAI } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -13,23 +14,28 @@ A tua missão: gerar UM documento HTML completo, standalone, premium, único e l
 REGRAS ABSOLUTAS:
 1. Devolves APENAS HTML puro começando com <!DOCTYPE html>. Sem markdown, sem \`\`\`, sem explicações.
 2. Usa Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
-3. Usa Google Fonts apropriadas (Inter, Space Grotesk, Fraunces, Instrument Serif, etc) — escolhe consoante o nicho.
+3. Se o utilizador pedir fontes específicas, usa EXATAMENTE essas fontes. Caso contrário escolhe Google Fonts apropriadas.
 4. Inclui meta viewport responsiva. Mobile-first.
 5. Inclui um <title> apropriado e <meta name="description">.
-6. Design DEVE ser único, art-directed, NÃO genérico. Cada pedido = layout diferente. Varia paletas, tipografia, estrutura (split, fullscreen, magazine, bento, asymmetric) e micro-interações (transitions, hover, scroll reveal com IntersectionObserver inline).
+6. Design DEVE ser único, art-directed, NÃO genérico. Cada pedido = layout diferente. Varia paletas, tipografia, estrutura e micro-interações sem cair em template barato.
 7. Conteúdo em PORTUGUÊS (PT-PT) por defeito a menos que o pedido peça outra língua.
-8. Usa imagens estáveis e públicas de https://picsum.photos/seed/<tema>/1600/900 ou semelhantes; NÃO uses images.unsplash.com nem source.unsplash.com.
+8. Respeita EXATAMENTE a marca, o setor, a paleta, o tom e a lista de secções pedidas. NÃO substituas secções pedidas por secções inventadas.
 9. Conteúdo real, persuasivo, profissional — NÃO uses "Lorem ipsum".
-10. Footer completo. Formulários de contacto abrem wa.me/<numero> ou mailto: se houver dados.
+10. Se o utilizador pedir uma landing page, gera UMA landing page one-page. NÃO inventes rotas, páginas internas, /sobre, /servicos, /contacto ou data-route a menos que isso seja explicitamente pedido.
+11. Se o utilizador der um nome de marca/negócio, usa esse nome exatamente como marca principal. NÃO inventes outro nome.
+12. Imagens têm de ser coerentes com o negócio. NUNCA uses animais, paisagens aleatórias ou imagens irrelevantes. Se não tiveres certeza, prefere fundos elegantes/gradientes/fotografia clínica neutra em vez de imagem errada.
+13. Se usares imagens remotas, usa keywords estritas e relevantes ao setor (ex: dental, dentist, orthodontics, smile, clinic interior, doctor portrait) — nunca keywords genéricas.
+14. Footer completo. Formulários de contacto devem ser reais e visualmente premium.
 
 MODO DE NAVEGAÇÃO — ESCOLHE 1 dos 2 conforme o pedido:
 
-(A) ONE-PAGE (default para landing pages, sites simples):
+(A) ONE-PAGE (OBRIGATÓRIO por defeito para landing pages e sites simples):
     - Uma única página com várias secções com id (#home, #sobre, #servicos, #portfolio, #contacto).
     - Nav com links âncora (href="#sobre", etc.) e scroll-behavior: smooth.
     - Mínimo 5 secções ricas.
+    - Nunca uses href="/sobre" nem <section data-route="..."> neste modo.
 
-(B) MULTI-PAGE (quando o utilizador pedir "site institucional", "várias páginas", "com rotas", "página sobre", "página separada", etc.):
+(B) MULTI-PAGE (SÓ quando o utilizador pedir explicitamente "várias páginas", "com rotas", "/sobre", "página separada", etc.):
     - Gera várias rotas no MESMO documento usando <section data-route="/rota">.
     - Rotas típicas: data-route="/" (home), "/sobre", "/servicos", "/portfolio", "/contacto", "/blog".
     - A primeira rota é sempre "/" (home).
@@ -40,47 +46,6 @@ MODO DE NAVEGAÇÃO — ESCOLHE 1 dos 2 conforme o pedido:
     - NÃO uses display:none inline nas rotas — o runtime trata disso.
 
 QUALIDADE = AWWWARDS. Pensa como director criativo, não como template.`;
-
-const UNSPLASH_URL_PATTERN = /https?:\/\/(?:images|source)\.unsplash\.com\/[^"'\s)<>]+/gi;
-
-function sanitizeSeed(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "image";
-}
-
-function defaultHeight(width: number) {
-  if (width <= 320) return width;
-  if (width <= 640) return Math.round(width * 0.75);
-  return Math.round(width * 0.5625);
-}
-
-function normalizeImageUrl(rawUrl: string) {
-  try {
-    const url = new URL(rawUrl);
-    let width = Number(url.searchParams.get("w")) || 1600;
-    let height = Number(url.searchParams.get("h")) || defaultHeight(width);
-    let seed = "image";
-
-    if (url.hostname === "source.unsplash.com") {
-      const sizeMatch = url.pathname.match(/\/(\d+)x(\d+)\/?$/);
-      if (sizeMatch) {
-        width = Number(sizeMatch[1]) || width;
-        height = Number(sizeMatch[2]) || height;
-      }
-      seed = sanitizeSeed(url.search.slice(1) || url.pathname || "image");
-    } else {
-      const photoMatch = url.pathname.match(/photo-([a-z0-9-]+)/i);
-      seed = sanitizeSeed(photoMatch?.[1] || `${width}x${height}`);
-    }
-
-    return `https://picsum.photos/seed/${seed}/${width}/${height}`;
-  } catch {
-    return "https://picsum.photos/seed/image/1600/900";
-  }
-}
-
-function normalizeGeneratedHtml(html: string) {
-  return html.replace(UNSPLASH_URL_PATTERN, normalizeImageUrl);
-}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -94,56 +59,43 @@ Deno.serve(async (req) => {
       });
     }
 
-    const openaiKey = Deno.env.get("OPENAI_API_KEY");
     const geminiKey = Deno.env.get("GEMINI_API_KEY");
-    const apiKey = openaiKey || geminiKey;
-    if (!apiKey) {
-      return new Response(JSON.stringify({ error: "Nenhuma API key de IA configurada (OPENAI_API_KEY ou GEMINI_API_KEY)" }), {
+    if (!geminiKey) {
+      return new Response(JSON.stringify({ error: "GEMINI_API_KEY não configurada." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const useOpenAI = !!openaiKey;
-    const aiUrl = useOpenAI
-      ? "https://api.openai.com/v1/chat/completions"
-      : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    const aiModel = useOpenAI ? "gpt-4o" : "gemini-2.5-flash";
 
     // Charge 50 credits before generating.
     const charge = await chargeCredits(req, "site_create", `Geração de site${websiteName ? `: ${websiteName}` : ""}`);
     if (!charge.ok) return insufficientCreditsResponse(corsHeaders, charge);
 
-    const userMsg = `Nome do projecto: ${websiteName || "Sem nome"}\n\nPedido do utilizador:\n${prompt}\n\nGera agora a página HTML completa, premium e única.`;
+    const userMsg = `NOME DO PROJECTO / MARCA: ${websiteName || "Sem nome"}
 
-    const body: Record<string, unknown> = {
-      model: aiModel,
+PEDIDO DO UTILIZADOR:
+${prompt}
+
+INSTRUÇÕES DE EXECUÇÃO:
+- Se o pedido disser "landing page", gera apenas one-page.
+- Se o pedido listar secções, inclui todas essas secções.
+- Se o pedido exigir um estilo específico (ex: luxo, branco/bege, Montserrat + Inter, premium healthcare), cumpre-o literalmente.
+- Se o setor for dental/saúde, toda a imagem, copy e UI devem parecer clínica dentária premium moderna.
+- Não inventes rotas nem páginas separadas sem pedido explícito.
+- Não uses imagens irrelevantes. Zero animais, zero placeholders aleatórios.
+
+Gera agora a página HTML completa, premium e única.`;
+
+    const ai = await callAI({
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userMsg },
       ],
       temperature: 0.9,
-    };
-    if (useOpenAI) body.max_tokens = 16000;
-
-    const resp = await fetch(aiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
+      geminiModel: "gemini-2.5-flash",
     });
 
-    if (!resp.ok) {
-      const txt = await resp.text();
-      return new Response(JSON.stringify({ error: `AI gateway error: ${resp.status} ${txt}` }), {
-        status: resp.status === 429 || resp.status === 402 ? resp.status : 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const data = await resp.json();
-    let html: string = data?.choices?.[0]?.message?.content || "";
+    let html: string = ai.content || "";
     if (!html.trim()) {
       return new Response(JSON.stringify({ error: "Resposta vazia do modelo ao criar o site." }), {
         status: 502,
@@ -156,7 +108,6 @@ Deno.serve(async (req) => {
       // wrap minimal
       html = `<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><script src="https://cdn.tailwindcss.com"></script></head><body>${html}</body></html>`;
     }
-    html = normalizeGeneratedHtml(html);
 
     return new Response(JSON.stringify({ html }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
