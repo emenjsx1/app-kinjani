@@ -43,42 +43,7 @@ REGRAS DE CHAT (action="chat"):
 REGRAS DE PLANO (action="plan"):
 - Devolve um plano numerado curto em message. NÃO devolvas html.`;
 
-const UNSPLASH_URL_PATTERN = /https?:\/\/(?:images|source)\.unsplash\.com\/[^"'\s)<>]+/gi;
-
-function sanitizeSeed(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "image";
-}
-
-function fallbackHeight(width: number) {
-  if (width <= 320) return width;
-  if (width <= 640) return Math.round(width * 0.75);
-  return Math.round(width * 0.5625);
-}
-
-function normalizeImageUrl(rawUrl: string) {
-  try {
-    const url = new URL(rawUrl);
-    let width = Number(url.searchParams.get("w")) || 1600;
-    let height = Number(url.searchParams.get("h")) || fallbackHeight(width);
-    let seed = "image";
-
-    if (url.hostname === "source.unsplash.com") {
-      const sizeMatch = url.pathname.match(/\/(\d+)x(\d+)\/?$/);
-      if (sizeMatch) {
-        width = Number(sizeMatch[1]) || width;
-        height = Number(sizeMatch[2]) || height;
-      }
-      seed = sanitizeSeed(url.search.slice(1) || url.pathname || "image");
-    } else {
-      const photoMatch = url.pathname.match(/photo-([a-z0-9-]+)/i);
-      seed = sanitizeSeed(photoMatch?.[1] || `${width}x${height}`);
-    }
-
-    return `https://picsum.photos/seed/${seed}/${width}/${height}`;
-  } catch {
-    return "https://picsum.photos/seed/image/1600/900";
-  }
-}
+// (a normalização de imagens é feita em normalizeGeneratedHtml via _shared/image-resolver.ts)
 
 async function normalizeGeneratedHtml(html: string, context = "") {
   // Substitui URLs Unsplash inventadas e qualquer <img> por imagens reais (Pexels API ou catálogo curado).
