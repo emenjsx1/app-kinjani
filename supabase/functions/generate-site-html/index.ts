@@ -2,7 +2,6 @@
 // Returns: { html: string }. Cobra créditos (site_create = 50) antes de chamar o modelo.
 import { chargeCredits, insufficientCreditsResponse } from "../_shared/credits.ts";
 import { callAI } from "../_shared/ai.ts";
-import { QUALITY_REFERENCE_HTML } from "./reference-quality.ts";
 
 
 const corsHeaders = {
