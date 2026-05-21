@@ -44,7 +44,7 @@ serve(async (req) => {
     const aiUrl = useOpenAI
       ? "https://api.openai.com/v1/chat/completions"
       : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    const aiModel = useOpenAI ? "gpt-4o-mini" : "gemini-2.5-flash";
+    const aiModel = useOpenAI ? "gpt-5-mini" : "gemini-2.5-flash";
 
     const userPrompt = `
 Edita o conteúdo desta secção "${sectionType}" para o website "${websiteName}" (nicho: ${niche}).

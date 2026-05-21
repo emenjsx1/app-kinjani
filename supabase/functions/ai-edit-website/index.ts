@@ -134,7 +134,7 @@ serve(async (req) => {
     const aiUrl = useOpenAI
       ? "https://api.openai.com/v1/chat/completions"
       : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    const aiModel = useOpenAI ? "gpt-4o-mini" : "gemini-2.5-flash";
+    const aiModel = useOpenAI ? "gpt-5" : "gemini-2.5-flash";
 
     // ---------- Modern structured-output mode ----------
     if (body.mode === "plan") {
@@ -222,7 +222,7 @@ Devolve o JSON.`;
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         // Use a vision-capable model when images are present.
-        model: useOpenAI ? (hasVision ? "gpt-4o" : "gpt-4o-mini") : "gemini-2.5-flash",
+        model: useOpenAI ? (hasVision ? "gpt-5" : "gpt-5") : "gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
