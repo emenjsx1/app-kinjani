@@ -153,19 +153,23 @@ Deno.serve(async (req) => {
 
     const wantStream = req.headers.get("accept")?.includes("text/event-stream") === true;
 
+    const isGpt5 = useOpenAI && aiModel.startsWith("gpt-5");
+    const editBody: Record<string, unknown> = {
+      model: aiModel,
+      messages,
+      response_format: { type: "json_object" },
+      stream: wantStream,
+    };
+    if (isGpt5) editBody.max_completion_tokens = 12000;
+    else editBody.temperature = 0.5;
+
     const resp = await fetch(aiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: aiModel,
-        temperature: 0.5,
-        messages,
-        response_format: { type: "json_object" },
-        stream: wantStream,
-      }),
+      body: JSON.stringify(editBody),
     });
 
     if (!resp.ok) {

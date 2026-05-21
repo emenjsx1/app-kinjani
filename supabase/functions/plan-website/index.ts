@@ -142,18 +142,22 @@ Nome sugerido (se quiseres ignorar e inventar melhor, ignora): ${websiteName ?? 
 
 Devolve EXCLUSIVAMENTE um objecto JSON puro (NÃO wrappes em "plan" ou outra chave) com EXACTAMENTE estes campos top-level: brand, tagline, type, domainLabel, contact{email,phone,address}, palette{primary,secondary,accent,background,text}, font, sections (array de 6-9 objetos {type,title,content}). Lembra-te: nome de marca real e curto, paleta sofisticada do setor, copy completa e profissional, imagens Unsplash relevantes em cada slot de imagem.`;
 
+    const isGpt5 = useOpenAI && aiModel.startsWith("gpt-5");
+    const planBody: Record<string, unknown> = {
+      model: aiModel,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userMessage },
+      ],
+      response_format: useOpenAI ? { type: "json_object" } : { type: "json_schema", json_schema: PLAN_SCHEMA },
+    };
+    if (isGpt5) planBody.max_completion_tokens = 8000;
+    else planBody.temperature = 0.85;
+
     const resp = await fetch(aiUrl, {
       method: "POST",
       headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: aiModel,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userMessage },
-        ],
-        response_format: useOpenAI ? { type: "json_object" } : { type: "json_schema", json_schema: PLAN_SCHEMA },
-        temperature: 0.85,
-      }),
+      body: JSON.stringify(planBody),
     });
 
     if (!resp.ok) {
