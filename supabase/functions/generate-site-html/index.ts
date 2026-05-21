@@ -12,6 +12,7 @@ import {
   generateCreativePrompt
 } from "./creative-intelligence.ts";
 import { runCreativeDirector } from "./creative-director.ts";
+import { resolveImages } from "../_shared/image-resolver.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -308,6 +309,13 @@ Foca especialmente em:
 - Usar gradientes e glassmorphism
 - Garantir espaçamento generoso (py-20 md:py-32)
 - Copy real e persuasivo (ZERO Lorem Ipsum)`;
+    }
+
+    // Substitui TODAS as imagens por reais (Pexels API se houver chave, caso contrário catálogo curado Unsplash)
+    try {
+      html = await resolveImages(html, String(prompt || ""));
+    } catch (imgErr) {
+      console.error("[image-resolver] falhou, mantendo HTML original", imgErr);
     }
 
     // Retorna o HTML com informações de qualidade

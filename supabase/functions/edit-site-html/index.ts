@@ -4,6 +4,7 @@
 // Cobrança proporcional: pré-cobra 5 créd; após geração ajusta para o nível real (micro/small/medium/large/massive).
 import { chargeCredits, classifyEditByTokens, CREDIT_COSTS, insufficientCreditsResponse, resolveUserId } from "../_shared/credits.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveImages } from "../_shared/image-resolver.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,45 +43,16 @@ REGRAS DE CHAT (action="chat"):
 REGRAS DE PLANO (action="plan"):
 - Devolve um plano numerado curto em message. NÃO devolvas html.`;
 
-const UNSPLASH_URL_PATTERN = /https?:\/\/(?:images|source)\.unsplash\.com\/[^"'\s)<>]+/gi;
+// (a normalização de imagens é feita em normalizeGeneratedHtml via _shared/image-resolver.ts)
 
-function sanitizeSeed(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "image";
-}
-
-function fallbackHeight(width: number) {
-  if (width <= 320) return width;
-  if (width <= 640) return Math.round(width * 0.75);
-  return Math.round(width * 0.5625);
-}
-
-function normalizeImageUrl(rawUrl: string) {
+async function normalizeGeneratedHtml(html: string, context = "") {
+  // Substitui URLs Unsplash inventadas e qualquer <img> por imagens reais (Pexels API ou catálogo curado).
   try {
-    const url = new URL(rawUrl);
-    let width = Number(url.searchParams.get("w")) || 1600;
-    let height = Number(url.searchParams.get("h")) || fallbackHeight(width);
-    let seed = "image";
-
-    if (url.hostname === "source.unsplash.com") {
-      const sizeMatch = url.pathname.match(/\/(\d+)x(\d+)\/?$/);
-      if (sizeMatch) {
-        width = Number(sizeMatch[1]) || width;
-        height = Number(sizeMatch[2]) || height;
-      }
-      seed = sanitizeSeed(url.search.slice(1) || url.pathname || "image");
-    } else {
-      const photoMatch = url.pathname.match(/photo-([a-z0-9-]+)/i);
-      seed = sanitizeSeed(photoMatch?.[1] || `${width}x${height}`);
-    }
-
-    return `https://picsum.photos/seed/${seed}/${width}/${height}`;
-  } catch {
-    return "https://picsum.photos/seed/image/1600/900";
+    return await resolveImages(html, context);
+  } catch (e) {
+    console.error("[image-resolver] falhou no edit, mantendo HTML", e);
+    return html;
   }
-}
-
-function normalizeGeneratedHtml(html: string) {
-  return html.replace(UNSPLASH_URL_PATTERN, normalizeImageUrl);
 }
 
 Deno.serve(async (req) => {
@@ -226,8 +198,17 @@ Deno.serve(async (req) => {
               } catch (e) { console.error("edit refund failed", e); }
             }
           };
-          const flushFinal = () => {
-            controller.enqueue(encoder.encode(`\n__KINJANI_END__${JSON.stringify({ raw: fullText })}\n`));
+          const flushFinal = async () => {
+            // Pós-processa o HTML final para garantir imagens reais (Pexels/catálogo curado)
+            let finalRaw = fullText;
+            try {
+              const parsed = JSON.parse(fullText);
+              if (parsed?.action === "edit" && typeof parsed.html === "string") {
+                parsed.html = await normalizeGeneratedHtml(parsed.html, String(instruction || ""));
+                finalRaw = JSON.stringify(parsed);
+              }
+            } catch { /* não-JSON; segue como está */ }
+            controller.enqueue(encoder.encode(`\n__KINJANI_END__${JSON.stringify({ raw: finalRaw })}\n`));
           };
           try {
             while (true) {
@@ -252,7 +233,7 @@ Deno.serve(async (req) => {
               }
             }
             await settleCharge();
-            flushFinal();
+            await flushFinal();
           } catch (e) {
             controller.enqueue(encoder.encode(`\n__KINJANI_ERROR__${(e as Error).message}\n`));
           } finally {
@@ -302,11 +283,11 @@ Deno.serve(async (req) => {
     let newHtml: string | undefined;
 
     if (action === "edit") {
-      newHtml = normalizeGeneratedHtml(String(parsed.html || "")
+      newHtml = await normalizeGeneratedHtml(String(parsed.html || "")
         .replace(/^```html\s*/i, "")
         .replace(/^```\s*/i, "")
         .replace(/```\s*$/i, "")
-        .trim());
+        .trim(), String(instruction || ""));
       if (!newHtml.toLowerCase().includes("<html")) {
         return new Response(JSON.stringify({
           action: "chat",
