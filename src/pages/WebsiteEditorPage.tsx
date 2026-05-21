@@ -177,6 +177,26 @@ export default function WebsiteEditorPage() {
 
   const normalizeHtml = (value: string) => value.replace(/\s+/g, " ").trim();
 
+  const sanitizeHistory = (items: ChatMsg[]) => {
+    return items.map((item) => {
+      if (item.role !== "assistant") return item;
+      const parsed = parseAssistantJsonResponse(item.content);
+      if (!parsed || typeof parsed !== "object") return item;
+
+      const action = parsed.action === "edit" || parsed.action === "plan" ? parsed.action : item.action ?? "chat";
+      const normalizedSnapshot = typeof parsed.html === "string" && parsed.html.trim()
+        ? normalizeGeneratedHtml(parsed.html.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim())
+        : item.htmlSnapshot;
+
+      return {
+        ...item,
+        action,
+        content: typeof parsed.message === "string" && parsed.message.trim() ? parsed.message.trim() : item.content,
+        htmlSnapshot: normalizedSnapshot,
+      };
+    });
+  };
+
   const stop = () => {
     abortRef.current?.abort();
   };
@@ -187,11 +207,21 @@ export default function WebsiteEditorPage() {
       const w = await getWebsite(id);
       if (!w) return navigate("/websites");
       setWebsite(w);
-      const existingHtml = (w as any).generated_html || "";
-      const existingHistory = Array.isArray((w as any).chat_history) ? (w as any).chat_history : [];
+      const existingHtml = normalizeGeneratedHtml((w as any).generated_html || "");
+      const rawHistory = Array.isArray((w as any).chat_history) ? (w as any).chat_history : [];
+      const existingHistory = sanitizeHistory(rawHistory);
       setHtml(existingHtml);
       setHistory(existingHistory);
       setLoading(false);
+
+      const htmlChanged = existingHtml !== ((w as any).generated_html || "");
+      const historyChanged = JSON.stringify(existingHistory) !== JSON.stringify(rawHistory);
+      if (htmlChanged || historyChanged) {
+        await updateWebsite(w.id, {
+          generated_html: existingHtml,
+          chat_history: existingHistory,
+        } as any);
+      }
 
       // Auto-generate APENAS uma vez, e só se vier com ?fresh=1 (recém-criado)
       const isFresh = searchParams.get("fresh") === "1";
