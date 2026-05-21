@@ -1,75 +1,76 @@
-// Generates a full standalone HTML page from a prompt using Gemini.
+// KINJANI CREATIVE INTELLIGENCE ENGINE
+// Generates premium websites using creative reasoning + Gemini 2.5 Flash
 // Returns: { html: string }. Cobra créditos (site_create = 50) antes de chamar o modelo.
 import { chargeCredits, insufficientCreditsResponse } from "../_shared/credits.ts";
 import { callAI } from "../_shared/ai.ts";
-
+import { EXPERT_SYSTEM_PROMPT, SECTOR_SPECIFIC_INSTRUCTIONS } from "./expert-prompts.ts";
+import { MODERN_DESIGN_PATTERNS } from "./modern-components.ts";
+import { validateHTMLQuality, formatQualityReport } from "./quality-validator.ts";
+import {
+  analyzeCreativeDirection,
+  composeVisualStructure,
+  generateCreativePrompt
+} from "./creative-intelligence.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const SYSTEM_PROMPT = `És um web designer e developer de elite ao nível da Lovable / v0 / Framer.
+// Detecta o setor baseado no prompt
+function detectSector(prompt: string): string {
+  const lower = prompt.toLowerCase();
+  if (lower.match(/dent[aá]ri[ao]|cl[ií]nica dental|ortodon|implante|branqueamento|sorriso/)) return 'dental';
+  if (lower.match(/restaurante|comida|menu|chef|prato|gastronomia|cozinha/)) return 'restaurant';
+  if (lower.match(/saas|software|app|dashboard|plataforma|tech|startup/)) return 'saas';
+  if (lower.match(/portf[oó]lio|designer|fot[oó]grafo|criativo|artista/)) return 'portfolio';
+  if (lower.match(/cl[ií]nica|sa[uú]de|m[eé]dic|hospital|terapeuta|fisio/)) return 'health';
+  if (lower.match(/luxo|premium|exclusiv|high-end|elite/)) return 'luxury';
+  return 'general';
+}
+
+const SYSTEM_PROMPT = `${EXPERT_SYSTEM_PROMPT}
+
+═══════════════════════════════════════════════════════════════════════════════
+📚 EXEMPLOS DE COMPONENTES MODERNOS (Para inspiração)
+═══════════════════════════════════════════════════════════════════════════════
+
+${MODERN_DESIGN_PATTERNS.heroes}
+
+${MODERN_DESIGN_PATTERNS.bentoGrids}
+
+${MODERN_DESIGN_PATTERNS.cards}
+
+${MODERN_DESIGN_PATTERNS.navbars}
+
+${MODERN_DESIGN_PATTERNS.animations}
+
+${MODERN_DESIGN_PATTERNS.footers}
+
+${MODERN_DESIGN_PATTERNS.colorPalettes}
+
+═══════════════════════════════════════════════════════════════════════════════
+
+IMPORTANTE: Estes exemplos são para INSPIRAÇÃO. NÃO copies literalmente.
+Usa-os para entender o NÍVEL DE QUALIDADE esperado e cria algo ÚNICO para cada pedido.
+
 A tua missão: gerar UM documento HTML completo, standalone, premium, único e lindo, baseado no pedido do utilizador.
 
-REFERÊNCIA DE QUALIDADE DE CÓDIGO:
-- O utilizador quer HTML com cara de site feito à mão por um developer real, não layout tosco de IA.
-- Pensa em secções construídas manualmente, com hierarchy forte, CSS customizado no <style>, variáveis de cor, navbar cuidada, hero cinematográfica, transições subtis, reveal on scroll, mobile menu e footer real.
-- A composição deve parecer semelhante em nível de polimento a um template premium codado manualmente em Tailwind + CSS custom, NÃO a blocos genéricos empilhados.
-- Usa comentários de secção claros no HTML (ex: <!-- Hero -->, <!-- Serviços -->).
-- Cria contraste, ritmo vertical, alternância de fundos e detalhes de interação elegantes.
-- Inclui uma secção final "O que posso fazer por si?" com cards mostrando as capacidades do assistente de edição (mudar design, alterar conteúdo, adicionar secções, modificar estrutura, adicionar links, etc.), como na referência.
-
-REGRAS ABSOLUTAS:
+REGRAS TÉCNICAS ABSOLUTAS:
 1. Devolves APENAS HTML puro começando com <!DOCTYPE html>. Sem markdown, sem \`\`\`, sem explicações.
 2. Usa Tailwind CSS via CDN: <script src="https://cdn.tailwindcss.com"></script>
-3. Se o utilizador pedir fontes específicas, usa EXATAMENTE essas fontes. Caso contrário escolhe Google Fonts apropriadas.
-4. Inclui meta viewport responsiva. Mobile-first.
-5. Inclui um <title> apropriado e <meta name="description">.
-6. Design DEVE ser único, art-directed, NÃO genérico. Cada pedido = layout diferente. Varia paletas, tipografia, estrutura e micro-interações sem cair em template barato.
-7. Conteúdo em PORTUGUÊS (PT-PT) por defeito a menos que o pedido peça outra língua.
-8. Respeita EXATAMENTE a marca, o setor, a paleta, o tom e a lista de secções pedidas. NÃO substituas secções pedidas por secções inventadas.
-9. Conteúdo real, persuasivo, profissional — NÃO uses "Lorem ipsum".
-10. Se o utilizador pedir uma landing page, gera UMA landing page one-page. NÃO inventes rotas, páginas internas, /sobre, /servicos, /contacto ou data-route a menos que isso seja explicitamente pedido.
-11. Se o utilizador der um nome de marca/negócio, usa esse nome exatamente como marca principal. NÃO inventes outro nome.
-12. Imagens têm de ser coerentes com o negócio. NUNCA uses animais, paisagens aleatórias ou imagens irrelevantes. Se não tiveres certeza, prefere fundos elegantes/gradientes/fotografia clínica neutra em vez de imagem errada.
-13. Se usares imagens remotas, usa keywords estritas e relevantes ao setor (ex: dental, dentist, orthodontics, smile, clinic interior, doctor portrait) — nunca keywords genéricas.
-14. Footer completo. Formulários de contacto devem ser reais e visualmente premium.
-15. O resultado deve parecer código de produção: secções bem compostas, classes coerentes, espaçamento profissional, sem blocos repetidos com a mesma estrutura pobre.
-16. Se o pedido mencionar luxo/saúde/dental, evita visual corporativo barato. Usa camadas, superfícies translúcidas discretas, sombras suaves, copy premium e direção artística credível.
+3. Carrega 2 Google Fonts contrastantes (display + sans)
+4. Define CSS variables para cores no <style>
+5. Inclui meta viewport, title, description
+6. Mobile-first, responsivo em todos os breakpoints
+7. Conteúdo em PORTUGUÊS (PT-PT) por defeito
+8. Scroll-behavior: smooth no html
+9. IntersectionObserver para scroll reveals
+10. Mobile menu funcional com JavaScript
 
-MODO DE NAVEGAÇÃO — ESCOLHE 1 dos 2 conforme o pedido:
-
-(A) ONE-PAGE (OBRIGATÓRIO por defeito para landing pages e sites simples):
-    - Uma única página com várias secções com id (#home, #sobre, #servicos, #portfolio, #contacto).
-    - Nav com links âncora (href="#sobre", etc.) e scroll-behavior: smooth.
-    - Mínimo 5 secções ricas.
-    - Nunca uses href="/sobre" nem <section data-route="..."> neste modo.
-
-(B) MULTI-PAGE (SÓ quando o utilizador pedir explicitamente "várias páginas", "com rotas", "/sobre", "página separada", etc.):
-    - Gera várias rotas no MESMO documento usando <section data-route="/rota">.
-    - Rotas típicas: data-route="/" (home), "/sobre", "/servicos", "/portfolio", "/contacto", "/blog".
-    - A primeira rota é sempre "/" (home).
-    - Cada <section data-route="..."> deve conter a página completa (hero/conteúdo/etc) e ser RICA (não vazia).
-    - Header/footer ficam FORA dos data-route (partilhados entre páginas).
-    - Links de navegação no header usam href="/sobre", href="/servicos", etc., E adicionam atributo data-nav (ex: <a href="/sobre" data-nav>Sobre</a>) — um runtime injectado faz a navegação automaticamente sem reload.
-    - Podes misturar: dentro de cada rota podes ainda usar âncoras #seccao para sub-navegação.
-    - NÃO uses display:none inline nas rotas — o runtime trata disso.
-
-QUALIDADE = AWWWARDS. Pensa como director criativo, não como template.
-
-PADRÃO DE QUALIDADE (extrair, NÃO copiar):
-- Navbar fixa com transição on-scroll (muda padding/fundo) + mobile menu real
-- Hero com imagem de fundo em Ken Burns (@keyframes zoom infinito) + overlay escuro + título com pontuação destacada em cor primária
-- Detalhes art-directed: "border decoration offset" atrás de imagens, underlines animados em links (::after width 0→100%), cards com hover translate-y + border primária
-- Scroll-reveal subtil via IntersectionObserver (opacity + translateY, delays escalonados)
-- Grid de portfólio ASSIMÉTRICO (col-span variável, ex: 2+1+1+2) — nunca grid 3×2 chato
-- Testemunho com SVG grande de aspas em cor primária semi-transparente
-- Paleta dark refinada com UMA cor primária forte + 2-3 tons de cinza/grafite
-- 2 famílias Google Fonts contrastantes (display p/ títulos, sans neutra p/ corpo)
-- Script final: navbar scroll effect + mobile menu toggle + footer year + IntersectionObserver
-- Ritmo vertical py-20 md:py-32 + alternância subtil de fundos
-- Footer minimal centrado com social SVGs inline`;
+MODO DE NAVEGAÇÃO:
+- ONE-PAGE por defeito: secções com id, links âncora (#sobre)
+- MULTI-PAGE só se pedido: <section data-route="/rota"> com data-nav nos links`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -95,47 +96,174 @@ Deno.serve(async (req) => {
     const charge = await chargeCredits(req, "site_create", `Geração de site${websiteName ? `: ${websiteName}` : ""}`);
     if (!charge.ok) return insufficientCreditsResponse(corsHeaders, charge);
 
-    const userMsg = `NOME DO PROJECTO / MARCA: ${websiteName || "Sem nome"}
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // FASE 1: ANÁLISE CRIATIVA PROFUNDA
+    // O sistema PENSA antes de gerar, como um diretor criativo real
+    // ═══════════════════════════════════════════════════════════════════════════════
 
-PEDIDO DO UTILIZADOR:
-${prompt}
+    console.log('[Creative Intelligence] Analisando direção criativa...');
+    const creativeAnalysis = analyzeCreativeDirection(prompt);
 
-INSTRUÇÕES DE EXECUÇÃO:
-- Se o pedido disser "landing page", gera apenas one-page.
-- Se o pedido listar secções, inclui todas essas secções.
-- Se o pedido exigir um estilo específico (ex: luxo, branco/bege, Montserrat + Inter, premium healthcare), cumpre-o literalmente.
-- Se o setor for dental/saúde, toda a imagem, copy e UI devem parecer clínica dentária premium moderna.
-- O HTML final deve parecer escrito por um developer sénior de frontend: navbar fixa bem resolvida, secções com composições diferentes, imagens integradas com intenção, micro-animações suaves e estrutura sem cara de template barato.
-- Usa a referência do utilizador apenas como padrão de qualidade e composição, não como conteúdo de engenharia.
-- Não inventes rotas nem páginas separadas sem pedido explícito.
-- Não uses imagens irrelevantes. Zero animais, zero placeholders aleatórios.
-
-Gera agora a página HTML completa, premium e única.`;
-
-    const ai = await callAI({
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userMsg },
-      ],
-      temperature: 0.9,
-      geminiModel: "gemini-2.5-flash",
+    console.log('[Creative Intelligence] Análise:', {
+      niche: creativeAnalysis.niche,
+      emotion: creativeAnalysis.emotionalDirection,
+      positioning: creativeAnalysis.brandPositioning
     });
 
-    let html: string = ai.content || "";
-    if (!html.trim()) {
-      return new Response(JSON.stringify({ error: "Resposta vazia do modelo ao criar o site." }), {
-        status: 502,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // FASE 2: COMPOSIÇÃO VISUAL
+    // Define estrutura visual ANTES de gerar HTML
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    console.log('[Creative Intelligence] Compondo estrutura visual...');
+    const visualComposition = composeVisualStructure(creativeAnalysis);
+
+    console.log('[Creative Intelligence] Composição:', {
+      heroStyle: visualComposition.heroStyle,
+      pacing: visualComposition.visualPacing,
+      asymmetry: visualComposition.asymmetryLevel
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // FASE 3: GERAÇÃO DO PROMPT CRIATIVO
+    // Transforma análise em instruções específicas
+    // ═══════════════════════════════════════════════════════════════════════════════
+
+    const creativePrompt = generateCreativePrompt(
+      creativeAnalysis,
+      visualComposition,
+      prompt,
+      websiteName || "Website Premium"
+    );
+
+    const userMsg = `${creativePrompt}
+
+INSTRUÇÕES TÉCNICAS CRÍTICAS:
+
+🎯 OBJETIVO: Criar um website que pareça feito por uma agência premium de €10k+, NÃO por IA genérica.
+
+✅ OBRIGATÓRIO:
+1. Escolhe 1 estilo de hero moderno (Cinematic, Split Asymmetric, Glassmorphism, etc)
+2. Usa layout assimétrico (NUNCA grid 3x3 simétrico)
+3. Define paleta de cores coerente com CSS variables
+4. Carrega 2 Google Fonts contrastantes
+5. Implementa scroll reveal com IntersectionObserver
+6. Adiciona hover effects em todos os elementos interativos
+7. Navbar fixed com backdrop-blur e transição on-scroll
+8. Mobile menu funcional
+9. Espaçamento generoso (py-20 md:py-32)
+10. Copy real e persuasivo em português (ZERO Lorem Ipsum)
+
+🚫 PROIBIDO:
+- Lorem Ipsum ou placeholder text
+- Imagens irrelevantes (animais, paisagens aleatórias)
+- Grid 3x3 simétrico
+- Cards sem hover effects
+- Cores primárias puras (red, blue) - usa tons sofisticados
+- Apenas text-center - varia alinhamentos
+- Espaçamento pequeno (menos de py-16)
+- Fontes system - sempre Google Fonts
+- Sites sem animações
+
+📐 ESTRUTURA:
+- Se "landing page": ONE-PAGE com secções #id
+- Se pedir "várias páginas": MULTI-PAGE com data-route
+- Mínimo 5 secções ricas e variadas
+- Footer completo com links e social media
+
+🎨 QUALIDADE:
+- Cada secção deve ter composição DIFERENTE
+- Alterna fundos (white, gray-50, gradientes)
+- Usa transparências (bg-white/10, text-white/80)
+- Adiciona micro-interações (hover, focus, active)
+- Tipografia com hierarchy clara (8xl → base)
+
+Gera agora a página HTML completa, premium, única e profissional.
+Lembra-te: O utilizador deve dizer "WOW, isto parece caro!" quando vir o resultado.`;
+
+    // Sistema de geração com validação de qualidade e retry
+    let html: string = "";
+    let qualityResult;
+    let attempts = 0;
+    const maxAttempts = 2; // Tenta até 2 vezes se qualidade for baixa
+
+    while (attempts < maxAttempts) {
+      attempts++;
+
+      console.log(`[Attempt ${attempts}/${maxAttempts}] Gerando HTML...`);
+
+      // Usa temperatura alta para criatividade máxima
+      const ai = await callAI({
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userMsg },
+        ],
+        temperature: 1.0, // Máxima criatividade
+        geminiModel: "gemini-2.5-flash", // Modelo mais recente e capaz
       });
-    }
-    // strip code fences if any
-    html = html.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
-    if (!html.toLowerCase().startsWith("<!doctype") && !html.toLowerCase().startsWith("<html")) {
-      // wrap minimal
-      html = `<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><script src="https://cdn.tailwindcss.com"></script></head><body>${html}</body></html>`;
+
+      html = ai.content || "";
+
+      if (!html.trim()) {
+        if (attempts === maxAttempts) {
+          return new Response(JSON.stringify({ error: "Resposta vazia do modelo ao criar o site." }), {
+            status: 502,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        continue; // Tenta novamente
+      }
+
+      // Strip code fences if any
+      html = html.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+
+      if (!html.toLowerCase().startsWith("<!doctype") && !html.toLowerCase().startsWith("<html")) {
+        // wrap minimal
+        html = `<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><script src="https://cdn.tailwindcss.com"></script></head><body>${html}</body></html>`;
+      }
+
+      // Valida qualidade do HTML gerado
+      qualityResult = validateHTMLQuality(html);
+
+      console.log(`[Quality Check] Score: ${qualityResult.score}/100, Passed: ${qualityResult.passed}`);
+      console.log(formatQualityReport(qualityResult));
+
+      // Se passou na validação ou é a última tentativa, aceita o resultado
+      if (qualityResult.passed || attempts === maxAttempts) {
+        break;
+      }
+
+      // Se não passou, adiciona feedback específico para retry
+      console.log(`[Retry] Qualidade insuficiente (${qualityResult.score}/100). Tentando novamente com feedback...`);
+
+      userMsg += `\n\n⚠️ FEEDBACK DA TENTATIVA ANTERIOR (Score: ${qualityResult.score}/100):
+
+PROBLEMAS ENCONTRADOS:
+${qualityResult.issues.map((issue, i) => `${i + 1}. ${issue}`).join('\n')}
+
+AVISOS:
+${qualityResult.warnings.map((warning, i) => `${i + 1}. ${warning}`).join('\n')}
+
+Por favor, corrige estes problemas e gera um HTML de MAIOR QUALIDADE.
+Foca especialmente em:
+- Adicionar mais animações e micro-interações
+- Usar layouts assimétricos e criativos
+- Implementar scroll reveal com IntersectionObserver
+- Adicionar hover effects em todos os elementos
+- Usar gradientes e glassmorphism
+- Garantir espaçamento generoso (py-20 md:py-32)
+- Copy real e persuasivo (ZERO Lorem Ipsum)`;
     }
 
-    return new Response(JSON.stringify({ html }), {
+    // Retorna o HTML com informações de qualidade
+    return new Response(JSON.stringify({
+      html,
+      quality: {
+        score: qualityResult?.score || 0,
+        passed: qualityResult?.passed || false,
+        attempts
+      }
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
