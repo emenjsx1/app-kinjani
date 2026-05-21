@@ -12,6 +12,7 @@ import {
   generateCreativePrompt
 } from "./creative-intelligence.ts";
 import { runCreativeDirector } from "./creative-director.ts";
+import { resolveImages } from "../_shared/image-resolver.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
