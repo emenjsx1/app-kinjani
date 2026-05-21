@@ -281,7 +281,46 @@ export const QUALITY_REFERENCE_HTML = `<!DOCTYPE html>
                 </div>
             </div>
         </section>
-</main>
+
+        <!-- Secção de Capacidades do Developer -->
+        <section id="developer-capabilities" class="py-20 bg-[#1A1D29] border-t-2 border-primary/30">
+            <div class="container mx-auto px-6 text-center scroll-reveal">
+                <div class="max-w-3xl mx-auto">
+                    <h2 class="text-3xl font-bold text-white mb-4">O que posso fazer por si?</h2>
+                    <p class="text-lg text-light-gray mb-10">
+                        Como seu assistente de desenvolvimento web, a minha função é aplicar as suas ideias diretamente neste site. Basta dar-me uma instrução clara e eu atualizo o código. Pode pedir-me para:
+                    </p>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                    <div class="bg-dark p-6 rounded-lg text-left border border-gray-800">
+                        <h3 class="font-bold text-primary mb-2">Mudar o Design</h3>
+                        <p class="text-mid-gray text-sm">"Muda a cor principal para #00A8E8" ou "Usa uma fonte mais formal para os títulos".</p>
+                    </div>
+                    <div class="bg-dark p-6 rounded-lg text-left border border-gray-800">
+                        <h3 class="font-bold text-primary mb-2">Alterar Conteúdo</h3>
+                        <p class="text-mid-gray text-sm">"Altera o título principal para 'Construções Inovadoras'" ou "Troca a imagem da secção 'Sobre Nós'".</p>
+                    </div>
+                    <div class="bg-dark p-6 rounded-lg text-left border border-gray-800">
+                        <h3 class="font-bold text-primary mb-2">Adicionar Secções</h3>
+                        <p class="text-mid-gray text-sm">"Adiciona uma secção de 'Parceiros' com os logos X, Y e Z" ou "Cria uma galeria de fotos abaixo dos projectos".</p>
+                    </div>
+                    <div class="bg-dark p-6 rounded-lg text-left border border-gray-800">
+                        <h3 class="font-bold text-primary mb-2">Modificar Estrutura</h3>
+                        <p class="text-mid-gray text-sm">"Move a secção de contacto para cima da secção de serviços" ou "Remove a secção de testemunhos".</p>
+                    </div>
+                    <div class="bg-dark p-6 rounded-lg text-left border border-gray-800">
+                        <h3 class="font-bold text-primary mb-2">Adicionar Links</h3>
+                        <p class="text-mid-gray text-sm">"Adiciona um link para o nosso Instagram no rodapé" ou "Faz o botão 'Ver Projectos' levar para uma nova página".</p>
+                    </div>
+                    <div class="bg-dark p-6 rounded-lg text-left border border-gray-800">
+                        <h3 class="font-bold text-primary mb-2">... e muito mais!</h3>
+                        <p class="text-mid-gray text-sm">Qualquer alteração que tenha em mente, basta descrevê-la. Estou pronto para o seu próximo pedido.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
 
     <!-- Footer -->
     <footer class="bg-[#0D0F16] py-12">
