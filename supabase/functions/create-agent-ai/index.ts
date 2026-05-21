@@ -111,8 +111,8 @@ serve(async (req) => {
       );
     }
 
-    const GEMINI_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
-    if (!GEMINI_API_KEY) {
+    const OPENROUTER_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_KEY) {
       throw new Error("OPENROUTER_API_KEY is not configured");
     }
 
@@ -144,7 +144,7 @@ Responde apenas com JSON válido.
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GEMINI_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

@@ -127,7 +127,7 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const apiKey = Deno.env.get("OPENROUTER_API_KEY");
-    if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
+    if (!apiKey) throw new Error("OPENROUTER_KEY not configured");
 
     // ---------- Modern structured-output mode ----------
     if (body.mode === "plan") {

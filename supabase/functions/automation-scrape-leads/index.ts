@@ -23,8 +23,8 @@ serve(async (req) => {
       throw new Error("Pesquisa deve ter pelo menos 3 caracteres");
     }
 
-    const GEMINI_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
-    if (!GEMINI_API_KEY) {
+    const OPENROUTER_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_KEY) {
       throw new Error("OPENROUTER_API_KEY não configurada");
     }
 
@@ -38,7 +38,7 @@ serve(async (req) => {
     const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GEMINI_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
