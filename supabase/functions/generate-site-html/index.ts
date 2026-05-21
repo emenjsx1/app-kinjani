@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
     const aiUrl = useOpenAI
       ? "https://api.openai.com/v1/chat/completions"
       : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    const aiModel = useOpenAI ? "gpt-4o-mini" : "gemini-2.5-flash";
+    const aiModel = useOpenAI ? "gpt-5" : "gemini-2.5-flash";
 
     // Charge 50 credits before generating.
     const charge = await chargeCredits(req, "site_create", `Geração de site${websiteName ? `: ${websiteName}` : ""}`);
@@ -115,20 +115,27 @@ Deno.serve(async (req) => {
 
     const userMsg = `Nome do projecto: ${websiteName || "Sem nome"}\n\nPedido do utilizador:\n${prompt}\n\nGera agora a página HTML completa, premium e única.`;
 
+    const isGpt5 = useOpenAI && aiModel.startsWith("gpt-5");
+    const body: Record<string, unknown> = {
+      model: aiModel,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userMsg },
+      ],
+    };
+    if (isGpt5) {
+      body.max_completion_tokens = 16000;
+    } else {
+      body.temperature = 0.9;
+    }
+
     const resp = await fetch(aiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: aiModel,
-        temperature: 0.9,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userMsg },
-        ],
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!resp.ok) {

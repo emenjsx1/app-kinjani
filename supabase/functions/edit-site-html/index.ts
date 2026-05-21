@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
     const aiUrl = useOpenAI
       ? "https://api.openai.com/v1/chat/completions"
       : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    const aiModel = useOpenAI ? "gpt-4o-mini" : "gemini-2.5-flash";
+    const aiModel = useOpenAI ? "gpt-5" : "gemini-2.5-flash";
 
 
     // Pré-cobra "small" (5 créd). Após geração, ajustamos para o nível real com base nos tokens de output.
@@ -153,19 +153,23 @@ Deno.serve(async (req) => {
 
     const wantStream = req.headers.get("accept")?.includes("text/event-stream") === true;
 
+    const isGpt5 = useOpenAI && aiModel.startsWith("gpt-5");
+    const editBody: Record<string, unknown> = {
+      model: aiModel,
+      messages,
+      response_format: { type: "json_object" },
+      stream: wantStream,
+    };
+    if (isGpt5) editBody.max_completion_tokens = 12000;
+    else editBody.temperature = 0.5;
+
     const resp = await fetch(aiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: aiModel,
-        temperature: 0.5,
-        messages,
-        response_format: { type: "json_object" },
-        stream: wantStream,
-      }),
+      body: JSON.stringify(editBody),
     });
 
     if (!resp.ok) {
