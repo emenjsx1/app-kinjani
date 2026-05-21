@@ -268,7 +268,7 @@ Deno.serve(async (req) => {
               }
             }
             await settleCharge();
-            flushFinal();
+            await flushFinal();
           } catch (e) {
             controller.enqueue(encoder.encode(`\n__KINJANI_ERROR__${(e as Error).message}\n`));
           } finally {
