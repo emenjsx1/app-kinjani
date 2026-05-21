@@ -34,9 +34,9 @@ serve(async (req) => {
     const { sectionType, currentContent, instruction, websiteName, niche } = 
       await req.json() as EditSectionRequest;
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    const GEMINI_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
     if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is not configured");
+      throw new Error("OPENROUTER_API_KEY is not configured");
     }
 
     const userPrompt = `
@@ -54,14 +54,14 @@ Responde apenas com o JSON atualizado da secção, mantendo todas as chaves exis
     console.log(`Editing section ${sectionType} for ${websiteName}`);
     console.log("Instruction:", instruction);
 
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: "qwen/qwen-2.5-coder-32b-instruct",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },

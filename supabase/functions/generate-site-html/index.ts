@@ -53,9 +53,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("GEMINI_API_KEY");
+    const apiKey = Deno.env.get("OPENROUTER_API_KEY");
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "GEMINI_API_KEY missing" }), {
+      return new Response(JSON.stringify({ error: "OPENROUTER_API_KEY missing" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -67,14 +67,14 @@ Deno.serve(async (req) => {
 
     const userMsg = `Nome do projecto: ${websiteName || "Sem nome"}\n\nPedido do utilizador:\n${prompt}\n\nGera agora a página HTML completa, premium e única.`;
 
-    const resp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: "qwen/qwen-2.5-coder-32b-instruct",
         temperature: 0.9,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
