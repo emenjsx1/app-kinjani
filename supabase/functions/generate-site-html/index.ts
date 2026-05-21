@@ -18,7 +18,7 @@ REGRAS ABSOLUTAS:
 5. Inclui um <title> apropriado e <meta name="description">.
 6. Design DEVE ser único, art-directed, NÃO genérico. Cada pedido = layout diferente. Varia paletas, tipografia, estrutura (split, fullscreen, magazine, bento, asymmetric) e micro-interações (transitions, hover, scroll reveal com IntersectionObserver inline).
 7. Conteúdo em PORTUGUÊS (PT-PT) por defeito a menos que o pedido peça outra língua.
-8. Usa imagens reais de https://images.unsplash.com/photo-... ou https://source.unsplash.com/1600x900/?<keywords>.
+8. Usa imagens estáveis e públicas de https://picsum.photos/seed/<tema>/1600/900 ou semelhantes; NÃO uses images.unsplash.com nem source.unsplash.com.
 9. Conteúdo real, persuasivo, profissional — NÃO uses "Lorem ipsum".
 10. Footer completo. Formulários de contacto abrem wa.me/<numero> ou mailto: se houver dados.
 
@@ -40,6 +40,47 @@ MODO DE NAVEGAÇÃO — ESCOLHE 1 dos 2 conforme o pedido:
     - NÃO uses display:none inline nas rotas — o runtime trata disso.
 
 QUALIDADE = AWWWARDS. Pensa como director criativo, não como template.`;
+
+const UNSPLASH_URL_PATTERN = /https?:\/\/(?:images|source)\.unsplash\.com\/[^"'\s)<>]+/gi;
+
+function sanitizeSeed(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "") || "image";
+}
+
+function defaultHeight(width: number) {
+  if (width <= 320) return width;
+  if (width <= 640) return Math.round(width * 0.75);
+  return Math.round(width * 0.5625);
+}
+
+function normalizeImageUrl(rawUrl: string) {
+  try {
+    const url = new URL(rawUrl);
+    let width = Number(url.searchParams.get("w")) || 1600;
+    let height = Number(url.searchParams.get("h")) || defaultHeight(width);
+    let seed = "image";
+
+    if (url.hostname === "source.unsplash.com") {
+      const sizeMatch = url.pathname.match(/\/(\d+)x(\d+)\/?$/);
+      if (sizeMatch) {
+        width = Number(sizeMatch[1]) || width;
+        height = Number(sizeMatch[2]) || height;
+      }
+      seed = sanitizeSeed(url.search.slice(1) || url.pathname || "image");
+    } else {
+      const photoMatch = url.pathname.match(/photo-([a-z0-9-]+)/i);
+      seed = sanitizeSeed(photoMatch?.[1] || `${width}x${height}`);
+    }
+
+    return `https://picsum.photos/seed/${seed}/${width}/${height}`;
+  } catch {
+    return "https://picsum.photos/seed/image/1600/900";
+  }
+}
+
+function normalizeGeneratedHtml(html: string) {
+  return html.replace(UNSPLASH_URL_PATTERN, normalizeImageUrl);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -105,6 +146,7 @@ Deno.serve(async (req) => {
       // wrap minimal
       html = `<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"><script src="https://cdn.tailwindcss.com"></script></head><body>${html}</body></html>`;
     }
+    html = normalizeGeneratedHtml(html);
 
     return new Response(JSON.stringify({ html }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

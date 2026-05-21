@@ -12,6 +12,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { injectRuntime } from "@/lib/inject-runtime";
+import { normalizeGeneratedHtml, parseAssistantJsonResponse } from "@/lib/generated-html";
 import { PublishDialog } from "@/components/websites/PublishDialog";
 import { ThinkingIndicator } from "@/components/ui/thinking-indicator";
 import { SmoothPreviewIframe } from "@/components/websites/SmoothPreviewIframe";
@@ -157,18 +158,16 @@ export default function WebsiteEditorPage() {
     }
 
     const raw = finalRaw || acc;
-    let parsed: any = null;
-    try { parsed = JSON.parse(raw); } catch {
-      const m = raw.match(/\{[\s\S]*\}/);
-      if (m) { try { parsed = JSON.parse(m[0]); } catch { /* noop */ } }
-    }
+    const parsed: any = parseAssistantJsonResponse(raw);
     if (!parsed || typeof parsed !== "object") {
       return { action: "chat", message: raw.slice(0, 800) || "Não consegui processar a resposta." };
     }
     const action = parsed.action === "edit" || parsed.action === "plan" ? parsed.action : "chat";
     let newHtml: string | undefined;
     if (action === "edit") {
-      newHtml = String(parsed.html || "").replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
+      newHtml = normalizeGeneratedHtml(
+        String(parsed.html || "").replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim(),
+      );
       if (!newHtml.toLowerCase().includes("<html")) {
         return { action: "chat", message: parsed.message || "Não consegui gerar HTML válido." };
       }
@@ -177,6 +176,26 @@ export default function WebsiteEditorPage() {
   };
 
   const normalizeHtml = (value: string) => value.replace(/\s+/g, " ").trim();
+
+  const sanitizeHistory = (items: ChatMsg[]) => {
+    return items.map((item) => {
+      if (item.role !== "assistant") return item;
+      const parsed = parseAssistantJsonResponse(item.content);
+      if (!parsed || typeof parsed !== "object") return item;
+
+      const action = parsed.action === "edit" || parsed.action === "plan" ? parsed.action : item.action ?? "chat";
+      const normalizedSnapshot = typeof parsed.html === "string" && parsed.html.trim()
+        ? normalizeGeneratedHtml(parsed.html.replace(/^```html\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim())
+        : item.htmlSnapshot;
+
+      return {
+        ...item,
+        action,
+        content: typeof parsed.message === "string" && parsed.message.trim() ? parsed.message.trim() : item.content,
+        htmlSnapshot: normalizedSnapshot,
+      };
+    });
+  };
 
   const stop = () => {
     abortRef.current?.abort();
@@ -188,11 +207,21 @@ export default function WebsiteEditorPage() {
       const w = await getWebsite(id);
       if (!w) return navigate("/websites");
       setWebsite(w);
-      const existingHtml = (w as any).generated_html || "";
-      const existingHistory = Array.isArray((w as any).chat_history) ? (w as any).chat_history : [];
+      const existingHtml = normalizeGeneratedHtml((w as any).generated_html || "");
+      const rawHistory = Array.isArray((w as any).chat_history) ? (w as any).chat_history : [];
+      const existingHistory = sanitizeHistory(rawHistory);
       setHtml(existingHtml);
       setHistory(existingHistory);
       setLoading(false);
+
+      const htmlChanged = existingHtml !== ((w as any).generated_html || "");
+      const historyChanged = JSON.stringify(existingHistory) !== JSON.stringify(rawHistory);
+      if (htmlChanged || historyChanged) {
+        await updateWebsite(w.id, {
+          generated_html: existingHtml,
+          chat_history: existingHistory,
+        } as any);
+      }
 
       // Auto-generate APENAS uma vez, e só se vier com ?fresh=1 (recém-criado)
       const isFresh = searchParams.get("fresh") === "1";
@@ -252,17 +281,18 @@ export default function WebsiteEditorPage() {
     try {
       const data = await callEdge("generate-site-html", { prompt, websiteName: name || website?.name }, ctrl.signal);
       if (!data?.html) throw new Error(data?.error || "Sem resposta");
+      const safeHtml = normalizeGeneratedHtml(data.html);
       const asst: ChatMsg = {
         role: "assistant",
         content: "Site criado ✨ Pede qualquer alteração — cores, secções, logo, links, equipa, contactos, ou pede para transformar em site multi-página (com rotas /sobre, /serviços, etc).",
         ts: Date.now(),
         action: "edit",
-        htmlSnapshot: data.html,
+        htmlSnapshot: safeHtml,
       };
       const finalHistory = [...draftHistory, asst];
-      setHtml(data.html);
+      setHtml(safeHtml);
       setHistory(finalHistory);
-      await persist(data.html, finalHistory);
+      await persist(safeHtml, finalHistory);
     } catch (e: any) {
       const aborted = e?.name === "AbortError" || ctrl.signal.aborted;
       const asst: ChatMsg = {
