@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { callAI } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,6 +30,10 @@ ANTI-TEMPLATE — REGRAS CRÍTICAS:
 REGRAS GERAIS:
 - Português de Portugal sempre
 - Adapta TOM ao prompt do cliente (premium dark = sóbrio e cortante; playful = leve e direto; editorial = narrativo)
+- Se o prompt especificar marca, estilo, tipografia, paleta, setor e lista de secções, segue isso literalmente.
+- Se o negócio for saúde/dental, o tom deve soar premium, clínico, humano e credível — nunca genérico nem corporativo barato.
+- NUNCA inventes secções fora das pedidas.
+- NUNCA escrevas copy que pareça outro setor.
 - CTAs ativos e específicos ao negócio ("Reservar mesa para 2", "Candidatar à mentoria", "Ver coleção outono") — nunca "Saber mais" genérico
 - Testemunhos com nomes, cargos e detalhes credíveis e específicos
 - Quando o prompt menciona formulário, captação, ou perguntas — o copy do CTA e Contact deve assumir esse contexto (não generalizar)
@@ -46,17 +51,10 @@ serve(async (req) => {
     const { websiteType, niche, templateName, prompt, websiteName, sections } = 
       await req.json() as WebsiteGenerationRequest;
 
-    const openaiKey = Deno.env.get("OPENAI_API_KEY");
     const geminiKey = Deno.env.get("GEMINI_API_KEY");
-    const API_KEY = openaiKey || geminiKey;
-    if (!API_KEY) {
-      throw new Error("Nenhuma API key de IA configurada (OPENAI_API_KEY ou GEMINI_API_KEY)");
+    if (!geminiKey) {
+      throw new Error("GEMINI_API_KEY não configurada.");
     }
-    const useOpenAI = !!openaiKey;
-    const aiUrl = useOpenAI
-      ? "https://api.openai.com/v1/chat/completions"
-      : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    const aiModel = useOpenAI ? "gpt-4o-mini" : "gemini-2.5-flash";
 
     const uniqueSeed = Math.random().toString(36).substring(2, 8);
     const userPrompt = `
@@ -72,6 +70,13 @@ ${prompt}
 
 SECÇÕES A GERAR:
 ${sections.join(", ")}
+
+REGRAS IMPORTANTES:
+- Se o prompt pedir landing page, pensa em narrativa one-page.
+- Se o prompt pedir dental premium / luxo / branco e bege / Montserrat + Inter / modern medical UI, o copy deve refletir exatamente isso.
+- Se pedirem Before/After ou transformações, devolve isso como secção image-text com linguagem de transformação estética e confiança clínica.
+- Se pedirem Statistics ou números, devolve secção counter.
+- Não inventes termos de outros nichos nem promessas vagas.
 
 Para cada secção, gera conteúdo apropriado. Usa o seguinte formato JSON:
 
@@ -141,6 +146,25 @@ Para cada secção, gera conteúdo apropriado. Usa o seguinte formato JSON:
     "faq1Answer": "Resposta 1",
     "faq2Question": "Pergunta 2",
     "faq2Answer": "Resposta 2"
+  },
+  "counter": {
+    "title": "Título da secção",
+    "counter1Value": "1500",
+    "counter1Suffix": "+",
+    "counter1Label": "Sorrisos reabilitados",
+    "counter2Value": "98",
+    "counter2Suffix": "%",
+    "counter2Label": "Pacientes que recomendam",
+    "counter3Value": "12",
+    "counter3Suffix": " anos",
+    "counter3Label": "De prática especializada"
+  },
+  "image-text": {
+    "title": "Título da transformação",
+    "description": "Descrição do antes/depois e do impacto estético-funcional.",
+    "image": "https://images.unsplash.com/...",
+    "imagePosition": "left",
+    "ctaText": "Marcar avaliação"
   }
 }
 
@@ -150,44 +174,15 @@ Gera APENAS as secções solicitadas: ${sections.join(", ")}
     console.log("Generating website content for:", websiteName);
     console.log("Sections to generate:", sections);
 
-    const reqBody: Record<string, unknown> = {
-      model: aiModel,
+    const ai = await callAI({
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
       ],
-      temperature: useOpenAI ? 1.0 : 1.05,
-    };
-    reqBody.max_tokens = 2400;
-    const response = await fetch(aiUrl, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(reqBody),
+      temperature: 0.8,
+      geminiModel: "gemini-2.5-flash",
     });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Limite de requisições excedido. Tente novamente mais tarde." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Créditos insuficientes. Adicione créditos à sua conta." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
-      throw new Error(`AI Gateway error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const content = ai.content;
 
     if (!content) {
       throw new Error("No content received from AI");
