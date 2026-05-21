@@ -1,5 +1,4 @@
-// Shared AI helper. Prefers OpenAI (OPENAI_API_KEY) and falls back to Gemini
-// (GEMINI_API_KEY) when OpenAI is missing or fails with quota/rate limit errors.
+// Shared AI helper. Usa apenas Gemini (Google) — OpenAI removido.
 // All endpoints used here are OpenAI-compatible Chat Completions.
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
@@ -7,52 +6,17 @@ export type ChatMessage = { role: "system" | "user" | "assistant"; content: stri
 export interface CallAIOptions {
   messages: ChatMessage[];
   temperature?: number;
-  // Override defaults if needed.
-  openaiModel?: string;
+  // Override default Gemini model if needed.
   geminiModel?: string;
-  // If true, request response_format json_object (OpenAI only).
-  jsonMode?: boolean;
 }
 
 export interface CallAIResult {
   content: string;
-  provider: "openai" | "gemini";
+  provider: "gemini";
   model: string;
 }
 
-const OPENAI_DEFAULT = "gpt-4o-mini";
 const GEMINI_DEFAULT = "gemini-2.5-flash";
-
-async function callOpenAI(opts: CallAIOptions, apiKey: string): Promise<CallAIResult> {
-  const model = opts.openaiModel || OPENAI_DEFAULT;
-  const body: Record<string, unknown> = {
-    model,
-    temperature: opts.temperature ?? 0.7,
-    messages: opts.messages,
-  };
-  if (opts.jsonMode) body.response_format = { type: "json_object" };
-
-  const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(body),
-  });
-  if (!resp.ok) {
-    const txt = await resp.text();
-    const err = new Error(`openai ${resp.status}: ${txt}`);
-    (err as any).status = resp.status;
-    throw err;
-  }
-  const data = await resp.json();
-  return {
-    content: data?.choices?.[0]?.message?.content ?? "",
-    provider: "openai",
-    model,
-  };
-}
 
 async function callGemini(opts: CallAIOptions, apiKey: string): Promise<CallAIResult> {
   const model = opts.geminiModel || GEMINI_DEFAULT;
@@ -85,24 +49,13 @@ async function callGemini(opts: CallAIOptions, apiKey: string): Promise<CallAIRe
   };
 }
 
-/** Call the preferred AI provider (Gemini first, then OpenAI fallback). */
+/** Call Gemini AI provider only. */
 export async function callAI(opts: CallAIOptions): Promise<CallAIResult> {
-  const openaiKey = Deno.env.get("OPENAI_API_KEY");
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
 
-  if (geminiKey) {
-    try {
-      return await callGemini(opts, geminiKey);
-    } catch (e) {
-      const status = (e as any)?.status;
-      if (openaiKey && (status === 429 || status === 402 || (status && status >= 500))) {
-        return await callOpenAI(opts, openaiKey);
-      }
-      throw e;
-    }
+  if (!geminiKey) {
+    throw new Error("GEMINI_API_KEY não configurada.");
   }
 
-  if (openaiKey) return await callOpenAI(opts, openaiKey);
-
-  throw new Error("Nenhuma API key de IA configurada (GEMINI_API_KEY ou OPENAI_API_KEY).");
+  return await callGemini(opts, geminiKey);
 }
