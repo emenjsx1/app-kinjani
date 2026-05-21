@@ -4,6 +4,7 @@
 // Cobrança proporcional: pré-cobra 5 créd; após geração ajusta para o nível real (micro/small/medium/large/massive).
 import { chargeCredits, classifyEditByTokens, CREDIT_COSTS, insufficientCreditsResponse, resolveUserId } from "../_shared/credits.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { resolveImages } from "../_shared/image-resolver.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
