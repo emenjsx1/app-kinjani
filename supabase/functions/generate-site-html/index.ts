@@ -2,6 +2,8 @@
 // Returns: { html: string }. Cobra créditos (site_create = 50) antes de chamar o modelo.
 import { chargeCredits, insufficientCreditsResponse } from "../_shared/credits.ts";
 import { callAI } from "../_shared/ai.ts";
+import { QUALITY_REFERENCE_HTML } from "./reference-quality.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -55,7 +57,36 @@ MODO DE NAVEGAÇÃO — ESCOLHE 1 dos 2 conforme o pedido:
     - Podes misturar: dentro de cada rota podes ainda usar âncoras #seccao para sub-navegação.
     - NÃO uses display:none inline nas rotas — o runtime trata disso.
 
-QUALIDADE = AWWWARDS. Pensa como director criativo, não como template.`;
+QUALIDADE = AWWWARDS. Pensa como director criativo, não como template.
+
+═══════════════════════════════════════════════════════════════════════════════
+EXEMPLO DE REFERÊNCIA DE QUALIDADE (NÃO COPIAR LITERALMENTE):
+Abaixo está UM exemplo do nível de polimento que esperamos. NÃO copies conteúdo,
+paleta, fontes, sector, copy, imagens nem layout exato. Usa-o APENAS como barra
+de qualidade técnica e artística. O teu site DEVE ser diferente — outra paleta,
+outras fontes, outras composições, outro sector, outra estrutura de secções.
+
+O que DEVES extrair como padrão de qualidade:
+- Navbar fixa com transição on-scroll (muda padding e fundo) + mobile menu real
+- Hero com imagem de fundo em Ken Burns (animação @keyframes zoom infinito) + overlay escuro + título com pontuação destacada em cor primária
+- Detalhes art-directed: "border decoration offset" atrás de imagens, underlines animados em links (::after width 0→100%), cards com hover translate-y + border-color primária
+- Scroll-reveal subtil via IntersectionObserver (opacity + translateY, transition-delay escalonado)
+- Grid de portfolio ASSIMÉTRICO (ex: col-span variável 2+1+1+2) — nunca grid 3×2 chato
+- Secção de testemunho com SVG grande de aspas em cor primária semi-transparente
+- Paleta dark refinada com UMA cor primária forte (não 4 cores espalhadas) + 2-3 tons de cinza/grafite
+- Tipografia: 2 famílias Google Fonts contrastantes (uma display para títulos, uma sans neutra para corpo)
+- Script no final: navbar scroll effect + mobile menu toggle + footer year + IntersectionObserver reveal
+- Ritmo vertical com py-20 md:py-32 + alternância de fundos (--color-dark vs tom ligeiramente diferente)
+- Footer minimal centrado com social SVGs inline
+
+REFERÊNCIA (sector: engenharia/construção — TU vais gerar OUTRO sector se pedido):
+\`\`\`html
+${QUALITY_REFERENCE_HTML}
+\`\`\`
+═══════════════════════════════════════════════════════════════════════════════
+
+REGRA FINAL: O teu output NÃO pode partilhar paleta, fontes, copy, nome de marca,
+nem layout de portfólio idêntico ao exemplo acima. Inspira-te no NÍVEL, não no CONTEÚDO.`;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
