@@ -140,75 +140,54 @@ async function generateAgentResponse(
   agentType?: string,
   lastUserExtraParts: GeminiPart[] = [],
 ): Promise<string> {
-  const apiKey = Deno.env.get('OPENROUTER_API_KEY');
+  const geminiKey = Deno.env.get('GEMINI_API_KEY');
 
-  if (!apiKey) {
-    console.error('OPENROUTER_API_KEY not configured');
+  if (!geminiKey) {
+    console.error('GEMINI_API_KEY not configured');
     return 'Desculpe, não consigo processar sua mensagem no momento.';
   }
 
   const baseSystem = AGENT_SYSTEM_PROMPTS[agentType || ''] || AGENT_SYSTEM_PROMPTS['atendimento-faq'];
   const systemText = (agentPrompt ? `${baseSystem}\n\nInstruções específicas:\n${agentPrompt}` : baseSystem) + BASE_RULES;
 
-  // Detect if last user turn carries image attachments → pick vision model.
-  const hasImage = lastUserExtraParts.some((p) => p.inline_data?.mime_type?.startsWith('image/'));
-
-  const orMessages: any[] = [{ role: 'system', content: systemText }];
-  messages.forEach((message, idx) => {
-    const role = message.role === 'assistant' ? 'assistant' : 'user';
+  const contents = messages.map((message, idx) => {
+    const parts: GeminiPart[] = [{ text: message.content }];
     if (idx === messages.length - 1 && message.role === 'user' && lastUserExtraParts.length) {
-      if (hasImage) {
-        const parts: any[] = [{ type: 'text', text: message.content || '(ver anexos)' }];
-        for (const p of lastUserExtraParts) {
-          if (p.inline_data?.mime_type?.startsWith('image/')) {
-            parts.push({ type: 'image_url', image_url: { url: `data:${p.inline_data.mime_type};base64,${p.inline_data.data}` } });
-          } else if (p.text) {
-            parts.push({ type: 'text', text: p.text });
-          }
-        }
-        orMessages.push({ role, content: parts });
-      } else {
-        const extraText = lastUserExtraParts.map((p) => p.text || '').filter(Boolean).join('\n');
-        orMessages.push({ role, content: `${message.content || ''}${extraText ? `\n\n${extraText}` : ''}` });
-      }
-    } else {
-      orMessages.push({ role, content: message.content || '' });
+      parts.push(...lastUserExtraParts);
     }
+    return {
+      role: message.role === 'assistant' ? 'model' : 'user',
+      parts,
+    };
   });
 
-  const model = hasImage ? 'qwen/qwen-2.5-vl-72b-instruct' : 'deepseek/deepseek-chat';
-
   try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://kinjani.ai',
-        'X-Title': 'Kinjani AI',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model,
-        temperature: 0.7,
-        max_tokens: 700,
-        messages: orMessages,
+        system_instruction: { parts: [{ text: systemText }] },
+        contents,
+        generationConfig: { maxOutputTokens: 700, temperature: 0.7 },
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('OpenRouter API error:', response.status, errorText);
+      console.error('Gemini API error:', errorText);
       return 'Desculpe, ocorreu um erro ao processar sua mensagem.';
     }
 
     const data = await response.json();
-    const text = (data?.choices?.[0]?.message?.content || '').trim();
+    const parts = data?.candidates?.[0]?.content?.parts || [];
+    const text = parts.map((part: { text?: string }) => part.text || '').join('').trim();
     return text || 'Não foi possível gerar uma resposta.';
   } catch (error) {
     console.error('Error generating AI response:', error);
     return 'Desculpe, ocorreu um erro ao processar sua mensagem.';
   }
 }
+
 
 
 async function loadConversationHistory(instanceKey: string, jid: string): Promise<ChatMsg[]> {
