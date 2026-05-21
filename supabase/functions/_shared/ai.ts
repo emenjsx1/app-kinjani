@@ -49,13 +49,34 @@ async function callGemini(opts: CallAIOptions, apiKey: string): Promise<CallAIRe
   };
 }
 
-/** Call Gemini AI provider only. */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Call Gemini AI provider with retries + model fallback on 503/429/5xx. */
 export async function callAI(opts: CallAIOptions): Promise<CallAIResult> {
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
-
   if (!geminiKey) {
     throw new Error("GEMINI_API_KEY não configurada.");
   }
 
-  return await callGemini(opts, geminiKey);
+  const primary = opts.geminiModel || GEMINI_DEFAULT;
+  const fallbacks = Array.from(
+    new Set([primary, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite"]),
+  );
+
+  let lastErr: any;
+  for (const model of fallbacks) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await callGemini({ ...opts, geminiModel: model }, geminiKey);
+      } catch (e: any) {
+        lastErr = e;
+        const status = e?.status;
+        const retryable = status === 503 || status === 429 || (status >= 500 && status < 600);
+        if (!retryable) throw e;
+        await sleep(500 * Math.pow(2, attempt) + Math.random() * 300);
+      }
+    }
+    // try next fallback model
+  }
+  throw lastErr;
 }
