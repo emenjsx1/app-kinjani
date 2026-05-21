@@ -121,7 +121,7 @@ serve(async (req) => {
     const aiUrl = useOpenAI
       ? "https://api.openai.com/v1/chat/completions"
       : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    const aiModel = useOpenAI ? "gpt-5-mini" : "gemini-2.5-flash";
+    const aiModel = useOpenAI ? "gpt-4o-mini" : "gemini-2.5-flash";
 
     // Cobra 5 créditos antes de gerar o agente.
     const charge = await chargeCredits(req, "agent_create_ai", `Criação agente AI: ${businessName}`);
@@ -148,7 +148,6 @@ Responde apenas com JSON válido.
 
     console.log(`Creating AI agent for ${businessName}`);
 
-    const isGpt5 = useOpenAI && aiModel.startsWith("gpt-5");
     const reqBody: Record<string, unknown> = {
       model: aiModel,
       messages: [
@@ -156,14 +155,9 @@ Responde apenas com JSON válido.
         { role: "user", content: userPrompt },
       ],
       response_format: useOpenAI ? { type: "json_object" } : { type: "json_schema", json_schema: CREATE_AGENT_JSON_SCHEMA },
+      temperature: 0.6,
     };
-    if (isGpt5) {
-      reqBody.max_completion_tokens = 8000;
-      reqBody.reasoning_effort = "minimal";
-    } else {
-      reqBody.temperature = 0.6;
-      reqBody.max_tokens = 4000;
-    }
+    reqBody.max_tokens = useOpenAI ? 4000 : 4000;
     const response = await fetch(aiUrl, {
       method: "POST",
       headers: {
