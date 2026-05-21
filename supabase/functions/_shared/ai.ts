@@ -21,7 +21,7 @@ export interface CallAIResult {
 }
 
 const OPENAI_DEFAULT = "gpt-4o-mini";
-const GEMINI_DEFAULT = "gemini-2.5-flash";
+const GEMINI_DEFAULT = "gemini-2.5-pro";
 
 async function callOpenAI(opts: CallAIOptions, apiKey: string): Promise<CallAIResult> {
   const model = opts.openaiModel || OPENAI_DEFAULT;
