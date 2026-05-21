@@ -111,9 +111,9 @@ serve(async (req) => {
       );
     }
 
-    const OPENROUTER_KEY = Deno.env.get("OPENROUTER_API_KEY");
-    if (!OPENROUTER_KEY) {
-      throw new Error("OPENROUTER_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not configured");
     }
 
     // Cobra 5 créditos antes de gerar o agente.
@@ -141,14 +141,14 @@ Responde apenas com JSON válido.
 
     console.log(`Creating AI agent for ${businessName}`);
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENROUTER_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "deepseek/deepseek-chat",
+        model: "gemini-2.5-flash",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },

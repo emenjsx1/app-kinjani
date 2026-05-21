@@ -123,8 +123,8 @@ serve(async (req) => {
     const { prompt, websiteName } = await req.json() as { prompt: string; websiteName?: string };
     if (!prompt || prompt.trim().length < 8) throw new Error("Prompt demasiado curto");
 
-    const KEY = Deno.env.get("OPENROUTER_API_KEY");
-    if (!KEY) throw new Error("OPENROUTER_API_KEY missing");
+    const KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!KEY) throw new Error("GEMINI_API_KEY missing");
 
     const userMessage = `PEDIDO DO UTILIZADOR:
 """
@@ -135,11 +135,11 @@ Nome sugerido (se quiseres ignorar e inventar melhor, ignora): ${websiteName ?? 
 
 Devolve o plano completo conforme schema. Lembra-te: nome de marca real e curto, paleta sofisticada do setor, 6-9 secções variadas, copy completa e profissional, imagens Unsplash relevantes em cada slot de imagem.`;
 
-    const resp = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const resp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "qwen/qwen-2.5-coder-32b-instruct",
+        model: "gemini-2.5-flash",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userMessage },

@@ -46,9 +46,9 @@ serve(async (req) => {
     const { websiteType, niche, templateName, prompt, websiteName, sections } = 
       await req.json() as WebsiteGenerationRequest;
 
-    const OPENROUTER_KEY = Deno.env.get("OPENROUTER_API_KEY");
-    if (!OPENROUTER_KEY) {
-      throw new Error("OPENROUTER_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not configured");
     }
 
     const uniqueSeed = Math.random().toString(36).substring(2, 8);
@@ -143,14 +143,14 @@ Gera APENAS as secções solicitadas: ${sections.join(", ")}
     console.log("Generating website content for:", websiteName);
     console.log("Sections to generate:", sections);
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENROUTER_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "qwen/qwen-2.5-coder-32b-instruct",
+        model: "gemini-2.5-flash",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
