@@ -11,6 +11,7 @@ import {
   composeVisualStructure,
   generateCreativePrompt
 } from "./creative-intelligence.ts";
+import { runCreativeDirector } from "./creative-director.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
