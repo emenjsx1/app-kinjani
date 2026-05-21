@@ -147,16 +147,23 @@ serve(async (req) => {
         },
       ];
 
+      const isGpt5Plan = useOpenAI && aiModel.startsWith("gpt-5");
+      const planReqBody: Record<string, unknown> = {
+        model: aiModel,
+        messages,
+        response_format: useOpenAI ? { type: "json_object" } : { type: "json_schema", json_schema: OPERATION_PLAN_JSON_SCHEMA },
+      };
+      if (isGpt5Plan) {
+        planReqBody.max_completion_tokens = 8000;
+        planReqBody.reasoning_effort = "minimal";
+      } else {
+        planReqBody.temperature = 0.4;
+        planReqBody.max_tokens = 4000;
+      }
       const response = await fetch(aiUrl, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          model: aiModel,
-          messages,
-          response_format: useOpenAI ? { type: "json_object" } : { type: "json_schema", json_schema: OPERATION_PLAN_JSON_SCHEMA },
-          temperature: 0.4,
-          max_tokens: 4000,
-        }),
+        body: JSON.stringify(planReqBody),
       });
 
       if (!response.ok) {
@@ -217,20 +224,27 @@ Devolve o JSON.`;
         ]
       : textBlock;
 
+    const isGpt5Edit = useOpenAI && aiModel.startsWith("gpt-5");
+    const editReqBody: Record<string, unknown> = {
+      // Use a vision-capable model when images are present.
+      model: useOpenAI ? "gpt-5" : "gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
+      response_format: { type: "json_object" },
+    };
+    if (isGpt5Edit) {
+      editReqBody.max_completion_tokens = 16000;
+      editReqBody.reasoning_effort = "minimal";
+    } else {
+      editReqBody.max_tokens = 8000;
+      editReqBody.temperature = 0.7;
+    }
     const response = await fetch(aiUrl, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        // Use a vision-capable model when images are present.
-        model: useOpenAI ? (hasVision ? "gpt-5" : "gpt-5") : "gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent },
-        ],
-        response_format: { type: "json_object" },
-        max_tokens: 8000,
-        temperature: 0.7,
-      }),
+      body: JSON.stringify(editReqBody),
     });
 
     if (!response.ok) {

@@ -61,21 +61,28 @@ Responde apenas com o JSON atualizado da secção, mantendo todas as chaves exis
     console.log(`Editing section ${sectionType} for ${websiteName}`);
     console.log("Instruction:", instruction);
 
+    const isGpt5 = useOpenAI && aiModel.startsWith("gpt-5");
+    const reqBody: Record<string, unknown> = {
+      model: aiModel,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+    };
+    if (isGpt5) {
+      reqBody.max_completion_tokens = 4000;
+      reqBody.reasoning_effort = "minimal";
+    } else {
+      reqBody.temperature = 0.7;
+      reqBody.max_tokens = 1000;
+    }
     const response = await fetch(aiUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: aiModel,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
-      }),
+      body: JSON.stringify(reqBody),
     });
 
     if (!response.ok) {
