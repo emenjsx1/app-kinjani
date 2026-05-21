@@ -56,7 +56,7 @@ serve(async (req) => {
     const aiUrl = useOpenAI
       ? "https://api.openai.com/v1/chat/completions"
       : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    const aiModel = useOpenAI ? "gpt-5" : "gemini-2.5-flash";
+    const aiModel = useOpenAI ? "gpt-4o-mini" : "gemini-2.5-flash";
 
     const uniqueSeed = Math.random().toString(36).substring(2, 8);
     const userPrompt = `
@@ -150,21 +150,15 @@ Gera APENAS as secções solicitadas: ${sections.join(", ")}
     console.log("Generating website content for:", websiteName);
     console.log("Sections to generate:", sections);
 
-    const isGpt5 = useOpenAI && aiModel.startsWith("gpt-5");
     const reqBody: Record<string, unknown> = {
       model: aiModel,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
       ],
+      temperature: useOpenAI ? 1.0 : 1.05,
     };
-    if (isGpt5) {
-      reqBody.max_completion_tokens = 6000;
-      reqBody.reasoning_effort = "minimal";
-    } else {
-      reqBody.temperature = useOpenAI ? 1.0 : 1.05;
-      reqBody.max_tokens = 2400;
-    }
+    reqBody.max_tokens = 2400;
     const response = await fetch(aiUrl, {
       method: "POST",
       headers: {

@@ -44,7 +44,7 @@ serve(async (req) => {
     const aiUrl = useOpenAI
       ? "https://api.openai.com/v1/chat/completions"
       : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    const aiModel = useOpenAI ? "gpt-5-mini" : "gemini-2.5-flash";
+    const aiModel = useOpenAI ? "gpt-4o-mini" : "gemini-2.5-flash";
 
     const userPrompt = `
 Edita o conteúdo desta secção "${sectionType}" para o website "${websiteName}" (nicho: ${niche}).
@@ -61,21 +61,15 @@ Responde apenas com o JSON atualizado da secção, mantendo todas as chaves exis
     console.log(`Editing section ${sectionType} for ${websiteName}`);
     console.log("Instruction:", instruction);
 
-    const isGpt5 = useOpenAI && aiModel.startsWith("gpt-5");
     const reqBody: Record<string, unknown> = {
       model: aiModel,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
       ],
+      temperature: 0.7,
     };
-    if (isGpt5) {
-      reqBody.max_completion_tokens = 4000;
-      reqBody.reasoning_effort = "minimal";
-    } else {
-      reqBody.temperature = 0.7;
-      reqBody.max_tokens = 1000;
-    }
+    reqBody.max_tokens = 1000;
     const response = await fetch(aiUrl, {
       method: "POST",
       headers: {

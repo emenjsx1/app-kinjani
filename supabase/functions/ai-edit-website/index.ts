@@ -134,7 +134,7 @@ serve(async (req) => {
     const aiUrl = useOpenAI
       ? "https://api.openai.com/v1/chat/completions"
       : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    const aiModel = useOpenAI ? "gpt-5" : "gemini-2.5-flash";
+    const aiModel = useOpenAI ? "gpt-4o" : "gemini-2.5-flash";
 
     // ---------- Modern structured-output mode ----------
     if (body.mode === "plan") {
@@ -147,19 +147,13 @@ serve(async (req) => {
         },
       ];
 
-      const isGpt5Plan = useOpenAI && aiModel.startsWith("gpt-5");
       const planReqBody: Record<string, unknown> = {
         model: aiModel,
         messages,
         response_format: useOpenAI ? { type: "json_object" } : { type: "json_schema", json_schema: OPERATION_PLAN_JSON_SCHEMA },
+        temperature: 0.4,
       };
-      if (isGpt5Plan) {
-        planReqBody.max_completion_tokens = 8000;
-        planReqBody.reasoning_effort = "minimal";
-      } else {
-        planReqBody.temperature = 0.4;
-        planReqBody.max_tokens = 4000;
-      }
+      planReqBody.max_tokens = 4000;
       const response = await fetch(aiUrl, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -224,23 +218,17 @@ Devolve o JSON.`;
         ]
       : textBlock;
 
-    const isGpt5Edit = useOpenAI && aiModel.startsWith("gpt-5");
     const editReqBody: Record<string, unknown> = {
       // Use a vision-capable model when images are present.
-      model: useOpenAI ? "gpt-5" : "gemini-2.5-flash",
+      model: useOpenAI ? "gpt-4o" : "gemini-2.5-flash",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userContent },
       ],
       response_format: { type: "json_object" },
+      temperature: 0.7,
     };
-    if (isGpt5Edit) {
-      editReqBody.max_completion_tokens = 16000;
-      editReqBody.reasoning_effort = "minimal";
-    } else {
-      editReqBody.max_tokens = 8000;
-      editReqBody.temperature = 0.7;
-    }
+    editReqBody.max_tokens = 8000;
     const response = await fetch(aiUrl, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },

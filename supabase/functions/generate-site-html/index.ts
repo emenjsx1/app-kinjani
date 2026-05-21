@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
     const aiUrl = useOpenAI
       ? "https://api.openai.com/v1/chat/completions"
       : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    const aiModel = useOpenAI ? "gpt-5" : "gemini-2.5-flash";
+    const aiModel = useOpenAI ? "gpt-4o" : "gemini-2.5-flash";
 
     // Charge 50 credits before generating.
     const charge = await chargeCredits(req, "site_create", `Geração de site${websiteName ? `: ${websiteName}` : ""}`);
@@ -115,20 +115,15 @@ Deno.serve(async (req) => {
 
     const userMsg = `Nome do projecto: ${websiteName || "Sem nome"}\n\nPedido do utilizador:\n${prompt}\n\nGera agora a página HTML completa, premium e única.`;
 
-    const isGpt5 = useOpenAI && aiModel.startsWith("gpt-5");
     const body: Record<string, unknown> = {
       model: aiModel,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userMsg },
       ],
+      temperature: 0.9,
     };
-    if (isGpt5) {
-      body.max_completion_tokens = 32000;
-      body.reasoning_effort = "minimal";
-    } else {
-      body.temperature = 0.9;
-    }
+    if (useOpenAI) body.max_tokens = 16000;
 
     const resp = await fetch(aiUrl, {
       method: "POST",
