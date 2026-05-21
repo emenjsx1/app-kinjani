@@ -309,11 +309,11 @@ Deno.serve(async (req) => {
     let newHtml: string | undefined;
 
     if (action === "edit") {
-      newHtml = normalizeGeneratedHtml(String(parsed.html || "")
+      newHtml = await normalizeGeneratedHtml(String(parsed.html || "")
         .replace(/^```html\s*/i, "")
         .replace(/^```\s*/i, "")
         .replace(/```\s*$/i, "")
-        .trim());
+        .trim(), String(instruction || ""));
       if (!newHtml.toLowerCase().includes("<html")) {
         return new Response(JSON.stringify({
           action: "chat",
