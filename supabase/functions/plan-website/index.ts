@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { callAI } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +8,7 @@ const corsHeaders = {
 
 const ALLOWED_SECTION_TYPES = [
   "hero","about","services","features","gallery","team",
-  "testimonials","pricing","faq","contact","cta","booking",
+  "testimonials","pricing","faq","contact","cta","booking","counter","image-text",
 ] as const;
 
 const SYSTEM_PROMPT = `Tu és um director criativo sénior de uma agência premium tipo Lovable / Linear / Stripe. Recebes QUALQUER pedido de website e desenhas um site completo, único, bespoke — NUNCA template genérico.
@@ -16,7 +17,7 @@ const SYSTEM_PROMPT = `Tu és um director criativo sénior de uma agência premi
 EXIGÊNCIAS DE QUALIDADE (não negociáveis)
 ═══════════════════════════════════════════════
 
-1. **MARCA**: Inventa um nome de marca real, memorável e curto (2-3 palavras MAX). NUNCA uses descrições genéricas como "Clínica de Psicologia", "Empresa de Construção", "Consultório Dentário". Exemplos bons: "Lume", "Sereno Mente", "Aurora Build", "Branco Smile", "Vértice Capital".
+1. **MARCA**: Se o utilizador der nome de marca/negócio explícito, usa-o EXATAMENTE. Só inventas nome quando não houver nenhum.
 
 2. **PALETA**: Escolhe paleta sofisticada e coerente com o setor. NUNCA azul genérico. Pensa em moodboard real:
    - Psicologia/wellness → tons terrosos, sage, off-white, terracota suave
@@ -28,18 +29,19 @@ EXIGÊNCIAS DE QUALIDADE (não negociáveis)
 
 3. **TIPOGRAFIA**: Escolhe Google Font expressiva. Combina com o mood. Ex: "Fraunces", "Cormorant Garamond", "Space Grotesk", "Plus Jakarta Sans", "Instrument Serif", "DM Serif Display".
 
-4. **SECÇÕES** (6 a 9 secções, ordem narrativa, variedade obrigatória):
+4. **SECÇÕES** (6 a 10 secções, ordem narrativa, variedade obrigatória):
    - Inclui SEMPRE: hero, about (ou features), services, contact
    - Acrescenta consoante o setor: team (com 3-4 membros realistas), testimonials (2-3 com nomes/cargos reais e portugueses), faq (3-5 perguntas reais do setor), gallery (6 imagens), pricing, booking, cta.
    - Se o pedido mencionar marcação/consulta/agendamento → inclui secção "booking" com serviços extraídos.
+    - Se o pedido mencionar estatísticas / números / prova → inclui "counter".
+    - Se o pedido mencionar before/after / antes e depois / transformações → inclui "image-text" com copy orientada a transformação visual.
+    - Se o pedido for landing page, NÃO cries páginas internas nem rotas.
 
 5. **COPY**: Profissional, calorosa, específica do setor — NUNCA placeholders ("Serviço 1", "Lorem", "Funcionalidade 1"). Cada serviço, FAQ, testimonial tem texto real e completo (2-3 frases).
 
-6. **IMAGENS**: Para cada secção que tem imagens (hero bannerUrl, team memberXImage, gallery imageX), preenche com URL Unsplash relevante:
-   \`https://images.unsplash.com/photo-XXX?w=1200&q=80\`
-   Usa fotos REAIS do setor (psicologia → terapia, sofá, plantas; dental → sorrisos, clínica branca; construção → obras, capacete; etc). Se não conheceres ID válido, usa formato:
-   \`https://source.unsplash.com/1200x800/?<keywords>\`
-   Ex: \`https://source.unsplash.com/1200x800/?psychology,therapy,calm\`.
+6. **IMAGENS**: Para cada secção que tem imagens (hero bannerUrl, team memberXImage, gallery imageX, image-text image), preenche com URL remota RELEVANTE AO SETOR.
+   - Dental premium: usa apenas keywords como dental clinic, dentist portrait, smile makeover, orthodontics, veneers, luxury clinic interior, dental technology.
+   - NUNCA uses imagens irrelevantes, animais, natureza aleatória, lifestyle sem contexto clínico, ou placeholders absurdos.
 
 7. **CONTACTOS**: Extrai email/telefone/morada do prompt. Se ausentes, inventa coerentes com a marca/local (ex: \`hello@<brandslug>.pt\`, \`+351 912 ...\`, "Av. da Liberdade 245, Lisboa").
 
@@ -59,6 +61,8 @@ faq: { title, faq1Question, faq1Answer, faq2Question, faq2Answer, faq3Question, 
 contact: { title, subtitle, email, phone, whatsappNumber, address }
 cta: { title, description, buttonText }
 booking: { title, subtitle, service1Title, service1Description, ... (até 6), slots ("09:00, 10:00, ..."), phone, whatsappNumber }
+counter: { title, counter1Value, counter1Suffix, counter1Label, counter2Value, counter2Suffix, counter2Label, counter3Value, counter3Suffix, counter3Label, counter4Value, counter4Suffix, counter4Label }
+image-text: { title, description, image, imagePosition, ctaText }
 
 REGRA FINAL: Devolve APENAS JSON. NÃO adicionas markdown, prefixos, código de bloco. APENAS o objeto JSON do plano completo.`;
 
@@ -100,7 +104,7 @@ const PLAN_SCHEMA = {
       sections: {
         type: "array",
         minItems: 5,
-        maxItems: 10,
+        maxItems: 12,
         items: {
           type: "object",
           additionalProperties: false,
@@ -123,52 +127,28 @@ serve(async (req) => {
     const { prompt, websiteName } = await req.json() as { prompt: string; websiteName?: string };
     if (!prompt || prompt.trim().length < 8) throw new Error("Prompt demasiado curto");
 
-    const openaiKey = Deno.env.get("OPENAI_API_KEY");
     const geminiKey = Deno.env.get("GEMINI_API_KEY");
-    const KEY = openaiKey || geminiKey;
-    if (!KEY) throw new Error("Nenhuma API key de IA configurada (OPENAI_API_KEY ou GEMINI_API_KEY)");
-    const useOpenAI = !!openaiKey;
-    const aiUrl = useOpenAI
-      ? "https://api.openai.com/v1/chat/completions"
-      : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    const aiModel = useOpenAI ? "gpt-4o" : "gemini-2.5-flash";
+    if (!geminiKey) throw new Error("GEMINI_API_KEY não configurada.");
 
     const userMessage = `PEDIDO DO UTILIZADOR:
 """
 ${prompt}
 """
 
-Nome sugerido (se quiseres ignorar e inventar melhor, ignora): ${websiteName ?? "(nenhum)"}
+Nome da marca/negócio: ${websiteName ?? "(nenhum)"}
 
-Devolve EXCLUSIVAMENTE um objecto JSON puro (NÃO wrappes em "plan" ou outra chave) com EXACTAMENTE estes campos top-level: brand, tagline, type, domainLabel, contact{email,phone,address}, palette{primary,secondary,accent,background,text}, font, sections (array de 6-9 objetos {type,title,content}). Lembra-te: nome de marca real e curto, paleta sofisticada do setor, copy completa e profissional, imagens Unsplash relevantes em cada slot de imagem.`;
+Devolve EXCLUSIVAMENTE um objecto JSON puro (NÃO wrappes em "plan" ou outra chave) com EXACTAMENTE estes campos top-level: brand, tagline, type, domainLabel, contact{email,phone,address}, palette{primary,secondary,accent,background,text}, font, sections. Usa a marca dada pelo utilizador se existir. Se o prompt pedir Montserrat + Inter, devolve font como "Montserrat, Inter". Se o prompt pedir landing page dental de luxo, garante estética white/beige premium, secções coerentes e sem rotas inventadas.`;
 
-    const planBody: Record<string, unknown> = {
-      model: aiModel,
+    const ai = await callAI({
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userMessage },
       ],
-      response_format: useOpenAI ? { type: "json_object" } : { type: "json_schema", json_schema: PLAN_SCHEMA },
-      temperature: 0.85,
-    };
-    if (useOpenAI) planBody.max_tokens = 6000;
-
-    const resp = await fetch(aiUrl, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify(planBody),
+      temperature: 0.55,
+      geminiModel: "gemini-2.5-flash",
     });
 
-    if (!resp.ok) {
-      const t = await resp.text();
-      console.error("AI gateway error", resp.status, t);
-      if (resp.status === 429) return new Response(JSON.stringify({ success: false, error: "rate_limited" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (resp.status === 402) return new Response(JSON.stringify({ success: false, error: "payment_required" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      throw new Error(`AI gateway ${resp.status}`);
-    }
-
-    const data = await resp.json();
-    const raw = data?.choices?.[0]?.message?.content;
+    const raw = ai.content;
     if (!raw) throw new Error("Resposta vazia do modelo ao planear o website");
     let plan = typeof raw === "string" ? JSON.parse(raw) : raw;
     // Some models wrap the plan in { plan: {...} } or { website_plan: {...} }; unwrap.
