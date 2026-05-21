@@ -138,132 +138,91 @@ Deno.serve(async (req) => {
     );
 
     // ═══════════════════════════════════════════════════════════════════════════════
-    // SEED CRIATIVO ALEATÓRIO — força DIVERGÊNCIA total entre gerações
-    // Mesmo nicho repetido NÃO pode produzir o mesmo site
+    // FASE A — CREATIVE DIRECTOR (AI raciocina e produz briefing visual coerente)
+    // O random só entra DEPOIS, escolhendo dentro das shortlists já justificadas
     // ═══════════════════════════════════════════════════════════════════════════════
+    const niche_hint = creativeAnalysis.niche;
+    console.log('[Creative Director] A pensar...');
+    const brief = await runCreativeDirector(prompt, websiteName || "", niche_hint);
+
     const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-    const pickN = <T,>(arr: T[], n: number): T[] => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+    const uniqueId = Math.random().toString(36).slice(2, 8);
 
-    const HERO_ARCHETYPES = [
-      "Cinematic Fullscreen (imagem/gradiente full-bleed + título oversized sobreposto + scroll indicator subtil)",
-      "Editorial Split 60/40 (texto à esquerda em serif gigante, visual à direita com offset/sangria)",
-      "Bento Hero (grid bento assimétrico 4-6 cards de tamanhos diferentes, headline embebida num card)",
-      "Minimal Statement (apenas tipografia oversized centrada, whitespace extremo, 1 CTA discreto)",
-      "Glassmorphism Layered (camadas translúcidas com blur sobre gradiente vibrante)",
-      "Magazine Cover (estilo capa de revista: flag + título serif gigante + lead + foto editorial)",
-      "Diagonal Split (divisão diagonal cor-sólida/imagem, conteúdo desencontrado)",
-      "Marquee Type (texto gigante em scroll horizontal infinito como hero principal)",
-      "Asymmetric Stack (blocos sobrepostos com z-index, broken grid, elementos a sangrar)",
-      "Dark Spotlight (fundo escuro, spotlight radial em volta do título, accent vivo)",
-    ];
+    const chosenPalette = pick(brief.shortlists.palettes);
+    const chosenFonts   = pick(brief.shortlists.fonts);
+    const chosenLayout  = pick(brief.shortlists.layouts);
+    const chosenHero    = pick(brief.shortlists.heroes);
 
-    const PALETTES = [
-      { name: "Noir & Gold", vars: "--bg:#0a0a0a;--fg:#f5f0e0;--accent:#c9a84c;--muted:#1a1a1a" },
-      { name: "Midnight Indigo", vars: "--bg:#0a0a1a;--fg:#fafbfc;--accent:#6366f1;--muted:#141432" },
-      { name: "Paper & Ink", vars: "--bg:#f5f3ee;--fg:#0d0d0d;--accent:#c44d2d;--muted:#e8e4dd" },
-      { name: "Forest Moss", vars: "--bg:#0f1f15;--fg:#e8f0e8;--accent:#7da87d;--muted:#1a3c2a" },
-      { name: "Cream & Terracotta", vars: "--bg:#faf6f1;--fg:#2d1810;--accent:#c4654a;--muted:#f0e8de" },
-      { name: "Electric Coral", vars: "--bg:#fff8f6;--fg:#1a0d0d;--accent:#ff5a5f;--muted:#ffe8e5" },
-      { name: "Arctic Steel", vars: "--bg:#f0f4f8;--fg:#0c2340;--accent:#2d8a9e;--muted:#dde6ee" },
-      { name: "Burgundy Cream", vars: "--bg:#faf5f0;--fg:#3d1a1a;--accent:#8b1e3f;--muted:#f0e5d8" },
-      { name: "Brutalist Pop", vars: "--bg:#ffffff;--fg:#0a0a0a;--accent:#ff5722;--muted:#fff48a" },
-      { name: "Vapor Chrome", vars: "--bg:#1a1530;--fg:#e8e0ff;--accent:#a78bfa;--muted:#2a2050" },
-      { name: "Sand & Olive", vars: "--bg:#f5f0e6;--fg:#2d2818;--accent:#6b7a3a;--muted:#e8dfc8" },
-      { name: "Mono Slate", vars: "--bg:#1a1d24;--fg:#e8ecf1;--accent:#94a3b8;--muted:#252932" },
-    ];
-
-    const FONT_PAIRS = [
-      "Fraunces + Inter", "Instrument Serif + DM Sans", "Cormorant Garamond + Montserrat",
-      "Syne + Plus Jakarta Sans", "Space Grotesk + IBM Plex Sans", "Bricolage Grotesque + Inter",
-      "Playfair Display + Work Sans", "DM Serif Display + Manrope", "Archivo Black + Hind",
-      "Bebas Neue + Barlow", "Outfit + Figtree", "Sora + Manrope",
-      "Italiana + Lato", "Tenor Sans + Source Sans 3", "Big Shoulders Display + Inter",
-    ];
-
-    const LAYOUT_DNA = [
-      "Editorial Magazine (colunas tipo revista, callouts laterais, pull-quotes oversized)",
-      "Swiss Grid (grid rigoroso 12-col, tipografia precisa, zero ornamento)",
-      "Broken Grid Brutalist (elementos a sangrar, sobreposição agressiva, bordas duras)",
-      "Bento Modular (cards de tamanhos variáveis, mix de conteúdo, hover lifts diferenciados)",
-      "Vertical Storytelling (scroll narrativo, secções full-height alternadas, parallax leve)",
-      "Asymmetric Editorial (alinhamentos desencontrados intencionais, whitespace dramático)",
-      "Card Stack Y2K (cards arredondados grandes, cores vibrantes, sombras coloridas)",
-      "Minimalist Awwwards (90% whitespace, micro-detalhes, animações sutis premium)",
-    ];
-
-    const MOTION_STYLES = [
-      "Smooth & Refined (fades 600ms ease-out, micro-lifts em hover, scroll reveals subtis)",
-      "Bold & Dynamic (slide-ins agressivos, scale transforms, hover com tilt 3D)",
-      "Cinematic Slow (parallax pesado, ken-burns em imagens, reveals encadeados 1.2s)",
-      "Snappy Modern (animações 200ms rápidas, micro-interactions vivas)",
-      "Editorial Calm (fades quase invisíveis, foco no conteúdo, motion mínima propositada)",
-    ];
-
-    const SECTION_ORDERS = [
-      ["hero", "manifesto", "serviços-bento", "processo-timeline", "casos-galeria", "equipa", "depoimentos", "faq", "cta-final", "footer"],
-      ["hero", "estatísticas-impacto", "sobre-narrativa", "ofertas-cards", "galeria-masonry", "testemunhos-editorial", "contato-direto", "footer"],
-      ["hero", "problema-solução", "como-funciona", "diferenciais", "social-proof", "pricing-ou-pacotes", "faq-acordeão", "cta-conversão", "footer"],
-      ["hero", "showcase-fullbleed", "filosofia-quote", "serviços-split", "histórias-clientes", "perguntas-frequentes", "agendar", "footer"],
-      ["hero", "destaque-único", "trilogia-pilares", "trabalho-recente-grid", "manifesto-pessoal", "contato-conversa", "footer"],
-    ];
-
-    const seed = {
-      hero: pick(HERO_ARCHETYPES),
-      palette: pick(PALETTES),
-      fonts: pick(FONT_PAIRS),
-      layoutDNA: pick(LAYOUT_DNA),
-      motion: pick(MOTION_STYLES),
-      sections: pick(SECTION_ORDERS),
-      moodWords: pickN(["raw","refined","cinematic","playful","austere","warm","futuristic","nostalgic","luxurious","brutalist","soft","confident","experimental","editorial","intimate"], 3).join(" + "),
-      uniqueId: Math.random().toString(36).slice(2, 8),
-    };
-
-    console.log('[Creative Seed]', { id: seed.uniqueId, palette: seed.palette.name, hero: seed.hero.slice(0,40), layout: seed.layoutDNA.slice(0,40) });
+    console.log('[Creative Director] Escolhas:', {
+      id: uniqueId,
+      niche: brief.interpretation.niche,
+      emotion: brief.interpretation.emotional_core,
+      palette: chosenPalette.name,
+      fonts: chosenFonts.pair,
+      layout: chosenLayout.name,
+      hero: chosenHero.name,
+      rationale: brief.rationale.slice(0, 120),
+    });
 
     let userMsg = `${creativePrompt}
 
 ═══════════════════════════════════════════════════════════════════════════════
-🎲 SEED CRIATIVO ÚNICO (ID: ${seed.uniqueId}) — OBRIGATÓRIO SEGUIR À RISCA
+🎨 CREATIVE BRIEF (ID: ${uniqueId}) — DECIDIDO PELO DIRETOR CRIATIVO
 ═══════════════════════════════════════════════════════════════════════════════
 
-Este seed garante que ESTE site é VISUALMENTE DIFERENTE de qualquer outro que já geraste.
-NÃO ignores. NÃO uses defaults. Aplica EXATAMENTE estas escolhas:
+INTERPRETAÇÃO DO BRIEFING:
+- Nicho: ${brief.interpretation.niche}
+- Núcleo emocional: ${brief.interpretation.emotional_core}
+- Posicionamento: ${brief.interpretation.positioning}
+- Público: ${brief.interpretation.audience}
+- Voz de marca: ${brief.interpretation.brand_voice}
 
-🎨 PALETA OBRIGATÓRIA: ${seed.palette.name}
-   CSS Variables (copia LITERALMENTE para :root):
-   :root { ${seed.palette.vars} }
-   Usa via var(--bg), var(--fg), var(--accent), var(--muted) em TODO o site.
+DIREÇÃO VISUAL (raciocínio do director):
+- Tipografia → ${brief.direction.typography_intent}
+- Espaçamento → ${brief.direction.spacing_intent}
+- Paleta → ${brief.direction.palette_intent}
+- Composição → ${brief.direction.composition_intent}
+- Motion → ${brief.direction.motion_intent}
 
-🔤 PAR TIPOGRÁFICO OBRIGATÓRIO: ${seed.fonts}
-   Carrega ambas via Google Fonts. Display → H1/H2/H3. Sans → body/UI.
-
-🎬 ARQUÉTIPO DE HERO OBRIGATÓRIO: ${seed.hero}
-   NÃO uses outro estilo de hero. Implementa exatamente este.
-
-📐 LAYOUT DNA OBRIGATÓRIO: ${seed.layoutDNA}
-   Toda a composição do site deve respeitar este DNA estrutural.
-
-✨ MOTION: ${seed.motion}
-
-🎭 MOOD: ${seed.moodWords}
-
-📋 ORDEM DE SECÇÕES (segue esta sequência exata):
-${seed.sections.map((s, i) => `   ${i + 1}. ${s}`).join("\n")}
+PORQUÊ ESTA DIREÇÃO (rationale do director — usa isto como bússola em TODAS as escolhas):
+${brief.rationale}
 
 ═══════════════════════════════════════════════════════════════════════════════
-🚨 REGRAS ANTI-REPETIÇÃO (CRÍTICO)
+🎯 ESCOLHAS FINAIS (justificadas, NÃO aleatórias)
 ═══════════════════════════════════════════════════════════════════════════════
 
-1. ESTE SITE NÃO PODE PARECER COM QUALQUER OUTRO QUE JÁ TENHAS GERADO.
-2. Se sentires impulso de usar grid 3x3 de cards centrado → PARA. Usa o Layout DNA acima.
-3. Se sentires impulso de hero centrado com título+sub+2 botões → PARA. Usa o Arquétipo acima.
-4. A PALETA É OBRIGATÓRIA — proibido substituir por azul/cinza genérico ou "indigo/blue Tailwind".
-5. As FONTES são obrigatórias — proibido usar só Inter ou system fonts.
-6. Varia ALINHAMENTOS entre secções (esquerda, direita, centro, justificado).
-7. Varia FUNDOS entre secções (var(--bg), var(--muted), var(--accent) invertido, gradiente).
-8. Mínimo 7 secções ricas. Cada secção com composição DIFERENTE da anterior.
-9. Copy 100% em PT, real e específico ao negócio. ZERO Lorem Ipsum.
-10. Inclui obrigatoriamente: 1 pull-quote oversized, 1 secção de números/estatísticas, 1 galeria/grid visual, 1 timeline/steps.
+PALETA: ${chosenPalette.name}
+  Porquê: ${chosenPalette.why}
+  CSS Variables (copia LITERALMENTE para :root):
+  :root { ${chosenPalette.vars} }
+  Usa via var(--bg), var(--fg), var(--accent), var(--muted) em TODO o site.
+
+TIPOGRAFIA: ${chosenFonts.pair}
+  Porquê: ${chosenFonts.why}
+  Carrega ambas via Google Fonts. Display → H1/H2/H3. Sans/Body → corpo, UI, micro-copy.
+
+LAYOUT DNA: ${chosenLayout.name}
+  Porquê: ${chosenLayout.why}
+  Toda a composição do site deve respeitar este DNA estrutural.
+
+HERO: ${chosenHero.name}
+  Porquê: ${chosenHero.why}
+  Implementa exatamente este arquétipo de hero.
+
+═══════════════════════════════════════════════════════════════════════════════
+🚨 REGRAS DE COERÊNCIA (não são caprichos — servem a intenção)
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Estas escolhas foram tomadas porque servem a intenção emocional do briefing.
+   Aplica-as fielmente. Não substituas por defaults Tailwind genéricos.
+2. Se sentires que algo não encaixa, REFINA dentro da intenção — não saias dela.
+3. Toda a copy deve respeitar a "voz de marca" definida acima.
+4. Mínimo 7 secções ricas. Cada secção com composição DIFERENTE da anterior.
+5. Varia alinhamentos (esquerda/direita/centro) e fundos (var(--bg)/var(--muted)/var(--accent) invertido).
+6. Copy 100% em PT-PT, real e específico ao negócio. ZERO Lorem Ipsum.
+7. Inclui obrigatoriamente: 1 pull-quote oversized, 1 secção de números/estatísticas,
+   1 galeria/grid visual, 1 timeline/steps.
+8. Adiciona logo após o <!DOCTYPE html> um comentário: <!-- creative-brief: ${uniqueId} -->
 
 REQUISITOS TÉCNICOS:
 - Tailwind CDN + Google Fonts no <head>
@@ -275,7 +234,7 @@ REQUISITOS TÉCNICOS:
 - py-20 md:py-32 mínimo entre secções
 - Footer completo
 
-Gera AGORA o HTML completo, único, premium, baseado neste seed ${seed.uniqueId}.`;
+Gera AGORA o HTML completo, único, premium, fiel a este Creative Brief ${uniqueId}.`;
 
     // Sistema de geração com validação de qualidade e retry
     let html: string = "";
