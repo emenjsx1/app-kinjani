@@ -123,8 +123,15 @@ serve(async (req) => {
     const { prompt, websiteName } = await req.json() as { prompt: string; websiteName?: string };
     if (!prompt || prompt.trim().length < 8) throw new Error("Prompt demasiado curto");
 
-    const KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!KEY) throw new Error("GEMINI_API_KEY missing");
+    const openaiKey = Deno.env.get("OPENAI_API_KEY");
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    const KEY = openaiKey || geminiKey;
+    if (!KEY) throw new Error("Nenhuma API key de IA configurada (OPENAI_API_KEY ou GEMINI_API_KEY)");
+    const useOpenAI = !!openaiKey;
+    const aiUrl = useOpenAI
+      ? "https://api.openai.com/v1/chat/completions"
+      : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+    const aiModel = useOpenAI ? "gpt-4o-mini" : "gemini-2.5-flash";
 
     const userMessage = `PEDIDO DO UTILIZADOR:
 """
@@ -133,18 +140,18 @@ ${prompt}
 
 Nome sugerido (se quiseres ignorar e inventar melhor, ignora): ${websiteName ?? "(nenhum)"}
 
-Devolve o plano completo conforme schema. Lembra-te: nome de marca real e curto, paleta sofisticada do setor, 6-9 secções variadas, copy completa e profissional, imagens Unsplash relevantes em cada slot de imagem.`;
+Devolve EXCLUSIVAMENTE um objecto JSON puro (NÃO wrappes em "plan" ou outra chave) com EXACTAMENTE estes campos top-level: brand, tagline, type, domainLabel, contact{email,phone,address}, palette{primary,secondary,accent,background,text}, font, sections (array de 6-9 objetos {type,title,content}). Lembra-te: nome de marca real e curto, paleta sofisticada do setor, copy completa e profissional, imagens Unsplash relevantes em cada slot de imagem.`;
 
-    const resp = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    const resp = await fetch(aiUrl, {
       method: "POST",
       headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: aiModel,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userMessage },
         ],
-        response_format: { type: "json_schema", json_schema: PLAN_SCHEMA },
+        response_format: useOpenAI ? { type: "json_object" } : { type: "json_schema", json_schema: PLAN_SCHEMA },
         temperature: 0.85,
       }),
     });
@@ -160,7 +167,11 @@ Devolve o plano completo conforme schema. Lembra-te: nome de marca real e curto,
     const data = await resp.json();
     const raw = data?.choices?.[0]?.message?.content;
     if (!raw) throw new Error("Resposta vazia do modelo ao planear o website");
-    const plan = typeof raw === "string" ? JSON.parse(raw) : raw;
+    let plan = typeof raw === "string" ? JSON.parse(raw) : raw;
+    // Some models wrap the plan in { plan: {...} } or { website_plan: {...} }; unwrap.
+    if (plan && typeof plan === "object" && !plan.brand && !plan.sections) {
+      plan = plan.plan ?? plan.website_plan ?? plan;
+    }
 
     console.log("plan-website OK:", plan.brand, "→", plan.sections?.length, "secções");
 

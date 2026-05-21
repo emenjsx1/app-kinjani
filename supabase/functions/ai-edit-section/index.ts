@@ -34,10 +34,17 @@ serve(async (req) => {
     const { sectionType, currentContent, instruction, websiteName, niche } = 
       await req.json() as EditSectionRequest;
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is not configured");
+    const openaiKey = Deno.env.get("OPENAI_API_KEY");
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    const API_KEY = openaiKey || geminiKey;
+    if (!API_KEY) {
+      throw new Error("Nenhuma API key de IA configurada (OPENAI_API_KEY ou GEMINI_API_KEY)");
     }
+    const useOpenAI = !!openaiKey;
+    const aiUrl = useOpenAI
+      ? "https://api.openai.com/v1/chat/completions"
+      : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+    const aiModel = useOpenAI ? "gpt-4o-mini" : "gemini-2.5-flash";
 
     const userPrompt = `
 Edita o conteúdo desta secção "${sectionType}" para o website "${websiteName}" (nicho: ${niche}).
@@ -54,14 +61,14 @@ Responde apenas com o JSON atualizado da secção, mantendo todas as chaves exis
     console.log(`Editing section ${sectionType} for ${websiteName}`);
     console.log("Instruction:", instruction);
 
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    const response = await fetch(aiUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GEMINI_API_KEY}`,
+        Authorization: `Bearer ${API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: aiModel,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
