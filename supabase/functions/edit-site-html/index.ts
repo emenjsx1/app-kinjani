@@ -233,8 +233,17 @@ Deno.serve(async (req) => {
               } catch (e) { console.error("edit refund failed", e); }
             }
           };
-          const flushFinal = () => {
-            controller.enqueue(encoder.encode(`\n__KINJANI_END__${JSON.stringify({ raw: fullText })}\n`));
+          const flushFinal = async () => {
+            // Pós-processa o HTML final para garantir imagens reais (Pexels/catálogo curado)
+            let finalRaw = fullText;
+            try {
+              const parsed = JSON.parse(fullText);
+              if (parsed?.action === "edit" && typeof parsed.html === "string") {
+                parsed.html = await normalizeGeneratedHtml(parsed.html, String(instruction || ""));
+                finalRaw = JSON.stringify(parsed);
+              }
+            } catch { /* não-JSON; segue como está */ }
+            controller.enqueue(encoder.encode(`\n__KINJANI_END__${JSON.stringify({ raw: finalRaw })}\n`));
           };
           try {
             while (true) {
