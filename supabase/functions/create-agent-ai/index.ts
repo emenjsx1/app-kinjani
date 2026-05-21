@@ -111,10 +111,17 @@ serve(async (req) => {
       );
     }
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is not configured");
+    const openaiKey = Deno.env.get("OPENAI_API_KEY");
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    const API_KEY = openaiKey || geminiKey;
+    if (!API_KEY) {
+      throw new Error("Nenhuma API key de IA configurada (OPENAI_API_KEY ou GEMINI_API_KEY)");
     }
+    const useOpenAI = !!openaiKey;
+    const aiUrl = useOpenAI
+      ? "https://api.openai.com/v1/chat/completions"
+      : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+    const aiModel = useOpenAI ? "gpt-4o-mini" : "gemini-2.5-flash";
 
     // Cobra 5 créditos antes de gerar o agente.
     const charge = await chargeCredits(req, "agent_create_ai", `Criação agente AI: ${businessName}`);
@@ -141,20 +148,20 @@ Responde apenas com JSON válido.
 
     console.log(`Creating AI agent for ${businessName}`);
 
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    const response = await fetch(aiUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GEMINI_API_KEY}`,
+        Authorization: `Bearer ${API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: aiModel,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
         ],
         temperature: 0.6,
-        response_format: { type: "json_schema", json_schema: CREATE_AGENT_JSON_SCHEMA },
+        response_format: useOpenAI ? { type: "json_object" } : { type: "json_schema", json_schema: CREATE_AGENT_JSON_SCHEMA },
         max_tokens: 4000,
       }),
     });

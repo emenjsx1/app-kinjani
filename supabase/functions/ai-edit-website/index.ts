@@ -126,8 +126,15 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const apiKey = Deno.env.get("GEMINI_API_KEY");
-    if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
+    const openaiKey = Deno.env.get("OPENAI_API_KEY");
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    const apiKey = openaiKey || geminiKey;
+    if (!apiKey) throw new Error("Nenhuma API key de IA configurada (OPENAI_API_KEY ou GEMINI_API_KEY)");
+    const useOpenAI = !!openaiKey;
+    const aiUrl = useOpenAI
+      ? "https://api.openai.com/v1/chat/completions"
+      : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+    const aiModel = useOpenAI ? "gpt-4o-mini" : "gemini-2.5-flash";
 
     // ---------- Modern structured-output mode ----------
     if (body.mode === "plan") {
@@ -140,13 +147,13 @@ serve(async (req) => {
         },
       ];
 
-      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+      const response = await fetch(aiUrl, {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "gemini-2.5-flash",
+          model: aiModel,
           messages,
-          response_format: { type: "json_schema", json_schema: OPERATION_PLAN_JSON_SCHEMA },
+          response_format: useOpenAI ? { type: "json_object" } : { type: "json_schema", json_schema: OPERATION_PLAN_JSON_SCHEMA },
           temperature: 0.4,
           max_tokens: 4000,
         }),
@@ -210,12 +217,12 @@ Devolve o JSON.`;
         ]
       : textBlock;
 
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    const response = await fetch(aiUrl, {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         // Use a vision-capable model when images are present.
-        model: hasVision ? "gemini-2.5-flash" : "gemini-2.5-flash",
+        model: useOpenAI ? (hasVision ? "gpt-4o" : "gpt-4o-mini") : "gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },

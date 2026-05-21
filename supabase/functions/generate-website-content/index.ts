@@ -46,10 +46,17 @@ serve(async (req) => {
     const { websiteType, niche, templateName, prompt, websiteName, sections } = 
       await req.json() as WebsiteGenerationRequest;
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) {
-      throw new Error("GEMINI_API_KEY is not configured");
+    const openaiKey = Deno.env.get("OPENAI_API_KEY");
+    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    const API_KEY = openaiKey || geminiKey;
+    if (!API_KEY) {
+      throw new Error("Nenhuma API key de IA configurada (OPENAI_API_KEY ou GEMINI_API_KEY)");
     }
+    const useOpenAI = !!openaiKey;
+    const aiUrl = useOpenAI
+      ? "https://api.openai.com/v1/chat/completions"
+      : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+    const aiModel = useOpenAI ? "gpt-4o-mini" : "gemini-2.5-flash";
 
     const uniqueSeed = Math.random().toString(36).substring(2, 8);
     const userPrompt = `
@@ -143,19 +150,19 @@ Gera APENAS as secções solicitadas: ${sections.join(", ")}
     console.log("Generating website content for:", websiteName);
     console.log("Sections to generate:", sections);
 
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+    const response = await fetch(aiUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GEMINI_API_KEY}`,
+        Authorization: `Bearer ${API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gemini-2.5-flash",
+        model: aiModel,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userPrompt },
         ],
-        temperature: 1.05,
+        temperature: useOpenAI ? 1.0 : 1.05,
         max_tokens: 2400,
       }),
     });
