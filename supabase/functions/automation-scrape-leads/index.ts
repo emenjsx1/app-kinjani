@@ -23,9 +23,9 @@ serve(async (req) => {
       throw new Error("Pesquisa deve ter pelo menos 3 caracteres");
     }
 
-    const OPENROUTER_KEY = Deno.env.get("OPENROUTER_API_KEY");
-    if (!OPENROUTER_KEY) {
-      throw new Error("OPENROUTER_API_KEY não configurada");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY não configurada");
     }
 
     const searchQuery = location 
@@ -35,14 +35,14 @@ serve(async (req) => {
     console.log(`Scraping leads for: "${searchQuery}", limit: ${limit}`);
 
     // Use Lovable AI to extract structured data from search results
-    const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const aiResponse = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENROUTER_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemma-3-27b-it",
+        model: "gemini-2.5-flash",
         messages: [
           {
             role: "system",

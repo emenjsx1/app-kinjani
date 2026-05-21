@@ -83,9 +83,9 @@ Deno.serve(async (req) => {
     const body = (await req.json()) as AgentChatRequest;
     const { messages, agentType, agentPrompt, attachments } = body;
 
-    const OPENROUTER_KEY = Deno.env.get("OPENROUTER_API_KEY");
-    if (!OPENROUTER_KEY) {
-      return new Response(JSON.stringify({ error: "OPENROUTER_API_KEY missing" }), {
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      return new Response(JSON.stringify({ error: "GEMINI_API_KEY missing" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -99,71 +99,59 @@ Deno.serve(async (req) => {
     const baseSystem = AGENT_SYSTEM_PROMPTS[agentType || ""] || AGENT_SYSTEM_PROMPTS["atendimento-faq"];
     const systemText = (agentPrompt ? `${baseSystem}\n\nInstruções específicas:\n${agentPrompt}` : baseSystem) + BASE_RULES;
 
-    // Detect attachments to pick a vision-capable model when needed.
-    const hasImage = Array.isArray(attachments) && attachments.some((a) => {
-      const inline = dataUrlToInlineData(a?.dataUrl);
-      return inline && normalizeMime(inline.mime_type).startsWith("image/");
-    });
-
-    // Build OpenAI-compatible messages. Inject attachment guidance into the last user turn.
+    // Build contents in Gemini native format.
+    // History messages become text-only `parts`. The LAST user turn carries attachments.
     const lastUserIdx = (() => {
       for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === "user") return i;
       return -1;
     })();
 
-    const orMessages: any[] = [{ role: "system", content: systemText }];
-    messages.forEach((m, i) => {
-      const role = m.role === "assistant" ? "assistant" : "user";
+    const contents = messages.map((m, i) => {
+      const role = m.role === "assistant" ? "model" : "user";
+      const parts: any[] = [];
+      if (m.content && m.content.trim()) parts.push({ text: m.content });
+
       if (i === lastUserIdx && Array.isArray(attachments) && attachments.length) {
-        const guidance = buildAttachmentGuidance(attachments) || "";
-        const text = `${guidance}\n\nMensagem do utilizador: ${m.content || "(ver anexos)"}`.trim();
-        if (hasImage) {
-          const parts: any[] = [{ type: "text", text }];
-          for (const att of attachments.slice(0, 6)) {
-            const inline = dataUrlToInlineData(att.dataUrl);
-            if (!inline) continue;
-            const mime = normalizeMime(inline.mime_type);
-            if (!mime.startsWith("image/") || !isSupportedMime(mime)) continue;
-            parts.push({ type: "image_url", image_url: { url: `data:${mime};base64,${inline.data}` } });
-          }
-          orMessages.push({ role, content: parts });
-        } else {
-          orMessages.push({ role, content: text });
+        const attachmentGuidance = buildAttachmentGuidance(attachments);
+        if (attachmentGuidance) parts.unshift({ text: `${attachmentGuidance}\n\nMensagem do utilizador: ${m.content || "(ver anexos)"}` });
+        for (const att of attachments.slice(0, 6)) {
+          const inline = dataUrlToInlineData(att.dataUrl);
+          if (!inline) continue;
+          const normalizedMime = normalizeMime(inline.mime_type);
+          if (!isSupportedMime(normalizedMime)) continue;
+          inline.mime_type = normalizedMime;
+          parts.push({ inline_data: inline });
         }
-      } else {
-        orMessages.push({ role, content: m.content || "" });
       }
+
+      if (parts.length === 0) parts.push({ text: "" });
+      return { role, parts };
     });
 
-    // AGENTS / REASONING → deepseek by default; switch to a vision model when images are present.
-    const model = hasImage ? "qwen/qwen-2.5-vl-72b-instruct" : "deepseek/deepseek-chat";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
 
-    const upstream = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const upstream = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENROUTER_KEY}`,
-        "HTTP-Referer": "https://kinjani.ai",
-        "X-Title": "Kinjani AI",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model,
-        stream: true,
-        temperature: 0.7,
-        max_tokens: 1024,
-        messages: orMessages,
+        system_instruction: { parts: [{ text: systemText }] },
+        contents,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 1024,
+        },
       }),
     });
 
     if (!upstream.ok) {
       const txt = await upstream.text();
-      console.error("OpenRouter error", upstream.status, txt);
+      console.error("Gemini error", upstream.status, txt);
       const status = upstream.status === 429 || upstream.status === 402 ? upstream.status : 500;
       const msg =
         upstream.status === 429
           ? "Limite de pedidos excedido. Tenta novamente em alguns segundos."
           : upstream.status === 402
-          ? "Créditos OpenRouter esgotados. Adiciona créditos em openrouter.ai."
+          ? "Créditos esgotados. Adiciona créditos à conta."
           : `Erro do modelo: ${upstream.status}`;
       return new Response(JSON.stringify({ error: msg, detail: txt.slice(0, 400) }), {
         status,
@@ -171,8 +159,53 @@ Deno.serve(async (req) => {
       });
     }
 
-    // OpenRouter already streams OpenAI-style SSE deltas — pass through as-is.
-    return new Response(upstream.body, {
+    // Transform Gemini SSE -> OpenAI-style SSE deltas so the existing client parser keeps working.
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    const stream = new ReadableStream({
+      async start(controller) {
+        const reader = upstream.body!.getReader();
+        const emit = (text: string) => {
+          const payload = { choices: [{ delta: { content: text } }] };
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+        };
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || "";
+            for (const raw of lines) {
+              const line = raw.trim();
+              if (!line.startsWith("data:")) continue;
+              const payload = line.slice(5).trim();
+              if (!payload || payload === "[DONE]") continue;
+              try {
+                const j = JSON.parse(payload);
+                const cand = j?.candidates?.[0];
+                const parts = cand?.content?.parts || [];
+                for (const p of parts) {
+                  if (typeof p?.text === "string" && p.text.length) emit(p.text);
+                }
+              } catch {
+                // skip malformed
+              }
+            }
+          }
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        } catch (e) {
+          console.error("stream error", e);
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: String(e) })}\n\n`));
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
       headers: {
         ...corsHeaders,
         "Content-Type": "text/event-stream",
@@ -180,6 +213,7 @@ Deno.serve(async (req) => {
         "X-Accel-Buffering": "no",
       },
     });
+
 
   } catch (e) {
     console.error("agent-chat fatal", e);

@@ -126,8 +126,8 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const apiKey = Deno.env.get("OPENROUTER_API_KEY");
-    if (!apiKey) throw new Error("OPENROUTER_KEY not configured");
+    const apiKey = Deno.env.get("GEMINI_API_KEY");
+    if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
 
     // ---------- Modern structured-output mode ----------
     if (body.mode === "plan") {
@@ -140,11 +140,11 @@ serve(async (req) => {
         },
       ];
 
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "qwen/qwen-2.5-coder-32b-instruct",
+          model: "gemini-2.5-flash",
           messages,
           response_format: { type: "json_schema", json_schema: OPERATION_PLAN_JSON_SCHEMA },
           temperature: 0.4,
@@ -210,12 +210,12 @@ Devolve o JSON.`;
         ]
       : textBlock;
 
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         // Use a vision-capable model when images are present.
-        model: hasVision ? "qwen/qwen-2.5-coder-32b-instruct" : "qwen/qwen-2.5-coder-32b-instruct",
+        model: hasVision ? "gemini-2.5-flash" : "gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userContent },
