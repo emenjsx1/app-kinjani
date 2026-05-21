@@ -21,7 +21,7 @@ export interface CallAIResult {
 }
 
 const OPENAI_DEFAULT = "gpt-4o-mini";
-const GEMINI_DEFAULT = "gemini-2.5-flash";
+const GEMINI_DEFAULT = "gemini-2.5-pro";
 
 async function callOpenAI(opts: CallAIOptions, apiKey: string): Promise<CallAIResult> {
   const model = opts.openaiModel || OPENAI_DEFAULT;
@@ -85,25 +85,24 @@ async function callGemini(opts: CallAIOptions, apiKey: string): Promise<CallAIRe
   };
 }
 
-/** Call the preferred AI provider (OpenAI first, then Gemini fallback). */
+/** Call the preferred AI provider (Gemini first, then OpenAI fallback). */
 export async function callAI(opts: CallAIOptions): Promise<CallAIResult> {
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
   const geminiKey = Deno.env.get("GEMINI_API_KEY");
 
-  if (openaiKey) {
+  if (geminiKey) {
     try {
-      return await callOpenAI(opts, openaiKey);
+      return await callGemini(opts, geminiKey);
     } catch (e) {
       const status = (e as any)?.status;
-      // Fallback to Gemini on rate limit / quota / 5xx if available.
-      if (geminiKey && (status === 429 || status === 402 || (status && status >= 500))) {
-        return await callGemini(opts, geminiKey);
+      if (openaiKey && (status === 429 || status === 402 || (status && status >= 500))) {
+        return await callOpenAI(opts, openaiKey);
       }
       throw e;
     }
   }
 
-  if (geminiKey) return await callGemini(opts, geminiKey);
+  if (openaiKey) return await callOpenAI(opts, openaiKey);
 
-  throw new Error("Nenhuma API key de IA configurada (OPENAI_API_KEY ou GEMINI_API_KEY).");
+  throw new Error("Nenhuma API key de IA configurada (GEMINI_API_KEY ou OPENAI_API_KEY).");
 }
