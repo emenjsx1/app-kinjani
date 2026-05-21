@@ -148,22 +148,29 @@ Responde apenas com JSON válido.
 
     console.log(`Creating AI agent for ${businessName}`);
 
+    const isGpt5 = useOpenAI && aiModel.startsWith("gpt-5");
+    const reqBody: Record<string, unknown> = {
+      model: aiModel,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+      response_format: useOpenAI ? { type: "json_object" } : { type: "json_schema", json_schema: CREATE_AGENT_JSON_SCHEMA },
+    };
+    if (isGpt5) {
+      reqBody.max_completion_tokens = 8000;
+      reqBody.reasoning_effort = "minimal";
+    } else {
+      reqBody.temperature = 0.6;
+      reqBody.max_tokens = 4000;
+    }
     const response = await fetch(aiUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: aiModel,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.6,
-        response_format: useOpenAI ? { type: "json_object" } : { type: "json_schema", json_schema: CREATE_AGENT_JSON_SCHEMA },
-        max_tokens: 4000,
-      }),
+      body: JSON.stringify(reqBody),
     });
 
     if (!response.ok) {

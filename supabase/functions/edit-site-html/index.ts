@@ -160,8 +160,12 @@ Deno.serve(async (req) => {
       response_format: { type: "json_object" },
       stream: wantStream,
     };
-    if (isGpt5) editBody.max_completion_tokens = 12000;
-    else editBody.temperature = 0.5;
+    if (isGpt5) {
+      editBody.max_completion_tokens = 24000;
+      editBody.reasoning_effort = "minimal";
+    } else {
+      editBody.temperature = 0.5;
+    }
 
     const resp = await fetch(aiUrl, {
       method: "POST",

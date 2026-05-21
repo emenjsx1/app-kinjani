@@ -151,8 +151,12 @@ Devolve EXCLUSIVAMENTE um objecto JSON puro (NÃO wrappes em "plan" ou outra cha
       ],
       response_format: useOpenAI ? { type: "json_object" } : { type: "json_schema", json_schema: PLAN_SCHEMA },
     };
-    if (isGpt5) planBody.max_completion_tokens = 8000;
-    else planBody.temperature = 0.85;
+    if (isGpt5) {
+      planBody.max_completion_tokens = 16000;
+      planBody.reasoning_effort = "minimal";
+    } else {
+      planBody.temperature = 0.85;
+    }
 
     const resp = await fetch(aiUrl, {
       method: "POST",

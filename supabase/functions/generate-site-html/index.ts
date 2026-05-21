@@ -124,7 +124,8 @@ Deno.serve(async (req) => {
       ],
     };
     if (isGpt5) {
-      body.max_completion_tokens = 16000;
+      body.max_completion_tokens = 32000;
+      body.reasoning_effort = "minimal";
     } else {
       body.temperature = 0.9;
     }

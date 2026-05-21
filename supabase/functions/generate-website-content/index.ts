@@ -150,21 +150,28 @@ Gera APENAS as secções solicitadas: ${sections.join(", ")}
     console.log("Generating website content for:", websiteName);
     console.log("Sections to generate:", sections);
 
+    const isGpt5 = useOpenAI && aiModel.startsWith("gpt-5");
+    const reqBody: Record<string, unknown> = {
+      model: aiModel,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+    };
+    if (isGpt5) {
+      reqBody.max_completion_tokens = 6000;
+      reqBody.reasoning_effort = "minimal";
+    } else {
+      reqBody.temperature = useOpenAI ? 1.0 : 1.05;
+      reqBody.max_tokens = 2400;
+    }
     const response = await fetch(aiUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        model: aiModel,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: useOpenAI ? 1.0 : 1.05,
-        max_tokens: 2400,
-      }),
+      body: JSON.stringify(reqBody),
     });
 
     if (!response.ok) {
