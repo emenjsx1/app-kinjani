@@ -80,8 +80,14 @@ function normalizeImageUrl(rawUrl: string) {
   }
 }
 
-function normalizeGeneratedHtml(html: string) {
-  return html.replace(UNSPLASH_URL_PATTERN, normalizeImageUrl);
+async function normalizeGeneratedHtml(html: string, context = "") {
+  // Substitui URLs Unsplash inventadas e qualquer <img> por imagens reais (Pexels API ou catálogo curado).
+  try {
+    return await resolveImages(html, context);
+  } catch (e) {
+    console.error("[image-resolver] falhou no edit, mantendo HTML", e);
+    return html;
+  }
 }
 
 Deno.serve(async (req) => {
