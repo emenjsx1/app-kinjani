@@ -304,8 +304,8 @@ export default function AdminPage() {
                 <div>
                   <label className="text-xs text-pistachio/60 mb-1.5 block font-semibold uppercase tracking-wider">URL Base</label>
                   <Input
-                    value={systemSettings?.evolution_api_url ?? ""}
-                    onChange={(e) => updateSystemSetting("evolution_api_url", e.target.value)}
+                    defaultValue={systemSettings?.evolution_api_url ?? ""}
+                    onBlur={(e) => updateSystemSetting("evolution_api_url", e.target.value)}
                     className="bg-background/40 border-forest/30 text-white text-sm"
                     placeholder="https://evo.kinjani.ai"
                   />
@@ -314,8 +314,8 @@ export default function AdminPage() {
                   <label className="text-xs text-pistachio/60 mb-1.5 block font-semibold uppercase tracking-wider">API Key</label>
                   <Input
                     type="password"
-                    value={systemSettings?.evolution_api_key ?? ""}
-                    onChange={(e) => updateSystemSetting("evolution_api_key", e.target.value)}
+                    defaultValue={systemSettings?.evolution_api_key ?? ""}
+                    onBlur={(e) => updateSystemSetting("evolution_api_key", e.target.value)}
                     className="bg-background/40 border-forest/30 text-white text-sm"
                     placeholder="Chave da Evolution API"
                   />
@@ -342,8 +342,8 @@ export default function AdminPage() {
                   <label className="text-xs text-pistachio/60 mb-1.5 block font-semibold uppercase tracking-wider">OpenAI API Key (Global)</label>
                   <Input
                     type="password"
-                    value={systemSettings?.openai_api_key ?? ""}
-                    onChange={(e) => updateSystemSetting("openai_api_key", e.target.value)}
+                    defaultValue={systemSettings?.openai_api_key ?? ""}
+                    onBlur={(e) => updateSystemSetting("openai_api_key", e.target.value)}
                     className="bg-background/40 border-forest/30 text-white text-sm"
                     placeholder="sk-..."
                   />
@@ -352,8 +352,8 @@ export default function AdminPage() {
                   <label className="text-xs text-pistachio/60 mb-1.5 block font-semibold uppercase tracking-wider">Gemini API Key (Global)</label>
                   <Input
                     type="password"
-                    value={systemSettings?.gemini_api_key ?? ""}
-                    onChange={(e) => updateSystemSetting("gemini_api_key", e.target.value)}
+                    defaultValue={systemSettings?.gemini_api_key ?? ""}
+                    onBlur={(e) => updateSystemSetting("gemini_api_key", e.target.value)}
                     className="bg-background/40 border-forest/30 text-white text-sm"
                     placeholder="AIza..."
                   />

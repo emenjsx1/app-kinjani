@@ -347,17 +347,17 @@ export default function DomainsPage() {
 
                 {selectedDomain.status !== "active" ? (
                   <div className="space-y-6">
-                    {/* Apex TXT Record */}
+                    {/* TXT Record for Verification */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-pistachio/80 uppercase">Apex Record (A)</span>
+                        <span className="font-bold text-pistachio/80 uppercase">1. Registo TXT (Verificação)</span>
                       </div>
                       <div className="bg-black/40 rounded-lg p-3 border border-forest/20 text-xs font-mono space-y-2">
                         <div className="flex justify-between items-center border-b border-forest/10 pb-1.5">
                           <span className="text-pistachio/50 text-[10px]">HOST / NOME:</span>
                           <div className="flex items-center gap-1">
-                            <span className="text-white select-all font-bold">_kinjani.{selectedDomain.domain}</span>
-                            <button onClick={() => copyVal(`_kinjani.${selectedDomain.domain}`)} className="p-1 hover:text-primary transition-colors">
+                            <span className="text-white select-all font-bold">_kinjani</span>
+                            <button onClick={() => copyVal("_kinjani")} className="p-1 hover:text-primary transition-colors">
                               <Copy className="h-3 w-3" />
                             </button>
                           </div>
@@ -374,19 +374,44 @@ export default function DomainsPage() {
                       </div>
                     </div>
 
-                    {/* CNAME Destination */}
+                    {/* A Record or CNAME */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-pistachio/80 uppercase">CNAME Record</span>
+                        <span className="font-bold text-pistachio/80 uppercase">2. Apontamento de Tráfego</span>
                       </div>
+                      <p className="text-[10px] text-pistachio/60">Se for um domínio principal (ex: site.com), use o Registo A. Se for um subdomínio (ex: www.site.com), use o Registo CNAME.</p>
+                      
+                      {/* A Record */}
                       <div className="bg-black/40 rounded-lg p-3 border border-forest/20 text-xs font-mono space-y-2">
                         <div className="flex justify-between items-center border-b border-forest/10 pb-1.5">
-                          <span className="text-pistachio/50 text-[10px]">HOST / NOME:</span>
+                          <span className="text-pistachio/50 text-[10px]">TIPO: A RECORD | NOME:</span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-white select-all font-bold">@</span>
+                            <button onClick={() => copyVal("@")} className="p-1 hover:text-primary transition-colors">
+                              <Copy className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <span className="text-pistachio/50 text-[10px]">APONTA PARA (IP Vercel):</span>
+                          <div className="flex items-center justify-between">
+                            <span className="text-primary select-all break-all pr-2">76.76.21.21</span>
+                            <button onClick={() => copyVal("76.76.21.21")} className="p-1 hover:text-primary transition-colors shrink-0">
+                              <Copy className="h-3 w-3" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* CNAME Record */}
+                      <div className="bg-black/40 rounded-lg p-3 border border-forest/20 text-xs font-mono space-y-2 mt-2">
+                        <div className="flex justify-between items-center border-b border-forest/10 pb-1.5">
+                          <span className="text-pistachio/50 text-[10px]">TIPO: CNAME | NOME:</span>
                           <div className="flex items-center gap-1">
                             <span className="text-white select-all font-bold">
-                              {selectedDomain.domain.split(".").length > 2 ? selectedDomain.domain.split(".")[0] : "@"}
+                              {selectedDomain.domain.split(".").length > 2 ? selectedDomain.domain.split(".")[0] : "www"}
                             </span>
-                            <button onClick={() => copyVal(selectedDomain.domain.split(".").length > 2 ? selectedDomain.domain.split(".")[0] : "@")} className="p-1 hover:text-primary transition-colors">
+                            <button onClick={() => copyVal(selectedDomain.domain.split(".").length > 2 ? selectedDomain.domain.split(".")[0] : "www")} className="p-1 hover:text-primary transition-colors">
                               <Copy className="h-3 w-3" />
                             </button>
                           </div>
@@ -394,8 +419,8 @@ export default function DomainsPage() {
                         <div className="flex flex-col gap-1">
                           <span className="text-pistachio/50 text-[10px]">APONTA PARA:</span>
                           <div className="flex items-center justify-between">
-                            <span className="text-primary select-all break-all pr-2">{baseHost}</span>
-                            <button onClick={() => copyVal(baseHost)} className="p-1 hover:text-primary transition-colors shrink-0">
+                            <span className="text-primary select-all break-all pr-2">cname.vercel-dns.com</span>
+                            <button onClick={() => copyVal("cname.vercel-dns.com")} className="p-1 hover:text-primary transition-colors shrink-0">
                               <Copy className="h-3 w-3" />
                             </button>
                           </div>
