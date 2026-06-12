@@ -339,6 +339,160 @@ export default function DomainsPage() {
                     <span className="w-1.5 h-1.5 rounded-full bg-primary"></span>
                     <span className="w-1.5 h-1.5 rounded-full bg-forest"></span>
                     <span className="w-1.5 h-1.5 rounded-full bg-forest"></span>
+                  </div>
+                </div>
+                
+                <div>
+                  <p className="text-lg font-bold text-white font-mono mt-1 break-all">{selectedDomain.domain}</p>
+                </div>
+
+                {(() => {
+                  const parts = selectedDomain.domain.split('.');
+                  const isSubdomain = parts.length > 2 && !(parts.length === 3 && (parts[1] === 'co' || parts[1] === 'com' || parts[1] === 'org' || parts[1] === 'net' || parts[1] === 'gov' || parts[1] === 'edu'));
+                  const subdomainPrefix = isSubdomain ? parts.slice(0, -2).join('.') : '';
+                  const txtName = isSubdomain ? `_kinjani.${subdomainPrefix}` : '_kinjani';
+                  const aName = isSubdomain ? subdomainPrefix : '@';
+                  const cnameName = isSubdomain ? subdomainPrefix : 'www';
+
+                  return (
+                    <>
+                      {selectedDomain.status !== "active" ? (
+                        <div className="space-y-6">
+                          {/* TXT Record for Verification */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-pistachio/80 uppercase">1. Registo TXT (Verificação)</span>
+                            </div>
+                            <div className="bg-black/40 rounded-lg p-3 border border-forest/20 text-xs font-mono space-y-2">
+                              <div className="flex justify-between items-center border-b border-forest/10 pb-1.5">
+                                <span className="text-pistachio/50 text-[10px]">HOST / NOME:</span>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-white select-all font-bold">{txtName}</span>
+                                  <button onClick={() => copyVal(txtName)} className="p-1 hover:text-primary transition-colors">
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <span className="text-pistachio/50 text-[10px]">VALOR:</span>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-primary select-all break-all pr-2">{selectedDomain.verification_token}</span>
+                                  <button onClick={() => copyVal(selectedDomain.verification_token)} className="p-1 hover:text-primary transition-colors shrink-0">
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* A Record or CNAME */}
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-pistachio/80 uppercase">2. Apontamento de Tráfego</span>
+                            </div>
+                            <p className="text-[10px] text-pistachio/60">Se for um domínio principal (ex: site.com), use o Registo A. Se for um subdomínio (ex: www.site.com), use o Registo CNAME.</p>
+                            
+                            {/* A Record */}
+                            <div className="bg-black/40 rounded-lg p-3 border border-forest/20 text-xs font-mono space-y-2">
+                              <div className="flex justify-between items-center border-b border-forest/10 pb-1.5">
+                                <span className="text-pistachio/50 text-[10px]">TIPO: A RECORD | NOME:</span>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-white select-all font-bold">{aName}</span>
+                                  <button onClick={() => copyVal(aName)} className="p-1 hover:text-primary transition-colors">
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <span className="text-pistachio/50 text-[10px]">APONTA PARA (IP Vercel):</span>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-primary select-all break-all pr-2">76.76.21.21</span>
+                                  <button onClick={() => copyVal("76.76.21.21")} className="p-1 hover:text-primary transition-colors shrink-0">
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* CNAME Record */}
+                            <div className="bg-black/40 rounded-lg p-3 border border-forest/20 text-xs font-mono space-y-2 mt-2">
+                              <div className="flex justify-between items-center border-b border-forest/10 pb-1.5">
+                                <span className="text-pistachio/50 text-[10px]">TIPO: CNAME | NOME:</span>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-white select-all font-bold">{cnameName}</span>
+                                  <button onClick={() => copyVal(cnameName)} className="p-1 hover:text-primary transition-colors">
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className="flex flex-col gap-1">
+                                <span className="text-pistachio/50 text-[10px]">APONTA PARA:</span>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-primary select-all break-all pr-2">cname.vercel-dns.com</span>
+                                  <button onClick={() => copyVal("cname.vercel-dns.com")} className="p-1 hover:text-primary transition-colors shrink-0">
+                                    <Copy className="h-3 w-3" />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="pt-3 border-t border-forest/20">
+                            <Button 
+                              onClick={() => verify(selectedDomain)} 
+                              disabled={verifyingId === selectedDomain.id}
+                              className="w-full bg-forest/20 hover:bg-forest/40 border border-primary/30 text-primary py-3 rounded-lg font-bold transition-all flex items-center justify-center gap-2"
+                            >
+                              <RefreshCw className={`h-4 w-4 ${verifyingId === selectedDomain.id ? "animate-spin" : ""}`} />
+                              Check Records
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="p-4 bg-emerald-950/20 border border-primary/20 rounded-lg flex flex-col items-center justify-center text-center gap-2">
+                            <CheckCircle2 className="h-10 w-10 text-primary" />
+                            <p className="text-sm font-bold text-primary">Domínio Conectado e SSL Ativo</p>
+                            <p className="text-xs text-pistachio/70 leading-relaxed">
+                              Este domínio já foi verificado e as definições DNS estão corretas. O tráfego do website é encriptado via HTTPS com segurança ativa.
+                            </p>
+                          </div>
+
+                          {selectedDomain.website_id && (
+                            <a 
+                              href={`https://${selectedDomain.domain}`}
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="w-full bg-primary hover:bg-primary/90 text-background py-2.5 rounded-lg font-bold flex items-center justify-center gap-2 transition-all"
+                            >
+                              <ExternalLink className="h-4 w-4" /> Aceder Website <ArrowRight className="h-3.5 w-3.5" />
+                            </a>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Associate Website select */}
+                      <div className="pt-4 border-t border-forest/20 space-y-2">
+                        <Label className="text-xs font-bold text-pistachio/80 uppercase">Associar ao Website Kinjani:</Label>
+                        <select
+                          value={selectedDomain.website_id || ""}
+                          onChange={(e) => link(selectedDomain.id, e.target.value)}
+                          className="w-full rounded-lg border border-forest/40 bg-card/85 px-3 py-2.5 text-xs text-white focus:outline-none focus:border-primary/50"
+                        >
+                          <option value="" className="bg-surface">(Sem site associado - Desvinculado)</option>
+                          {websites.map((w) => (
+                            <option key={w.id} value={w.id} className="bg-surface">{w.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            ) : (
+              <div className="bg-card/40 border border-forest/30 border-dashed rounded-xl p-8 text-center text-pistachio/55">
+                <HelpCircle className="h-8 w-8 mx-auto mb-2 opacity-40 text-primary" />
+                Selecione um domínio na lista para visualizar as instruções de DNS e status de segurança.
               </div>
             )}
           </div>
