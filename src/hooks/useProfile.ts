@@ -116,8 +116,9 @@ export function useProfile() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      const channelId = `profile-${user.id}-${Math.random().toString(36).slice(2)}`;
       channel = supabase
-        .channel(`profile-${user.id}`)
+        .channel(channelId)
         .on(
           'postgres_changes',
           { event: 'UPDATE', schema: 'public', table: 'profiles', filter: `user_id=eq.${user.id}` },
