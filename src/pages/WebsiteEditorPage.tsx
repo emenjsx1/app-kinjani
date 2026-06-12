@@ -629,6 +629,16 @@ export default function WebsiteEditorPage() {
           >
             <Globe className="h-4 w-4 mr-1.5" />Publicar
           </Button>
+          {website.published_url && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => window.open(website.published_url!, "_blank")}
+              className="border-[#45fd94]/50 hover:bg-[#45fd94]/10 text-[#45fd94]"
+            >
+              <ExternalLink className="h-4 w-4 mr-1.5" /> Ver Site
+            </Button>
+          )}
         </div>
       </header>
 
@@ -728,7 +738,11 @@ export default function WebsiteEditorPage() {
                   <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
                 </div>
                 <div className="bg-[#081f1b] border border-[#095344]/20 rounded px-6 py-0.5 text-[10px]">
-                  {website.slug ? `${website.slug}.kinja.ai` : "preview.kinja.ai"}
+                  {website.published_url 
+                    ? website.published_url.replace(/^https?:\/\//, '')
+                    : website.slug 
+                      ? `${website.slug}.kinja.ai` 
+                      : "preview.kinja.ai"}
                 </div>
                 <div className="w-10"></div>
               </div>
