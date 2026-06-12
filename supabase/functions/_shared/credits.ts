@@ -94,8 +94,9 @@ export async function chargeCredits(
   action: CreditAction,
   description?: string,
   multiplier = 1,
+  overrideUserId?: string | null,
 ): Promise<ChargeResult> {
-  const userId = await resolveUserId(req);
+  const userId = overrideUserId || await resolveUserId(req);
   if (!userId) return { ok: false, reason: "unauthenticated" };
 
   const amount = CREDIT_COSTS[action] * Math.max(1, Math.floor(multiplier));

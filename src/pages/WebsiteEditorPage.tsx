@@ -1,6 +1,40 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Send, Globe, ExternalLink, Loader2, Sparkles, Monitor, Smartphone, Tablet, Paperclip, Mic, Square, Lightbulb, Hammer, X, Download, Undo2, History as HistoryIcon } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Send, 
+  Globe, 
+  ExternalLink, 
+  Loader2, 
+  Sparkles, 
+  Monitor, 
+  Smartphone, 
+  Tablet, 
+  Paperclip, 
+  Mic, 
+  Square, 
+  Lightbulb, 
+  Hammer, 
+  X, 
+  Download, 
+  Undo2, 
+  History as HistoryIcon, 
+  ChevronLeft, 
+  Menu,
+  Bot,
+  PlusCircle,
+  Eye,
+  GripHorizontal,
+  Layout,
+  Layers,
+  ArrowRight,
+  Settings,
+  HelpCircle,
+  Grid,
+  CreditCard,
+  Mail,
+  Play
+} from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -22,7 +56,6 @@ type ChatMsg = {
   content: string;
   ts: number;
   action?: "chat" | "plan" | "edit";
-  /** HTML snapshot APÓS esta mensagem (só em assistant com edit). Clica para reverter aqui. */
   htmlSnapshot?: string;
 };
 
@@ -41,6 +74,7 @@ export default function WebsiteEditorPage() {
   const [busySeconds, setBusySeconds] = useState(0);
   const [device, setDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [mode, setMode] = useState<"build" | "plan">("build");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [attachments, setAttachments] = useState<{ name: string; type: string; dataUrl: string }[]>([]);
   const [recording, setRecording] = useState(false);
   const mediaRecRef = useRef<MediaRecorder | null>(null);
@@ -50,7 +84,10 @@ export default function WebsiteEditorPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const didAutoRunRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+  const autoSaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [saveState, setSaveState] = useState<"saved" | "unsaved" | "saving">("saved");
+  const [zoom, setZoom] = useState(100);
 
   const callEdge = async (fn: string, body: any, signal: AbortSignal) => {
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fn}`;
@@ -80,7 +117,6 @@ export default function WebsiteEditorPage() {
     return json;
   };
 
-  /** Streaming edge call: emits live "message" deltas + phase hints, returns final parsed payload. */
   const streamEdge = async (
     fn: string,
     body: any,
@@ -175,8 +211,6 @@ export default function WebsiteEditorPage() {
     return { action, message: String(parsed.message || ""), html: newHtml };
   };
 
-  const normalizeHtml = (value: string) => value.replace(/\s+/g, " ").trim();
-
   const sanitizeHistory = (items: ChatMsg[]) => {
     return items.map((item) => {
       if (item.role !== "assistant") return item;
@@ -223,11 +257,9 @@ export default function WebsiteEditorPage() {
         } as any);
       }
 
-      // Auto-generate APENAS uma vez, e só se vier com ?fresh=1 (recém-criado)
       const isFresh = searchParams.get("fresh") === "1";
       if (isFresh && !didAutoRunRef.current && !existingHtml && existingHistory.length === 0 && w.config?.prompt) {
         didAutoRunRef.current = true;
-        // Limpa o param para nunca repetir em refresh
         searchParams.delete("fresh");
         setSearchParams(searchParams, { replace: true });
         runGenerate(w.config.prompt, w.name);
@@ -246,12 +278,10 @@ export default function WebsiteEditorPage() {
       setBusySeconds(0);
       return;
     }
-
     setBusySeconds(0);
     const timer = window.setInterval(() => {
       setBusySeconds((seconds) => seconds + 1);
     }, 1000);
-
     return () => window.clearInterval(timer);
   }, [busy]);
 
@@ -262,13 +292,38 @@ export default function WebsiteEditorPage() {
       .reverse();
   }, [history]);
 
-  const persist = async (newHtml: string, newHistory: ChatMsg[]) => {
+  const persist = async (newHtml: string, newHistory: ChatMsg[], silent = false) => {
     if (!website) return;
-    await updateWebsite(website.id, {
-      generated_html: newHtml,
-      chat_history: newHistory,
-    } as any);
+    if (!silent) setSaveState("saving");
+    try {
+      await updateWebsite(website.id, {
+        generated_html: newHtml,
+        chat_history: newHistory,
+      } as any);
+      setSaveState("saved");
+    } catch {
+      setSaveState("unsaved");
+    }
   };
+
+  const saveNow = async () => {
+    if (!html || !website) return;
+    await persist(html, history);
+    toast({ title: "Guardado!", description: "O teu site foi guardado com sucesso." });
+  };
+
+  useEffect(() => {
+    if (!html || !website || loading) return;
+    setSaveState("unsaved");
+    if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
+    autoSaveRef.current = setTimeout(async () => {
+      await persist(html, history, true);
+    }, 3000);
+    return () => {
+      if (autoSaveRef.current) clearTimeout(autoSaveRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [html]);
 
   const runGenerate = async (prompt: string, name?: string) => {
     const ctrl = new AbortController();
@@ -339,7 +394,6 @@ export default function WebsiteEditorPage() {
     setBusy(true);
     setBusyLabel(mode === "plan" ? "A elaborar plano..." : "A interpretar pedido");
     const userMsg: ChatMsg = { role: "user", content: finalText + (sentAttachments.length ? `  📎 ${sentAttachments.length}` : ""), ts: Date.now() };
-    // Insert a live assistant placeholder that we update as tokens arrive.
     const liveAsst: ChatMsg = { role: "assistant", content: "", ts: Date.now(), action: "chat" };
     const draft = [...history, userMsg, liveAsst];
     setHistory(draft);
@@ -363,10 +417,10 @@ export default function WebsiteEditorPage() {
         (phase) => setBusyLabel(phase),
       );
 
-      const action: "chat" | "plan" | "edit" = data.action;
+      const action = data.action;
       const newHtml = action === "edit" && data.html ? data.html : html;
-      const didChangeHtml = action === "edit" && normalizeHtml(newHtml) !== normalizeHtml(html);
-      const finalAction: "chat" | "plan" | "edit" = didChangeHtml ? action : action === "edit" ? "chat" : action;
+      const didChangeHtml = action === "edit" && newHtml.replace(/\s+/g, " ").trim() !== html.replace(/\s+/g, " ").trim();
+      const finalAction = didChangeHtml ? action : action === "edit" ? "chat" : action;
       const asst: ChatMsg = {
         role: "assistant",
         content: didChangeHtml
@@ -468,19 +522,9 @@ export default function WebsiteEditorPage() {
     }
   };
 
-  const publish = async () => {
-    if (!website) return;
-    const url = `${window.location.origin}/site/${website.id}`;
-    const res = await updateWebsite(website.id, { status: "active", published_url: url });
-    if (res) {
-      setWebsite(res);
-      toast({ title: "Publicado!", description: "Site online." });
-    }
-  };
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
+      <div className="flex items-center justify-center h-screen bg-[#011612]">
         <LoadingSpinner size="lg" />
       </div>
     );
@@ -491,90 +535,327 @@ export default function WebsiteEditorPage() {
   const elapsedLabel = busySeconds > 0 ? ` · ${busySeconds}s` : "";
 
   return (
-    <div className="h-screen flex flex-col bg-background">
-      {/* Top bar */}
-      <header className="h-14 border-b flex items-center justify-between px-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/websites")}>
-            <ArrowLeft className="h-4 w-4" />
+    <div className="h-screen flex flex-col bg-[#011612] text-[#cfe8e1] font-sans antialiased overflow-hidden select-none">
+      {/* Top Navbar */}
+      <header className="bg-[#021713]/80 backdrop-blur-xl border-b border-[#095344]/30 shadow-sm shadow-[#45fd94]/5 flex justify-between items-center w-full px-6 h-16 shrink-0 z-50">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/websites")} className="hover:bg-white/5 text-[#45fd94]" title="Voltar">
+            <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex items-center gap-2">
-            <h1 className="font-semibold">{website.name}</h1>
-            <StatusBadge status={website.status} />
+          <div className="h-6 w-px bg-[#095344]/30"></div>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#182e29] border border-[#095344]/20 text-[#aacbc4] text-xs">
+            <Globe className="h-3.5 w-3.5 text-[#45fd94]" />
+            <span>{website.name || "portfolio.aether"}</span>
           </div>
         </div>
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
-          <Button size="sm" variant={device === "desktop" ? "default" : "ghost"} className="h-7 px-2" onClick={() => setDevice("desktop")}><Monitor className="h-3.5 w-3.5" /></Button>
-          <Button size="sm" variant={device === "tablet" ? "default" : "ghost"} className="h-7 px-2" onClick={() => setDevice("tablet")}><Tablet className="h-3.5 w-3.5" /></Button>
-          <Button size="sm" variant={device === "mobile" ? "default" : "ghost"} className="h-7 px-2" onClick={() => setDevice("mobile")}><Smartphone className="h-3.5 w-3.5" /></Button>
-        </div>
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-[#0d231f] rounded-lg p-1 mr-2 border border-[#095344]/20">
+            <Button size="sm" variant={device === "desktop" ? "default" : "ghost"} className={cn("h-7 px-2.5 rounded-md text-[#aacbc4]", device === "desktop" && "bg-[#45fd94] text-[#011612]")} onClick={() => setDevice("desktop")}><Monitor className="h-4 w-4" /></Button>
+            <Button size="sm" variant={device === "tablet" ? "default" : "ghost"} className={cn("h-7 px-2.5 rounded-md text-[#aacbc4]", device === "tablet" && "bg-[#45fd94] text-[#011612]")} onClick={() => setDevice("tablet")}><Tablet className="h-4 w-4" /></Button>
+            <Button size="sm" variant={device === "mobile" ? "default" : "ghost"} className={cn("h-7 px-2.5 rounded-md text-[#aacbc4]", device === "mobile" && "bg-[#45fd94] text-[#011612]")} onClick={() => setDevice("mobile")}><Smartphone className="h-4 w-4" /></Button>
+          </div>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" disabled={versions.length === 0} title="Histórico de versões">
-                <HistoryIcon className="h-3.5 w-3.5 mr-1.5" />
+              <Button variant="outline" size="sm" className="border-[#095344]/50 hover:bg-[#095344]/20 text-[#cfe8e1]" disabled={versions.length === 0} title="Histórico de versões">
+                <HistoryIcon className="h-4 w-4 mr-1.5" />
                 Histórico
                 {versions.length > 0 && (
-                  <span className="ml-1.5 inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-primary/15 text-primary text-[10px] font-semibold">
+                  <span className="ml-1.5 inline-flex items-center justify-center min-w-[1.1rem] h-[1.1rem] px-1 rounded-full bg-[#45fd94]/20 text-[#45fd94] text-[10px] font-semibold">
                     {versions.length}
                   </span>
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-[380px] p-0">
-              <div className="px-4 py-3 border-b flex items-center justify-between">
+            <PopoverContent align="end" className="w-[380px] p-0 bg-[#021f1b] border-[#095344]/40 text-[#cfe8e1]">
+              <div className="px-4 py-3 border-b border-[#095344]/20 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-semibold">Histórico de versões</p>
-                  <p className="text-[11px] text-muted-foreground">{versions.length} guardada{versions.length === 1 ? "" : "s"} · clica para reverter</p>
+                  <p className="text-sm font-semibold text-white">Histórico de versões</p>
+                  <p className="text-[11px] text-[#aacbc4]">{versions.length} guardada{versions.length === 1 ? "" : "s"} · clica para reverter</p>
                 </div>
-                <HistoryIcon className="h-4 w-4 text-muted-foreground" />
+                <HistoryIcon className="h-4 w-4 text-[#aacbc4]" />
               </div>
               <div className="max-h-[60vh] overflow-y-auto p-2 space-y-1">
-                {versions.length === 0 && (
-                  <p className="text-xs text-muted-foreground px-3 py-6 text-center">Ainda sem versões. Cada alteração da IA cria uma versão automaticamente.</p>
-                )}
                 {versions.map(({ message, index }, versionIndex) => {
                   const date = new Date(message.ts);
-                  const timeLabel = date.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit" });
-                  const dateLabel = date.toLocaleDateString("pt-PT", { day: "2-digit", month: "short" });
                   return (
                     <button
                       key={`${message.ts}-${index}`}
                       onClick={() => revertTo(message.htmlSnapshot!, index)}
-                      className="group w-full flex items-start gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-muted/60 transition"
+                      className="group w-full flex items-start gap-3 rounded-lg px-3 py-2.5 text-left hover:bg-white/5 transition"
                     >
-                      <div className="mt-0.5 w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-semibold flex items-center justify-center shrink-0">
+                      <div className="mt-0.5 w-7 h-7 rounded-full bg-[#45fd94]/10 text-[#45fd94] text-xs font-semibold flex items-center justify-center shrink-0">
                         v{versions.length - versionIndex}
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2 mb-0.5">
-                          <span className="text-xs font-medium text-foreground">Versão {versions.length - versionIndex}</span>
-                          <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{dateLabel} · {timeLabel}</span>
+                          <span className="text-xs font-medium text-white">Versão {versions.length - versionIndex}</span>
                         </div>
-                        <p className="text-[11px] text-muted-foreground line-clamp-2">{message.content}</p>
+                        <p className="text-[11px] text-[#aacbc4] line-clamp-2">{message.content}</p>
                       </div>
-                      <span className="opacity-0 group-hover:opacity-100 transition inline-flex items-center gap-1 text-[11px] text-primary shrink-0 self-center">
-                        <Undo2 className="h-3 w-3" /> Reverter
-                      </span>
                     </button>
                   );
                 })}
               </div>
             </PopoverContent>
           </Popover>
-          <Button variant="outline" size="sm" onClick={downloadHtml} disabled={!html} title="Descarregar HTML">
-            <Download className="h-3.5 w-3.5 mr-1.5" />Download
+          <Button variant="outline" size="sm" className="border-[#095344]/50 hover:bg-[#095344]/20 text-[#cfe8e1]" onClick={downloadHtml} disabled={!html}>
+            <Download className="h-4 w-4 mr-1.5" />Download
           </Button>
-          {website.status === "active" && website.published_url && (
-            <Button variant="outline" size="sm" asChild>
-              <a href={website.published_url} target="_blank" rel="noreferrer"><ExternalLink className="h-3.5 w-3.5 mr-1.5" />Ver Online</a>
-            </Button>
-          )}
-          <Button size="sm" onClick={() => setPublishOpen(true)} disabled={!html}>
-            <Globe className="h-3.5 w-3.5 mr-1.5" />Publicar
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={saveNow}
+            disabled={!html || saveState === "saving"}
+            className={cn(
+              "transition-colors border-[#095344]/50 hover:bg-[#095344]/20",
+              saveState === "saved" && "border-green-500/40 text-green-400",
+              saveState === "unsaved" && "border-amber-500/40 text-amber-400"
+            )}
+          >
+            {saveState === "saving" ? (
+              <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            ) : saveState === "saved" ? (
+              <span className="h-2 w-2 rounded-full bg-green-500 mr-1.5 inline-block" />
+            ) : (
+              <span className="h-2 w-2 rounded-full bg-amber-400 mr-1.5 inline-block animate-pulse" />
+            )}
+            {saveState === "saving" ? "A guardar…" : saveState === "saved" ? "Guardado" : "Guardar"}
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setPublishOpen(true)}
+            disabled={!html}
+            className="bg-[#45fd94] hover:bg-[#30a684] text-[#011612] font-bold"
+          >
+            <Globe className="h-4 w-4 mr-1.5" />Publicar
           </Button>
         </div>
       </header>
+
+      {/* Editor Body */}
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Left Sidebar: Layers / Page Sections */}
+        <aside className="w-64 bg-[#021f1b]/60 backdrop-blur-xl border-r border-[#095344]/30 flex flex-col shrink-0 z-30">
+          <div className="p-4 border-b border-[#095344]/20">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-xs font-semibold tracking-wider text-[#aacbc4] uppercase">Pages & Layers</span>
+              <button className="text-[#45fd94] hover:bg-[#45fd94]/10 p-1 rounded transition-colors">
+                <PlusCircle className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="flex gap-2 p-1 bg-[#0d231f] rounded-lg border border-[#095344]/20">
+              <button className="flex-1 py-1.5 rounded-md text-xs font-bold bg-[#45fd94] text-[#011612]">Layers</button>
+              <button className="flex-1 py-1.5 rounded-md text-xs font-medium text-[#aacbc4] hover:text-white">Assets</button>
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-3 space-y-4">
+            <div>
+              <div className="flex items-center gap-2 px-2 py-1 text-[#aacbc4] text-xs font-bold tracking-widest uppercase opacity-60">
+                <Layers className="h-3.5 w-3.5" />
+                Global Elements
+              </div>
+              <div className="mt-2 space-y-1">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#45fd94]/10 text-[#45fd94] border-l-4 border-l-[#45fd94] text-xs font-medium">
+                  <Layout className="h-4 w-4" />
+                  Header Navigation
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 px-2 py-1 text-[#aacbc4] text-xs font-bold tracking-widest uppercase opacity-60">
+                <Grid className="h-3.5 w-3.5" />
+                Page Sections
+              </div>
+              <div className="mt-2 space-y-1">
+                {[
+                  { name: "Hero Section", icon: Layout },
+                  { name: "Core Ecosystem", icon: Grid },
+                  { name: "Capacity / Pricing", icon: CreditCard },
+                  { name: "CTA / Footer Section", icon: Mail }
+                ].map((sec, idx) => (
+                  <div key={idx} className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-white/5 text-white/90 text-xs transition-all cursor-pointer">
+                    <div className="flex items-center gap-2">
+                      <sec.icon className="h-4 w-4 text-[#aacbc4]" />
+                      <span>{sec.name}</span>
+                    </div>
+                    <Eye className="h-3.5 w-3.5 text-[#aacbc4]/40 hover:text-white" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="p-4 border-t border-[#095344]/20 bg-[#00110e]/40">
+            <div className="flex items-center gap-2 text-xs text-[#45fd94] font-bold">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-[#45fd94] opacity-75 animate-ping"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#45fd94]"></span>
+              </span>
+              AI Sync Active
+            </div>
+          </div>
+        </aside>
+
+        {/* Middle Canvas */}
+        <main className="flex-1 bg-[#011612] relative overflow-hidden flex flex-col items-center justify-center p-8 z-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(69,253,148,0.05),transparent_70%)] pointer-events-none" />
+          
+          {/* Zoom controls */}
+          <div className="absolute bottom-6 left-6 z-10 flex items-center gap-3 bg-[#021f1b]/80 border border-[#095344]/30 px-4 py-2 rounded-full text-xs font-bold text-[#aacbc4] backdrop-blur-md">
+            <span>{zoom}%</span>
+            <div className="w-px h-3 bg-[#095344]/30"></div>
+            <button className="hover:text-[#45fd94] cursor-pointer text-sm px-1" onClick={() => setZoom(z => Math.max(50, z - 10))}>-</button>
+            <button className="hover:text-[#45fd94] cursor-pointer text-sm px-1" onClick={() => setZoom(z => Math.min(150, z + 10))}>+</button>
+          </div>
+
+          {html ? (
+            <div 
+              className="bg-background shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] border border-[#095344]/30 rounded-2xl overflow-hidden transition-all duration-300 w-full"
+              style={{ 
+                width: deviceWidth, 
+                maxWidth: "100%", 
+                height: "calc(100vh - 10rem)",
+                transform: `scale(${zoom / 100})`,
+                transformOrigin: "center center"
+              }}
+            >
+              {/* Fake web URL header */}
+              <div className="h-10 bg-[#021713] border-b border-[#095344]/20 flex items-center px-4 justify-between text-xs text-[#aacbc4]/60">
+                <div className="flex items-center gap-1">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/60" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/60" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-green-500/60" />
+                </div>
+                <div className="bg-[#081f1b] border border-[#095344]/20 rounded px-6 py-0.5 text-[10px]">
+                  {website.slug ? `${website.slug}.kinja.ai` : "preview.kinja.ai"}
+                </div>
+                <div className="w-10"></div>
+              </div>
+              <SmoothPreviewIframe html={injectRuntime(html)} device={device} />
+            </div>
+          ) : (
+            <div className="text-center text-[#aacbc4] z-10">
+              <Sparkles className="h-12 w-12 mx-auto mb-4 text-[#45fd94] opacity-50" />
+              <p className="text-sm">Escreva um pedido no chat para começar a gerar o seu site.</p>
+            </div>
+          )}
+        </main>
+
+        {/* Right Sidebar: Assistant Chat / AI Copilot */}
+        <aside 
+          className={cn(
+            "border-l border-[#095344]/30 flex flex-col min-h-0 bg-[#021f1b]/60 backdrop-blur-xl z-20 transition-all duration-300 shrink-0",
+            isSidebarOpen ? "w-80" : "w-0 opacity-0 pointer-events-none"
+          )}
+        >
+          <div className="p-4 border-b border-[#095344]/20 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-[#45fd94]/20 flex items-center justify-center text-[#45fd94]">
+              <Bot className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-xs text-white">Aether Copilot</h3>
+              <p className="text-[9px] text-[#5ddcb1] uppercase tracking-wider font-bold">AI sync online</p>
+            </div>
+            <button className="ml-auto text-[#aacbc4] hover:text-[#45fd94]">
+              <Settings className="h-4 w-4" />
+            </button>
+          </div>
+
+          {busy && (
+            <div className="px-4 py-2 bg-[#095344]/10 border-b border-[#095344]/20 flex items-center justify-between gap-2">
+              <ThinkingIndicator label={busyLabel || undefined} elapsed={elapsedLabel} />
+              <Button size="sm" variant="ghost" className="h-7 text-xs text-[#aacbc4] hover:text-red-400" onClick={stop}>
+                Pausar
+              </Button>
+            </div>
+          )}
+
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 min-w-0">
+            {history.length === 0 && !busy && (
+              <div className="text-xs text-[#aacbc4]/80 space-y-2">
+                <p>Olá! Peça modificações visuais, novos blocos ou altere textos do site.</p>
+                <div className="bg-[#081f1b] border border-[#095344]/20 rounded-xl p-3 space-y-1 text-[11px]">
+                  <p className="font-semibold text-[#45fd94]">Exemplos:</p>
+                  <p>• "Mude o título principal para 'Design Autônomo'"</p>
+                  <p>• "Altere o fundo para um cinza escuro"</p>
+                  <p>• "Adicione uma seção de contato antes do rodapé"</p>
+                </div>
+              </div>
+            )}
+
+            {history.map((m, i) => {
+              const isError = m.role === "assistant" && m.content.startsWith("⚠️");
+              return (
+                <div key={i} className={cn("flex flex-col gap-1", m.role === "user" ? "items-end" : "items-start")}>
+                  <div className={cn(
+                    "rounded-xl p-3 text-xs leading-relaxed max-w-[90%] shadow-md border",
+                    m.role === "user" 
+                      ? "bg-[#45fd94]/10 border-[#45fd94]/30 text-white" 
+                      : "bg-[#081f1b]/80 border-[#095344]/30 text-[#cfe8e1]",
+                    isError && "bg-red-500/10 border-red-500/30 text-red-300"
+                  )}>
+                    <p>{m.content}</p>
+                    {m.role === "assistant" && m.action === "edit" && m.htmlSnapshot && (
+                      <div className="mt-2 pt-2 border-t border-[#095344]/20 flex justify-between items-center text-[10px]">
+                        <button onClick={() => revertTo(m.htmlSnapshot!, i)} className="text-[#45fd94] hover:underline flex items-center gap-1 font-bold">
+                          <Undo2 className="h-3 w-3" /> Reverter versão
+                        </button>
+                        <span className="text-[9px] uppercase tracking-wider text-[#aacbc4]/50">Aplicado</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Suggestions */}
+          <div className="p-3 bg-[#00110e]/40 border-t border-[#095344]/20 space-y-1.5">
+            <span className="text-[9px] font-bold text-[#aacbc4] block mb-1">SUGGESTIONS</span>
+            {["Optimize for mobile design", "Apply high-contrast layout", "Add contact form"].map((s, idx) => (
+              <button 
+                key={idx} 
+                onClick={() => setInput(s)}
+                disabled={busy}
+                className="w-full text-left p-1.5 rounded bg-[#081f1b] border border-[#095344]/20 hover:border-[#45fd94]/40 hover:bg-[#45fd94]/5 text-[10px] text-[#aacbc4] hover:text-white transition-all truncate disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                "{s}"
+              </button>
+            ))}
+          </div>
+
+          {/* Chat input */}
+          <div className="p-4 border-t border-[#095344]/20">
+            <div className="relative group">
+              <Textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!busy) send(); } }}
+                disabled={busy}
+                placeholder={busy ? "Aguarde que a alteração seja concluída..." : "Type a command (e.g. 'Add a pricing card')..."}
+                className="w-full bg-[#081f1b] border border-[#095344]/20 focus:border-[#45fd94] text-xs text-white placeholder:text-[#aacbc4]/40 rounded-xl p-3 resize-none h-20 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <button 
+                onClick={send}
+                disabled={busy || (!input.trim() && attachments.length === 0)}
+                className="absolute bottom-3 right-3 w-8 h-8 rounded-lg bg-[#45fd94] hover:bg-[#30a684] text-[#011612] flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex justify-between items-center mt-3">
+              <div className="flex gap-2">
+                <button onClick={toggleRecord} disabled={busy} className={cn("text-[#aacbc4] hover:text-[#45fd94] disabled:opacity-40 disabled:cursor-not-allowed", recording && "text-red-500")}><Mic className="h-4 w-4" /></button>
+                <button disabled={busy} className="text-[#aacbc4] hover:text-[#45fd94] disabled:opacity-40 disabled:cursor-not-allowed"><Paperclip className="h-4 w-4" /></button>
+              </div>
+              <span className="text-[9px] text-[#aacbc4]/40">⌘ + Enter to send</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+
       {website && (
         <PublishDialog
           open={publishOpen}
@@ -586,198 +867,6 @@ export default function WebsiteEditorPage() {
           }
         />
       )}
-
-
-      <div className="flex-1 flex min-h-0">
-        {/* Chat */}
-        <aside className="w-[380px] border-r flex flex-col min-h-0">
-          <div className="px-4 py-3 border-b flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">Assistente Kinjani</span>
-          </div>
-          {busy && (
-            <div className="border-b px-4 py-3 flex items-center justify-between gap-3">
-              <ThinkingIndicator label={busyLabel || undefined} elapsed={elapsedLabel} />
-              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs shrink-0 text-muted-foreground hover:text-destructive" onClick={stop}>
-                <Square className="h-3 w-3 mr-1" />Pausar
-              </Button>
-            </div>
-          )}
-          <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-3 min-w-0">
-            {history.length === 0 && !busy && (
-              <div className="text-sm text-muted-foreground">
-                <p className="mb-2">Olá! Descreve o site que queres ou peça uma alteração.</p>
-                <p className="text-xs">Exemplos:<br/>• "Cria um site de psicologia, calmo, com booking"<br/>• "Adiciona uma secção de testemunhos"<br/>• "Muda a cor principal para verde-escuro"<br/>• "Coloca botão 'WhatsApp' que abre wa.me/258840000000"</p>
-              </div>
-            )}
-            {history.map((m, i) => {
-              const isError = m.role === "assistant" && m.content.startsWith("⚠️");
-              let displayContent = m.content;
-              if (isError) {
-                const match = m.content.match(/"message"\s*:\s*"([^"]+)"/);
-                if (match) {
-                  displayContent = `⚠️ ${match[1].split("\\n")[0]}`;
-                } else if (m.content.length > 280) {
-                  displayContent = m.content.slice(0, 280) + "…";
-                }
-              }
-              return (
-                <div key={i} className={cn("animate-fade-in", m.role === "user" ? "flex justify-end min-w-0" : "group min-w-0")}>
-                  <div className={cn(
-                    "min-w-0 break-words [overflow-wrap:anywhere]",
-                    m.role === "user"
-                      ? "bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-3 py-2 text-sm max-w-[85%]"
-                      : "text-sm text-foreground max-w-full whitespace-pre-wrap",
-                    isError && "text-destructive bg-destructive/10 rounded-lg px-3 py-2 border border-destructive/20"
-                  )}>
-                    {displayContent}
-                    {m.role === "assistant" && m.action === "edit" && m.htmlSnapshot && (
-                      <button
-                        onClick={() => revertTo(m.htmlSnapshot!, i)}
-                        className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition"
-                        title="Reverter o site para este ponto"
-                      >
-                        <Undo2 className="h-3 w-3" /> Reverter para aqui
-                      </button>
-                    )}
-                    {m.role === "assistant" && m.action === "plan" && (
-                      <span className="ml-2 text-[10px] uppercase tracking-wider text-muted-foreground">· plano</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-            {busy && (
-              <div className="animate-fade-in">
-                <ThinkingIndicator label={busyLabel || undefined} elapsed={elapsedLabel} />
-              </div>
-            )}
-          </div>
-          <div className="p-3 border-t">
-            <div className="rounded-2xl border bg-background focus-within:border-primary/40 transition-colors overflow-hidden">
-              {/* Attachments preview */}
-              {attachments.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 px-3 pt-3">
-                  {attachments.map((a, i) => (
-                    <div key={i} className="flex items-center gap-1.5 bg-muted rounded-md pl-2 pr-1 py-1 text-xs">
-                      <Paperclip className="h-3 w-3 text-muted-foreground" />
-                      <span className="truncate max-w-[140px]">{a.name}</span>
-                      <button
-                        onClick={() => setAttachments((p) => p.filter((_, j) => j !== i))}
-                        className="p-0.5 rounded hover:bg-background hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Textarea */}
-              <Textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-                placeholder={html ? (mode === "plan" ? "Pede um plano..." : "Descreve a alteração...") : "Descreve o site que queres criar..."}
-                className="min-h-[72px] max-h-[200px] resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 shadow-none bg-transparent px-3 pt-3 pb-1"
-                disabled={busy}
-              />
-
-              {/* Toolbar */}
-              <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1">
-                <div className="flex items-center gap-1">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*,audio/*,.pdf,.txt"
-                    className="hidden"
-                    onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }}
-                  />
-                  <Button size="icon" variant="ghost" className="h-8 w-8 rounded-full" onClick={() => fileInputRef.current?.click()} disabled={busy} title="Anexar ficheiro">
-                    <Paperclip className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant={recording ? "destructive" : "ghost"}
-                    className="h-8 w-8 rounded-full"
-                    onClick={toggleRecord}
-                    disabled={busy}
-                    title={recording ? "Parar gravação" : "Gravar áudio"}
-                  >
-                    {recording ? <Square className="h-3.5 w-3.5" /> : <Mic className="h-4 w-4" />}
-                  </Button>
-
-                  <div className="mx-1 h-5 w-px bg-border" />
-
-                  <div className="flex items-center gap-0.5 bg-muted/60 rounded-full p-0.5">
-                    <button
-                      onClick={() => setMode("build")}
-                      className={cn(
-                        "flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition",
-                        mode === "build" ? "bg-background shadow-sm font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      <Hammer className="h-3 w-3" /> Construir
-                    </button>
-                    <button
-                      onClick={() => setMode("plan")}
-                      className={cn(
-                        "flex items-center gap-1 text-xs px-2.5 py-1 rounded-full transition",
-                        mode === "plan" ? "bg-background shadow-sm font-medium text-foreground" : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      <Lightbulb className="h-3 w-3" /> Planear
-                    </button>
-                  </div>
-                </div>
-
-                {busy ? (
-                  <Button
-                    size="icon"
-                    variant="destructive"
-                    className="h-8 w-8 rounded-full shrink-0"
-                    onClick={stop}
-                    title="Parar"
-                  >
-                    <Square className="h-3.5 w-3.5" />
-                  </Button>
-                ) : (
-                  <Button
-                    size="icon"
-                    className="h-8 w-8 rounded-full shrink-0"
-                    onClick={send}
-                    disabled={!input.trim() && attachments.length === 0}
-                  >
-                    <Send className="h-3.5 w-3.5" />
-                  </Button>
-                )}
-              </div>
-            </div>
-            {recording && (
-              <p className="mt-1.5 text-[11px] text-destructive flex items-center gap-1.5 px-1">
-                <span className="h-1.5 w-1.5 rounded-full bg-destructive animate-pulse" />
-                A gravar áudio... toca em ■ para parar.
-              </p>
-            )}
-          </div>
-        </aside>
-
-        {/* Preview */}
-        <main className="flex-1 bg-muted/30 overflow-auto flex items-start justify-center p-6">
-          {html ? (
-            <div className="bg-white shadow-2xl rounded-lg overflow-hidden transition-all duration-300" style={{ width: deviceWidth, maxWidth: "100%", height: "calc(100vh - 7rem)" }}>
-              <SmoothPreviewIframe html={injectRuntime(html)} device={device} />
-            </div>
-          ) : (
-            <div className="text-center text-muted-foreground mt-20">
-              <Sparkles className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Escreve um pedido no chat para começar.</p>
-            </div>
-          )}
-        </main>
-      </div>
     </div>
   );
 }

@@ -386,7 +386,7 @@ export default function ClientDetailsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => navigate(`/websites/${website.id}/edit`)}
+                          onClick={() => navigate(`/editor/${website.id}`)}
                         >
                           <ExternalLink className="h-4 w-4" />
                         </Button>

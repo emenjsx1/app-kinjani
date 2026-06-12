@@ -10,6 +10,7 @@ import { CompositionRenderer } from "@/core/render/CompositionRenderer";
 import type { CompositionGraph } from "@/core/render/composition-graph";
 import { templateToGraph } from "@/core/render/templateToGraph";
 import { injectRuntime } from "@/lib/inject-runtime";
+import { isPlatformHost } from "@/lib/domain";
 
 interface WebsiteConfig {
   type?: "landing" | "institutional";
@@ -99,7 +100,7 @@ export default function PublicWebsitePage() {
         // Resolution order: 1) custom domain (host header) 2) slug 3) siteId
         let query = supabase.from("websites").select("*").limit(1);
         const host = window.location.host;
-        const isAppHost = /lovable(project)?\.app$|localhost/i.test(host);
+        const isAppHost = isPlatformHost(host);
 
         if (!isAppHost) {
           // Custom domain: lookup

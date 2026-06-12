@@ -39,13 +39,15 @@ interface OpenCreatorProps {
 
 const EXAMPLES = [
   { text: "Landing imobiliária de luxo, paleta dourado sobre preto", emoji: "🏛️" },
-  { text: "Fintech brutalista, tipografia agressiva, grids quebradas", emoji: "💸" },
+  { text: "Clínica médica moderna, cores azul e branco, formulário de marcação", emoji: "🏥" },
+  { text: "Escritório de advocacia elegante, navy e dourado, equipa e áreas de prática", emoji: "⚖️" },
   { text: "Startup AI estilo Apple, hero gigante, muito espaço em branco", emoji: "🍎" },
   { text: "Restaurante africano, paleta terrosa, fotografia editorial", emoji: "🍲" },
-  { text: "Agência criativa, vídeo de fundo, scroll narrativo", emoji: "🎬" },
-  { text: "Dashboard SaaS estilo Linear, dark mode, monoespaçado", emoji: "📊" },
+  { text: "Dashboard SaaS estilo Linear, dark mode, bento grid", emoji: "📊" },
+  { text: "Clínica dentária premium, sorriso perfeito, tratamentos e equipa", emoji: "🦷" },
+  { text: "Agência criativa, vídeo de fundo, scroll narrativo assimétrico", emoji: "🎬" },
   { text: "Estúdio de fotografia, galeria masonry, mood premium", emoji: "📷" },
-  { text: "Moda streetwear, vibes Y2K, cores neon, asymmetric", emoji: "👟" },
+  { text: "SaaS de gestão, pricing 3 tiers, features bento, dark mode", emoji: "🚀" },
 ];
 
 type StageStatus = "pending" | "running" | "done";
@@ -275,7 +277,7 @@ export function OpenCreator({ open, onOpenChange, onWebsiteCreated, onOpenAdvanc
         updateStage("finalize", { status: "done", detail: "Projecto criado" });
         toast.success("Projecto criado ✨ O chat vai começar a gerar o site...");
         onOpenChange(false);
-        navigate(`/websites/${result.id}/edit?fresh=1`);
+        navigate(`/editor/${result.id}?fresh=1`);
         return;
       }
       throw new Error("persist failed");

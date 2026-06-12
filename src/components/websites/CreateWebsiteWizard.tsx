@@ -358,7 +358,7 @@ export function CreateWebsiteWizard({ open, onOpenChange, onWebsiteCreated }: Cr
   };
 
   const handleCreate = () => { buildMode === "open" ? handleCreateOpenBuild() : handleCreateGuided(); };
-  const handleOpenEditor = () => { handleClose(); if (createdWebsiteId) navigate(`/websites/${createdWebsiteId}/edit`); };
+  const handleOpenEditor = () => { handleClose(); if (createdWebsiteId) navigate(`/editor/${createdWebsiteId}`); };
 
   const canProceed = () => {
     if (buildMode === "open") {

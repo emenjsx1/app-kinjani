@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export type ChatAttachment = {
   type: string;
@@ -21,6 +22,7 @@ export interface Message {
 interface UseAgentChatOptions {
   agentType: string;
   agentPrompt: string;
+  agentId?: string;
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
@@ -40,7 +42,7 @@ const phaseFromAttachments = (atts: ChatAttachment[] | undefined): string => {
   return bits.length ? `A processar (${bits.join(", ")})` : "A pensar";
 };
 
-export function useAgentChat({ agentType, agentPrompt }: UseAgentChatOptions) {
+export function useAgentChat({ agentType, agentPrompt, agentId }: UseAgentChatOptions) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -85,17 +87,21 @@ export function useAgentChat({ agentType, agentPrompt }: UseAgentChatOptions) {
           .filter((m) => m.id !== "welcome")
           .map((m) => ({ role: m.isUser ? ("user" as const) : ("assistant" as const), content: m.content }));
 
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
         const response = await fetch(CHAT_URL, {
           method: "POST",
           signal: ctrl.signal,
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
             messages: [...chatHistory, { role: "user", content }],
             agentType,
             agentPrompt,
+            agentId,
             attachments,
           }),
         });

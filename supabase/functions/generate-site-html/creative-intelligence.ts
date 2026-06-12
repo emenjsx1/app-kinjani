@@ -1,6 +1,6 @@
-// KINJANI CREATIVE INTELLIGENCE ENGINE
-// Sistema de raciocínio criativo que pensa ANTES de gerar
-// Comporta-se como Creative Director + Art Director + UX Architect
+// KINJANI CREATIVE INTELLIGENCE ENGINE v3.0
+// Filosofia Lovable: a IA raciocina sobre QUALQUER pedido antes de gerar.
+// Não há templates. O motor cria um scaffold de raciocínio para a IA preencher.
 
 export interface CreativeAnalysis {
   niche: string;
@@ -26,326 +26,214 @@ export interface VisualComposition {
   cinematicElements: string[];
 }
 
-/**
- * FASE 1: ANÁLISE CRIATIVA PROFUNDA
- * O AI deve PENSAR antes de gerar, como um diretor criativo real
- */
+// ═══════════════════════════════════════════════════════════════════════════════
+// FASE 1: ANÁLISE CONTEXTUAL MÍNIMA
+// Fornece pistas à IA — ela decide o resto
+// ═══════════════════════════════════════════════════════════════════════════════
+
 export function analyzeCreativeDirection(prompt: string): CreativeAnalysis {
   const lower = prompt.toLowerCase();
 
-  // Detecta nicho com contexto emocional
-  let niche = 'general';
-  let emotionalDirection = 'professional';
-  let brandPositioning = 'modern';
-  let visualLanguage = 'clean';
-  let audience = 'general public';
+  // Analisa pistas explícitas no prompt para dar contexto à IA
+  // A IA vai completar e refinar tudo isto durante o raciocínio
 
-  // DENTAL / HEALTHCARE
-  if (lower.match(/dent[aá]ri[ao]|cl[ií]nica dental|ortodon|implante|branqueamento|sorriso/)) {
-    niche = 'dental';
-    emotionalDirection = 'trust + serenity + transformation';
-    brandPositioning = 'premium healthcare';
-    visualLanguage = 'clean + calm + elegant + medical precision';
-    audience = 'health-conscious individuals seeking confidence';
-  }
+  // Pistas de estilo visual
+  const isDark    = lower.match(/dark|escuro|noturno|preto|black|neon|cyberpunk/);
+  const isMinimal = lower.match(/minimal|simples|clean|espaço branco|whitespace|elegante/);
+  const isBold    = lower.match(/ousado|bold|impacto|forte|vibrante|colorido|neon/);
+  const isWarm    = lower.match(/quente|aconchegante|artesanal|familiar|vintage|orgânico/);
+  const isLuxury  = lower.match(/luxo|premium|exclusiv|dourado|gold|sofisticado/);
+  const isEnergy  = lower.match(/energia|dinâmico|rápido|intenso|fitness|sport|esporte/);
+  const isCalm    = lower.match(/calmo|sereno|zen|paz|suave|delicado|spa|natureza/);
+  const isFun     = lower.match(/divertido|alegre|colorido|jovem|kids|animado|criança/);
 
-  // LUXURY / PREMIUM
-  else if (lower.match(/luxo|premium|exclusiv|high-end|elite|sofisticad/)) {
+  let niche = 'custom';
+  let emotionalDirection = 'professional + trustworthy + modern';
+  let brandPositioning = 'approachable premium';
+  let visualLanguage = 'clean + modern + structured';
+  let audience = 'broad audience';
+  let colorPsychology = 'derived from emotional direction';
+  let typographyDirection = 'Plus Jakarta Sans (display) + Inter (body)';
+  let spacingRhythm = 'py-20 md:py-32 | balanced rhythm';
+
+  if (isLuxury) {
     niche = 'luxury';
-    emotionalDirection = 'exclusivity + sophistication + desire';
+    emotionalDirection = 'exclusivity + sophistication + timeless desire';
     brandPositioning = 'ultra-premium';
-    visualLanguage = 'minimal + elegant + timeless + editorial';
-    audience = 'affluent individuals seeking exceptional quality';
-  }
-
-  // CONSTRUCTION / ARCHITECTURE
-  else if (lower.match(/constru[çc][ãa]o|engenharia|arquitetur|obra|edif[ií]cio/)) {
-    niche = 'construction';
-    emotionalDirection = 'strength + trust + precision';
-    brandPositioning = 'corporate-premium';
-    visualLanguage = 'structured + architectural + bold + professional';
-    audience = 'business decision-makers seeking reliability';
-  }
-
-  // TOURISM / TRAVEL
-  else if (lower.match(/turismo|viag|hotel|resort|destino|f[ée]rias/)) {
-    niche = 'tourism';
-    emotionalDirection = 'wanderlust + experience + emotion';
-    brandPositioning = 'experiential';
-    visualLanguage = 'immersive + cinematic + editorial + emotional';
-    audience = 'experience-seekers wanting memorable journeys';
-  }
-
-  // LAW FIRM
-  else if (lower.match(/advocacia|advogad|jur[ií]dic|direito|tribunal/)) {
-    niche = 'law';
-    emotionalDirection = 'authority + confidence + trust';
-    brandPositioning = 'professional excellence';
-    visualLanguage = 'elegant + structured + authoritative + premium';
-    audience = 'individuals and businesses needing legal expertise';
-  }
-
-  // FASHION / CREATIVE
-  else if (lower.match(/moda|fashion|roupa|est[ií]lo|design|criativ/)) {
-    niche = 'fashion';
-    emotionalDirection = 'bold + artistic + experimental';
+    visualLanguage = 'minimal + dark or white + editorial + oversized type';
+    colorPsychology = 'black + gold + cream | exclusivity + prestige';
+    typographyDirection = 'Cormorant Garamond (display) + Montserrat (body)';
+    spacingRhythm = 'py-32 md:py-48 | extreme breathing room';
+  } else if (isDark && isBold) {
+    niche = 'bold-dark';
+    emotionalDirection = 'power + boldness + impact + intensity';
+    brandPositioning = 'disruptive premium';
+    visualLanguage = 'dark + high-contrast + bold + experimental';
+    colorPsychology = 'dark + electric accent + white | power + impact';
+    typographyDirection = 'Bai Jamjuree (display) + Inter (body)';
+    spacingRhythm = 'py-16 md:py-24 | energetic tight rhythm';
+  } else if (isCalm || isMinimal) {
+    niche = 'serene';
+    emotionalDirection = 'serenity + clarity + elegance + trust';
+    brandPositioning = 'refined minimalism';
+    visualLanguage = 'minimal + spacious + clean + editorial';
+    colorPsychology = 'soft palette + white + single accent | clarity + calm';
+    typographyDirection = 'Playfair Display (display) + Inter (body)';
+    spacingRhythm = 'py-24 md:py-40 | generous calm rhythm';
+  } else if (isWarm) {
+    niche = 'artisan';
+    emotionalDirection = 'warmth + authenticity + craft + nostalgia';
+    brandPositioning = 'artisan quality';
+    visualLanguage = 'warm + earthy + editorial + handcrafted';
+    colorPsychology = 'earth tones + cream + warm brown | authenticity + warmth';
+    typographyDirection = 'Playfair Display (display) + Lato (body)';
+    spacingRhythm = 'py-20 md:py-28 | warm inviting rhythm';
+  } else if (isEnergy) {
+    niche = 'energetic';
+    emotionalDirection = 'energy + power + motivation + transformation';
+    brandPositioning = 'high-performance';
+    visualLanguage = 'dark + bold + kinetic + high-contrast';
+    colorPsychology = 'black + electric yellow/orange + white | energy + power';
+    typographyDirection = 'Bai Jamjuree (display) + Inter (body)';
+    spacingRhythm = 'py-16 md:py-24 | fast dynamic rhythm';
+  } else if (isFun) {
+    niche = 'playful';
+    emotionalDirection = 'joy + energy + friendliness + vibrancy';
+    brandPositioning = 'approachable and memorable';
+    visualLanguage = 'colorful + playful + dynamic + warm';
+    colorPsychology = 'vibrant multi-color + white | joy + friendliness';
+    typographyDirection = 'Nunito (display) + Inter (body)';
+    spacingRhythm = 'py-20 md:py-28 | warm engaging rhythm';
+  } else if (isBold) {
+    niche = 'bold-creative';
+    emotionalDirection = 'boldness + creativity + artistic + identity';
     brandPositioning = 'avant-garde';
     visualLanguage = 'editorial + asymmetric + bold + artistic';
-    audience = 'style-conscious individuals seeking uniqueness';
+    colorPsychology = 'bold single color + black + white | identity + expression';
+    typographyDirection = 'Sora (display) + DM Sans (body)';
+    spacingRhythm = 'py-20 md:py-32 | editorial rhythm';
   }
-
-  // RESTAURANT / FOOD
-  else if (lower.match(/restaurante|comida|gastronom|chef|culin[aá]ria/)) {
-    niche = 'restaurant';
-    emotionalDirection = 'sensory + appetite + experience';
-    brandPositioning = 'culinary excellence';
-    visualLanguage = 'editorial + warm + immersive + sensorial';
-    audience = 'food lovers seeking memorable dining';
-  }
-
-  // SAAS / TECH
-  else if (lower.match(/saas|software|app|tech|startup|plataforma/)) {
-    niche = 'saas';
-    emotionalDirection = 'innovation + efficiency + future';
-    brandPositioning = 'cutting-edge technology';
-    visualLanguage = 'modern + clean + futuristic + systematic';
-    audience = 'tech-savvy professionals seeking productivity';
-  }
-
-  // Determina estratégias baseadas no nicho
-  const hierarchyStyle = determineHierarchyStyle(niche);
-  const layoutStrategy = determineLayoutStrategy(niche, emotionalDirection);
-  const typographyDirection = determineTypographyDirection(niche, brandPositioning);
-  const spacingRhythm = determineSpacingRhythm(niche);
-  const visualStorytelling = determineVisualStorytelling(niche, emotionalDirection);
-  const colorPsychology = determineColorPsychology(niche, emotionalDirection);
-  const interactionStyle = determineInteractionStyle(niche);
 
   return {
     niche,
     emotionalDirection,
     brandPositioning,
     visualLanguage,
-    hierarchyStyle,
+    hierarchyStyle: deriveHierarchy(emotionalDirection),
     audience,
-    layoutStrategy,
+    layoutStrategy: deriveLayout(emotionalDirection),
     typographyDirection,
     spacingRhythm,
-    visualStorytelling,
+    visualStorytelling: deriveStorytelling(emotionalDirection),
     colorPsychology,
-    interactionStyle
+    interactionStyle: deriveInteractions(emotionalDirection),
   };
 }
 
-function determineHierarchyStyle(niche: string): string {
-  const styles: Record<string, string> = {
-    luxury: 'oversized typography + extreme whitespace + minimal elements',
-    dental: 'clear medical hierarchy + trust-building structure + calm progression',
-    construction: 'bold architectural hierarchy + strong grid system + corporate clarity',
-    tourism: 'cinematic storytelling hierarchy + immersive layers + emotional flow',
-    law: 'authoritative typography + structured sections + professional clarity',
-    fashion: 'editorial asymmetry + bold type contrasts + artistic freedom',
-    restaurant: 'sensory-first hierarchy + appetite-driven visuals + warm flow',
-    saas: 'systematic clarity + feature-focused + modern efficiency',
-    general: 'balanced hierarchy + clear sections + professional flow'
-  };
-  return styles[niche] || styles.general;
+function deriveHierarchy(emotion: string): string {
+  if (emotion.includes('exclusivity') || emotion.includes('luxury'))
+    return 'oversized typography + extreme whitespace + minimal curated elements';
+  if (emotion.includes('power') || emotion.includes('bold') || emotion.includes('energy'))
+    return 'oversized impact headlines + tight rhythm + bold sections';
+  if (emotion.includes('serenity') || emotion.includes('calm') || emotion.includes('care'))
+    return 'spacious sections + human-centered + calming progression';
+  if (emotion.includes('authority') || emotion.includes('trust') || emotion.includes('professional'))
+    return 'structured sections + trust-building + clear professional hierarchy';
+  return 'balanced modern hierarchy + clear sections + contemporary flow';
 }
 
-function determineLayoutStrategy(niche: string, emotion: string): string {
-  if (emotion.includes('cinematic') || emotion.includes('immersive')) {
-    return 'full-bleed sections + layered overlays + cinematic pacing + asymmetric grids';
-  }
-  if (emotion.includes('minimal') || emotion.includes('elegant')) {
-    return 'generous whitespace + centered composition + minimal elements + editorial spacing';
-  }
-  if (emotion.includes('bold') || emotion.includes('experimental')) {
-    return 'broken grids + asymmetric layouts + overlapping elements + artistic freedom';
-  }
-  if (emotion.includes('trust') || emotion.includes('professional')) {
-    return 'structured grids + clear sections + balanced composition + professional spacing';
-  }
-  return 'modern bento grids + asymmetric sections + layered composition + dynamic spacing';
+function deriveLayout(emotion: string): string {
+  if (emotion.includes('cinematic') || emotion.includes('immersive'))
+    return 'full-bleed sections + layered overlays + cinematic pacing';
+  if (emotion.includes('exclusivity') || emotion.includes('minimal'))
+    return 'generous whitespace + centered editorial + minimal elements';
+  if (emotion.includes('bold') || emotion.includes('artistic'))
+    return 'broken grids + asymmetric + overlapping elements + artistic freedom';
+  if (emotion.includes('energy') || emotion.includes('power'))
+    return 'dynamic diagonal layouts + bold sections + kinetic grids';
+  return 'modern bento grids + asymmetric sections + dynamic spacing';
 }
 
-function determineTypographyDirection(niche: string, positioning: string): string {
-  const directions: Record<string, string> = {
-    luxury: 'Cormorant Garamond (display) + Montserrat (body) | oversized + ultra-light + extreme tracking',
-    dental: 'Playfair Display (display) + Inter (body) | elegant + trustworthy + medical clarity',
-    construction: 'Bai Jamjuree (display) + Inter (body) | bold + architectural + strong presence',
-    tourism: 'Playfair Display (display) + Lato (body) | editorial + emotional + storytelling',
-    law: 'Cormorant Garamond (display) + Inter (body) | authoritative + elegant + professional',
-    fashion: 'Sora (display) + DM Sans (body) | bold + artistic + experimental',
-    restaurant: 'Playfair Display (display) + Lato (body) | warm + inviting + sensorial',
-    saas: 'Space Grotesk (display) + Inter (body) | modern + systematic + tech-forward',
-    general: 'Plus Jakarta Sans (display) + Inter (body) | modern + clean + versatile'
-  };
-  return directions[niche] || directions.general;
+function deriveStorytelling(emotion: string): string {
+  if (emotion.includes('exclusivity') || emotion.includes('luxury'))
+    return 'desire cultivation + heritage + exclusivity signals + understated CTA';
+  if (emotion.includes('trust') || emotion.includes('authority'))
+    return 'problem → solution narrative + proof points + trust journey';
+  if (emotion.includes('sensory') || emotion.includes('warmth'))
+    return 'sensory-first + experience building + desire creation + inviting CTA';
+  if (emotion.includes('energy') || emotion.includes('transformation'))
+    return 'challenge → transformation + results + motivation + action CTA';
+  return 'value proposition + features + social proof + conversion';
 }
 
-function determineSpacingRhythm(niche: string): string {
-  const rhythms: Record<string, string> = {
-    luxury: 'py-32 md:py-48 | extreme breathing room + minimal density',
-    dental: 'py-24 md:py-32 | calm rhythm + trust-building space',
-    construction: 'py-20 md:py-32 | structured rhythm + professional spacing',
-    tourism: 'py-24 md:py-40 | cinematic rhythm + immersive spacing',
-    law: 'py-24 md:py-32 | authoritative rhythm + professional spacing',
-    fashion: 'py-20 md:py-40 | editorial rhythm + artistic spacing',
-    restaurant: 'py-20 md:py-32 | warm rhythm + inviting spacing',
-    saas: 'py-20 md:py-32 | systematic rhythm + efficient spacing',
-    general: 'py-20 md:py-32 | balanced rhythm + modern spacing'
-  };
-  return rhythms[niche] || rhythms.general;
+function deriveInteractions(emotion: string): string {
+  if (emotion.includes('exclusivity') || emotion.includes('luxury'))
+    return 'ultra-subtle hover lifts + elegant transitions (800ms) + minimal motion';
+  if (emotion.includes('energy') || emotion.includes('power'))
+    return 'strong hover effects + fast transitions (200ms) + kinetic motion';
+  if (emotion.includes('serenity') || emotion.includes('calm'))
+    return 'gentle hover effects + smooth transitions (600ms) + calming reveals';
+  if (emotion.includes('joy') || emotion.includes('playful'))
+    return 'bouncy hover effects + cheerful transitions + delightful micro-animations';
+  return 'modern hover effects + smooth transitions (300ms) + professional motion';
 }
 
-function determineVisualStorytelling(niche: string, emotion: string): string {
-  if (emotion.includes('cinematic') || emotion.includes('immersive')) {
-    return 'hero as opening scene + sections as story chapters + emotional progression + climactic CTA';
-  }
-  if (emotion.includes('trust') || emotion.includes('confidence')) {
-    return 'problem-solution narrative + proof points + testimonials + trust-building journey';
-  }
-  if (emotion.includes('sensory') || emotion.includes('experience')) {
-    return 'sensory-first storytelling + appetite building + experience showcase + desire creation';
-  }
-  if (emotion.includes('bold') || emotion.includes('artistic')) {
-    return 'visual-first narrative + artistic expression + bold statements + creative journey';
-  }
-  return 'clear value proposition + feature showcase + social proof + conversion path';
-}
+// ═══════════════════════════════════════════════════════════════════════════════
+// FASE 2: COMPOSIÇÃO (simplificada — a IA decide os detalhes)
+// ═══════════════════════════════════════════════════════════════════════════════
 
-function determineColorPsychology(niche: string, emotion: string): string {
-  const psychology: Record<string, string> = {
-    luxury: 'black + gold + white | exclusivity + sophistication + timelessness',
-    dental: 'teal + cyan + white | trust + cleanliness + medical precision',
-    construction: 'navy + orange + gray | strength + energy + professionalism',
-    tourism: 'blue + teal + warm accents | wanderlust + ocean + adventure',
-    law: 'navy + gold + gray | authority + prestige + professionalism',
-    fashion: 'black + vibrant accent + white | boldness + creativity + style',
-    restaurant: 'warm orange + red + brown | appetite + warmth + comfort',
-    saas: 'indigo + purple + cyan | innovation + technology + future',
-    general: 'blue + teal + gray | trust + modernity + professionalism'
-  };
-  return psychology[niche] || psychology.general;
-}
-
-function determineInteractionStyle(niche: string): string {
-  const styles: Record<string, string> = {
-    luxury: 'subtle hover lifts + elegant transitions + minimal motion + refined interactions',
-    dental: 'calm hover effects + trust-building animations + smooth reveals + gentle interactions',
-    construction: 'strong hover effects + architectural transitions + bold interactions + professional motion',
-    tourism: 'immersive hover effects + cinematic transitions + emotional reveals + engaging interactions',
-    law: 'professional hover effects + authoritative transitions + structured interactions + refined motion',
-    fashion: 'bold hover effects + artistic transitions + experimental interactions + creative motion',
-    restaurant: 'appetizing hover effects + warm transitions + sensory interactions + inviting motion',
-    saas: 'efficient hover effects + systematic transitions + modern interactions + tech-forward motion',
-    general: 'modern hover effects + smooth transitions + professional interactions + balanced motion'
-  };
-  return styles[niche] || styles.general;
-}
-
-/**
- * FASE 2: COMPOSIÇÃO VISUAL
- * Decide a estrutura visual ANTES de gerar HTML
- */
 export function composeVisualStructure(analysis: CreativeAnalysis): VisualComposition {
-  const { niche, emotionalDirection, visualLanguage } = analysis;
+  const { emotionalDirection, visualLanguage } = analysis;
 
-  // Escolhe estilo de hero baseado na análise
   let heroStyle = 'cinematic-fullscreen';
-  if (visualLanguage.includes('minimal')) heroStyle = 'minimal-centered';
+  if (visualLanguage.includes('minimal'))   heroStyle = 'minimal-centered';
   if (visualLanguage.includes('editorial')) heroStyle = 'editorial-split';
-  if (visualLanguage.includes('immersive')) heroStyle = 'immersive-layered';
-  if (visualLanguage.includes('bold')) heroStyle = 'bold-asymmetric';
+  if (visualLanguage.includes('dark'))      heroStyle = 'dark-immersive';
+  if (visualLanguage.includes('warm'))      heroStyle = 'warm-editorial';
+  if (visualLanguage.includes('colorful'))  heroStyle = 'colorful-dynamic';
+  if (visualLanguage.includes('bold'))      heroStyle = 'bold-asymmetric';
 
-  // Define ritmo de secções (cada site deve ser único)
-  const sectionRhythm = generateUniqueSectionRhythm(niche, emotionalDirection);
-
-  // Define abordagem de layout
-  const layoutApproach = analysis.layoutStrategy;
-
-  // Define pacing visual
   let visualPacing = 'balanced';
-  if (emotionalDirection.includes('cinematic')) visualPacing = 'slow-immersive';
-  if (emotionalDirection.includes('bold')) visualPacing = 'fast-dynamic';
-  if (emotionalDirection.includes('calm')) visualPacing = 'slow-calm';
+  if (emotionalDirection.includes('luxury') || emotionalDirection.includes('exclusivity')) visualPacing = 'ultra-slow-elegant';
+  if (emotionalDirection.includes('energy') || emotionalDirection.includes('power'))       visualPacing = 'fast-dynamic';
+  if (emotionalDirection.includes('calm') || emotionalDirection.includes('serenity'))      visualPacing = 'slow-calm';
 
-  // Define nível de assimetria
   let asymmetryLevel = 'moderate';
-  if (visualLanguage.includes('editorial') || visualLanguage.includes('artistic')) asymmetryLevel = 'high';
-  if (visualLanguage.includes('structured') || visualLanguage.includes('corporate')) asymmetryLevel = 'low';
+  if (visualLanguage.includes('editorial') || visualLanguage.includes('bold'))       asymmetryLevel = 'high';
+  if (visualLanguage.includes('minimal') || visualLanguage.includes('structured'))   asymmetryLevel = 'low';
 
-  // Define elementos cinematográficos
-  const cinematicElements = determineCinematicElements(niche, emotionalDirection);
+  const cinematicElements = buildCinematicElements(emotionalDirection);
+  const sectionRhythm = ['hero', 'features', 'about', 'social-proof', 'cta', 'footer'];
 
   return {
     heroStyle,
     sectionRhythm,
-    layoutApproach,
+    layoutApproach: analysis.layoutStrategy,
     visualPacing,
     asymmetryLevel,
-    cinematicElements
+    cinematicElements,
   };
 }
 
-function generateUniqueSectionRhythm(niche: string, emotion: string): string[] {
-  // Cada geração deve ter ritmo único - varia a ordem e composição
-  const baseRhythms: Record<string, string[][]> = {
-    luxury: [
-      ['hero-minimal', 'statement-oversized', 'product-editorial', 'craftsmanship-story', 'cta-elegant'],
-      ['hero-editorial', 'philosophy-minimal', 'collection-asymmetric', 'heritage-story', 'contact-refined'],
-      ['hero-immersive', 'values-centered', 'showcase-bento', 'testimonial-editorial', 'cta-minimal']
-    ],
-    dental: [
-      ['hero-trust', 'treatments-grid', 'technology-showcase', 'team-professional', 'testimonials-proof', 'cta-appointment'],
-      ['hero-transformation', 'about-story', 'services-cards', 'results-gallery', 'faq-trust', 'contact-easy'],
-      ['hero-calm', 'why-us-features', 'treatments-detailed', 'team-caring', 'reviews-social', 'cta-consultation']
-    ],
-    tourism: [
-      ['hero-cinematic', 'experience-immersive', 'destinations-editorial', 'testimonials-emotional', 'cta-adventure'],
-      ['hero-wanderlust', 'story-narrative', 'gallery-masonry', 'itinerary-visual', 'booking-simple'],
-      ['hero-immersive', 'philosophy-travel', 'experiences-bento', 'memories-gallery', 'cta-journey']
-    ],
-    // Adiciona mais variações para outros nichos...
-  };
-
-  const rhythms = baseRhythms[niche] || [
-    ['hero-modern', 'features-grid', 'about-story', 'testimonials', 'cta-conversion'],
-    ['hero-bold', 'value-props', 'showcase-bento', 'social-proof', 'contact-easy'],
-    ['hero-clean', 'services-cards', 'process-steps', 'reviews', 'cta-action']
-  ];
-
-  // Escolhe uma variação aleatória baseada no timestamp
-  const index = Date.now() % rhythms.length;
-  return rhythms[index];
+function buildCinematicElements(emotion: string): string[] {
+  const base = ['intersection-observer-reveals', 'hover-lift-effects', 'stagger-animations'];
+  if (emotion.includes('cinematic') || emotion.includes('immersive'))
+    return [...base, 'ken-burns-zoom', 'parallax-layers', 'fade-sequences'];
+  if (emotion.includes('bold') || emotion.includes('energy'))
+    return [...base, 'bold-color-blocks', 'kinetic-elements', 'fast-reveals'];
+  if (emotion.includes('luxury') || emotion.includes('minimal'))
+    return [...base, 'subtle-fades', 'elegant-transitions', 'refined-reveals'];
+  if (emotion.includes('joy') || emotion.includes('playful'))
+    return [...base, 'bounce-effects', 'stagger-pop', 'colorful-transitions'];
+  return base;
 }
 
-function determineCinematicElements(niche: string, emotion: string): string[] {
-  const elements: string[] = [];
+// ═══════════════════════════════════════════════════════════════════════════════
+// FASE 3: PROMPT DE RACIOCÍNIO — O CORAÇÃO DO SISTEMA
+// Cria um scaffold que a IA deve preencher com o seu próprio raciocínio
+// Isto é o que torna o sistema como o Lovable
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  if (emotion.includes('cinematic') || emotion.includes('immersive')) {
-    elements.push('ken-burns-zoom', 'parallax-layers', 'scroll-triggered-reveals', 'fade-in-sequences');
-  }
-  if (emotion.includes('bold') || emotion.includes('artistic')) {
-    elements.push('broken-grid-overlaps', 'asymmetric-positioning', 'bold-color-blocks', 'experimental-layouts');
-  }
-  if (emotion.includes('elegant') || emotion.includes('minimal')) {
-    elements.push('subtle-fades', 'elegant-transitions', 'minimal-motion', 'refined-reveals');
-  }
-  if (emotion.includes('trust') || emotion.includes('professional')) {
-    elements.push('smooth-scrolls', 'professional-transitions', 'structured-reveals', 'trust-building-sequences');
-  }
-
-  // Sempre adiciona elementos base
-  elements.push('intersection-observer-reveals', 'hover-lift-effects', 'stagger-animations');
-
-  return elements;
-}
-
-/**
- * FASE 3: GERAÇÃO DO PROMPT CRIATIVO
- * Transforma a análise em instruções específicas para o AI
- */
 export function generateCreativePrompt(
   analysis: CreativeAnalysis,
   composition: VisualComposition,
@@ -354,104 +242,82 @@ export function generateCreativePrompt(
 ): string {
   return `
 ═══════════════════════════════════════════════════════════════════════════════
-🎨 KINJANI CREATIVE INTELLIGENCE ENGINE
+🧠 KINJANI OPEN BUILDER — RACIOCÍNIO CRIATIVO ANTES DE GERAR
 ═══════════════════════════════════════════════════════════════════════════════
 
-Tu és um DIRETOR CRIATIVO + ART DIRECTOR + UX ARCHITECT de nível mundial.
-NÃO és um gerador de templates. És uma INTELIGÊNCIA CRIATIVA.
+PEDIDO DO UTILIZADOR:
+"${userPrompt}"
+
+NOME DO PROJETO: ${websiteName || 'Website Premium'}
+
+───────────────────────────────────────────────────────────────────────────────
+CONTEXTO ANALISADO (pistas — tu completas e refinas):
+  Estilo visual detetado: ${analysis.visualLanguage}
+  Direção emocional base: ${analysis.emotionalDirection}
+  Posicionamento: ${analysis.brandPositioning}
+  Paleta sugerida: ${analysis.colorPsychology}
+  Tipografia base: ${analysis.typographyDirection}
+───────────────────────────────────────────────────────────────────────────────
+
+AGORA, COMO DIRETOR CRIATIVO, RACIOCINA:
+
+## 🏢 1. QUE NEGÓCIO/PROJETO É ESTE?
+[Analisa o pedido. Que tipo de negócio? Que serviços/produtos? Que mercado?
+ O que é que este negócio faz de especial? Que nome e identidade lhe darias?]
+
+## 👤 2. QUEM SÃO OS CLIENTES?
+[Quem vai visitar este site? Que idade, estilo de vida, necessidades?
+ O que os leva a escolher este negócio? O que temem? O que desejam?]
+
+## 💭 3. QUE EMOÇÃO QUERO CRIAR?
+[Que emoção deve o visitante sentir quando abre o site?
+ Confiança? Desejo? Energia? Serenidade? Admiração? Apetite?
+ Como traduzo essa emoção em decisões visuais concretas?]
+
+## 🎨 4. DECISÕES DE DESIGN
+### Paleta de Cores:
+[Define as cores exatas com HEX ou HSL. Porquê estas cores? O que comunicam?]
+
+### Tipografia:
+[Que fontes escolhes? Display + body. Tamanhos? Pesos? Porquê?]
+
+### Estilo Visual Geral:
+[Dark mode ou light? Minimalista ou rico? Editorial ou clean?
+ Que estilo de hero? Que tipo de layouts para as secções?]
+
+## 📋 5. ARQUITECTURA DO SITE
+[Lista as secções que este negócio específico precisa, por ordem narrativa.
+ Cada secção deve ter um propósito claro. O que uma agência de €15k faria?]
+
+## ✍️ 6. POSICIONAMENTO E COPY
+[Que mensagem principal? Como se diferencia? Que tom de voz?
+ Qual o headline do hero? Qual o CTA principal?]
 
 ═══════════════════════════════════════════════════════════════════════════════
-📊 ANÁLISE CRIATIVA PROFUNDA
+💻 AGORA GERA O HTML COMPLETO
 ═══════════════════════════════════════════════════════════════════════════════
 
-PROJETO: ${websiteName || 'Website Premium'}
-PEDIDO DO UTILIZADOR: ${userPrompt}
+Com base no teu raciocínio acima, gera o HTML/CSS completo.
 
-ANÁLISE ESTRATÉGICA:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Nicho: ${analysis.niche}
-Direção Emocional: ${analysis.emotionalDirection}
-Posicionamento: ${analysis.brandPositioning}
-Linguagem Visual: ${analysis.visualLanguage}
-Audiência: ${analysis.audience}
+REQUISITOS TÉCNICOS OBRIGATÓRIOS:
+1. Navbar fixed + backdrop-blur + mobile menu funcional
+2. Hero min-height: 100vh com headline + CTA
+3. Mínimo 6 secções relevantes a ESTE negócio
+4. CSS variables para toda a paleta de cores
+5. 2 Google Fonts (import no head)
+6. IntersectionObserver para scroll reveals em TODAS as secções
+7. Hover effects em todos os elementos interativos
+8. Imagens via Unsplash (keywords em inglês, relevantes ao negócio)
+9. Copy real em Português (PT-PT) — NUNCA Lorem Ipsum
+10. Footer completo com links e copyright ${new Date().getFullYear()}
+11. Totalmente responsive (mobile-first)
+12. Animações: Ken Burns no hero, stagger em listas, fade-up em secções
 
-ESTRATÉGIA VISUAL:
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Estilo de Hero: ${composition.heroStyle}
-Abordagem de Layout: ${composition.layoutApproach}
-Pacing Visual: ${composition.visualPacing}
-Nível de Assimetria: ${composition.asymmetryLevel}
-Elementos Cinematográficos: ${composition.cinematicElements.join(', ')}
+PACING VISUAL: ${composition.visualPacing}
+NÍVEL DE ASSIMETRIA: ${composition.asymmetryLevel}
+ELEMENTOS CINEMATOGRÁFICOS: ${composition.cinematicElements.join(', ')}
 
-HIERARQUIA: ${analysis.hierarchyStyle}
-TIPOGRAFIA: ${analysis.typographyDirection}
-ESPAÇAMENTO: ${analysis.spacingRhythm}
-STORYTELLING: ${analysis.visualStorytelling}
-PSICOLOGIA DE COR: ${analysis.colorPsychology}
-INTERAÇÕES: ${analysis.interactionStyle}
-
-RITMO DE SECÇÕES (ÚNICO PARA ESTE PROJETO):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${composition.sectionRhythm.map((section, i) => `${i + 1}. ${section}`).join('\n')}
-
-═══════════════════════════════════════════════════════════════════════════════
-🎯 MISSÃO CRIATIVA
-═══════════════════════════════════════════════════════════════════════════════
-
-Cria um website que:
-✓ Sente-se ÚNICO (não repetitivo)
-✓ Respira a emoção: ${analysis.emotionalDirection}
-✓ Comunica o posicionamento: ${analysis.brandPositioning}
-✓ Fala com a audiência: ${analysis.audience}
-✓ Usa a linguagem visual: ${analysis.visualLanguage}
-✓ Segue o ritmo de secções definido acima
-✓ Implementa os elementos cinematográficos especificados
-✓ Parece feito por uma agência de €15k+
-
-═══════════════════════════════════════════════════════════════════════════════
-🚫 PROIBIÇÕES ABSOLUTAS
-═══════════════════════════════════════════════════════════════════════════════
-
-NUNCA:
-❌ Recicles layouts anteriores
-❌ Uses estruturas repetitivas
-❌ Geres secções mecânicas
-❌ Uses Lorem Ipsum
-❌ Cries grids simétricos 3x3
-❌ Esqueças animações
-❌ Uses imagens irrelevantes
-❌ Cries sem pensar na emoção
-
-SEMPRE:
-✅ Pensa como diretor criativo
-✅ Raciocina sobre cada decisão visual
-✅ Cria composições únicas
-✅ Usa copy real e persuasivo
-✅ Implementa micro-interações
-✅ Adiciona profundidade visual
-✅ Conta uma história visual
-✅ Cria experiências memoráveis
-
-═══════════════════════════════════════════════════════════════════════════════
-💎 EXECUÇÃO CRIATIVA
-═══════════════════════════════════════════════════════════════════════════════
-
-Agora, como um verdadeiro CREATIVE DIRECTOR:
-
-1. PENSA sobre a emoção que queres criar
-2. VISUALIZA a composição antes de codificar
-3. DECIDE a hierarquia visual
-4. ESCOLHE a paleta emocional
-5. COMPÕE o ritmo de secções
-6. ADICIONA elementos cinematográficos
-7. IMPLEMENTA micro-interações
-8. POLISHES cada detalhe
-
-ENTÃO, e só então, gera o HTML/CSS.
-
-O resultado deve fazer o utilizador dizer:
-"WOW, isto foi feito por uma agência premium!"
-
-Gera agora o website completo, único, emocional e profissional.
+Devolve APENAS o HTML. Sem markdown, sem explicações.
+O documento começa em <!DOCTYPE html> e termina em </html>.
 `;
 }

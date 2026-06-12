@@ -31,6 +31,7 @@ import DomainsPage from "./pages/DomainsPage";
 import WhatsAppSettingsPage from "./pages/WhatsAppSettingsPage";
 import EmailSettingsPage from "./pages/EmailSettingsPage";
 import EmbedPage from "./pages/EmbedPage";
+import AdminPage from "./pages/AdminPage";
 
 const queryClient = new QueryClient();
 
@@ -59,7 +60,7 @@ const App = () => (
             <Route path="/agents" element={<ProtectedRoute><AgentsPage /></ProtectedRoute>} />
             <Route path="/agents/:id" element={<ProtectedRoute><AgentDetailsPage /></ProtectedRoute>} />
             <Route path="/websites" element={<ProtectedRoute><WebsitesPage /></ProtectedRoute>} />
-            <Route path="/websites/:id/edit" element={<ProtectedRoute><WebsiteEditorPage /></ProtectedRoute>} />
+            <Route path="/editor/:id" element={<ProtectedRoute><WebsiteEditorPage /></ProtectedRoute>} />
             <Route path="/clients" element={<ProtectedRoute><ClientsPage /></ProtectedRoute>} />
             <Route path="/clients/:id" element={<ProtectedRoute><ClientDetailsPage /></ProtectedRoute>} />
             <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
@@ -71,6 +72,7 @@ const App = () => (
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/cloud" element={<ProtectedRoute><CloudPage /></ProtectedRoute>} />
             <Route path="/domains" element={<ProtectedRoute><DomainsPage /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
             
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

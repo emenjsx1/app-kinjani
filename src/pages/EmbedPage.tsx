@@ -69,23 +69,72 @@ export default function EmbedPage() {
     if (!input.trim() || isLoading) return;
     const userMsg: Message = { id: Date.now().toString(), content: input, isUser: true, timestamp: now() };
     setMessages((p) => [...p, userMsg]);
-    const userText = input;
     setInput("");
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke("agent-chat", {
-        body: {
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({
           messages: [...messages, userMsg].map((m) => ({
             role: m.isUser ? "user" : "assistant",
             content: m.content,
           })),
           agentType,
           agentPrompt,
-        },
+          agentId,
+        }),
       });
-      if (error) throw error;
-      const reply = (data as any)?.reply || (data as any)?.message || "Desculpe, não consegui responder agora.";
-      setMessages((p) => [...p, { id: Date.now().toString() + "r", content: reply, isUser: false, timestamp: now() }]);
+
+      if (!response.ok || !response.body) {
+        throw new Error("Failed response");
+      }
+
+      // Add empty assistant message for streaming content
+      const assistantMsgId = Date.now().toString() + "r";
+      setMessages((p) => [...p, { id: assistantMsgId, content: "", isUser: false, timestamp: now() }]);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let replyContent = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const deltaContent = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (deltaContent) {
+              replyContent += deltaContent;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === assistantMsgId
+                    ? { ...m, content: replyContent }
+                    : m
+                )
+              );
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
     } catch (e) {
       setMessages((p) => [...p, { id: Date.now().toString() + "e", content: "Erro ao processar mensagem. Tente novamente.", isUser: false, timestamp: now() }]);
     } finally {

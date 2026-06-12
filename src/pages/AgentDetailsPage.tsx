@@ -1,18 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Copy, Check, Bot, RotateCcw, MessageSquare, AlertCircle } from "lucide-react";
+import { 
+  ArrowLeft, Copy, Check, Bot, RotateCcw, MessageSquare, AlertCircle, 
+  Settings, Key, History, Zap, Shield, HelpCircle, Activity, Play, Send, Mic, Paperclip
+} from "lucide-react";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { CodeBlock } from "@/components/ui/code-block";
-import { ChatContainer } from "@/components/chat";
-import { AgentFlowVisual } from "@/components/agents/AgentFlowVisual";
-import { AutomationPanel } from "@/components/agents/AutomationPanel";
 import { useAgentChat } from "@/hooks/useAgentChat";
 import { useAgents, Agent } from "@/hooks/useAgents";
 import { useWhatsAppInstances } from "@/hooks/useWhatsAppInstances";
@@ -21,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useProfile } from "@/hooks/useProfile";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function AgentDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,19 +33,21 @@ export default function AgentDetailsPage() {
   const [isActive, setIsActive] = useState(true);
   const [prompt, setPrompt] = useState("");
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
+  const [toneProfile, setToneProfile] = useState("Architectural / Precise");
+  const [creativityLevel, setCreativityLevel] = useState(70);
+  const [chatInput, setChatInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [isSavingInstance, setIsSavingInstance] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
+  const chatScrollRef = useRef<HTMLDivElement>(null);
 
   // Hook de chat com IA real
   const { messages, isLoading: isChatLoading, sendMessage, clearMessages } = useAgentChat({
     agentType: agent?.type_id || "atendimento-faq",
     agentPrompt: prompt,
+    agentId: id,
   });
-
-  // Determinar tab inicial baseado na URL
-  const defaultTab = searchParams.get("tab") || "settings";
 
   useEffect(() => {
     let isMounted = true;
@@ -82,6 +83,12 @@ export default function AgentDetailsPage() {
     };
   }, [id, navigate]);
 
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   const handleStatusChange = async (checked: boolean) => {
     if (!agent) return;
     
@@ -98,74 +105,57 @@ export default function AgentDetailsPage() {
     }
   };
 
-  const handleSavePrompt = async () => {
+  const handleDeployChanges = async () => {
     if (!agent) return;
     
     setIsSaving(true);
-    const result = await updateAgent(agent.id, { prompt });
-    
-    if (result) {
-      setAgent(result);
-      toast.success("Prompt guardado com sucesso");
-    } else {
-      toast.error("Erro ao guardar prompt");
-    }
-    setIsSaving(false);
-  };
+    try {
+      // 1. Save prompt
+      const promptResult = await updateAgent(agent.id, { prompt });
+      if (!promptResult) throw new Error("Erro ao guardar prompt");
 
-  const handleSaveInstance = async () => {
-    if (!agent) return;
-    
-    setIsSavingInstance(true);
-    const result = await updateAgent(agent.id, { instance_id: selectedInstanceId });
-    
-    if (result) {
-      setAgent(result);
-      
-      // Also reconfigure webhook on Evolution API
+      // 2. Save instance configuration if whatsapp
+      const instanceResult = await updateAgent(agent.id, { instance_id: selectedInstanceId });
+      if (!instanceResult) throw new Error("Erro ao atualizar instância");
+
+      // Reconfigure webhook on Evolution API if instance was saved
       if (selectedInstanceId) {
         const selectedInstance = instances.find(i => i.id === selectedInstanceId);
         if (selectedInstance?.instance_key) {
           try {
-            const { data: webhookResult, error: webhookError } = await supabase.functions.invoke("whatsapp-agent?action=setup-webhook&instance=" + selectedInstance.instance_key, {
-              method: "GET",
-            });
+            const { data: webhookResult, error: webhookError } = await supabase.functions.invoke(
+              "whatsapp-agent?action=setup-webhook&instance=" + selectedInstance.instance_key, 
+              { method: "GET" }
+            );
             if (webhookError) throw webhookError;
             console.log('Webhook reconfigured:', webhookResult);
             if (webhookResult.success) {
-              toast.success("Instância WhatsApp e webhook configurados com sucesso");
+              toast.success("Prompt e webhook configurados com sucesso");
             } else {
-              toast.warning("Instância salva, mas houve um problema ao configurar o webhook");
+              toast.warning("Alterações salvas, mas houve um problema ao configurar o webhook");
             }
           } catch (e) {
             console.error('Error setting up webhook:', e);
-            toast.warning("Instância salva, mas não foi possível configurar o webhook");
+            toast.warning("Alterações salvas, mas não foi possível configurar o webhook");
           }
         }
       } else {
-        toast.success("Instância WhatsApp atualizada com sucesso");
+        toast.success("Alterações publicadas com sucesso");
       }
-    } else {
-      toast.error("Erro ao atualizar instância");
+
+      const updatedAgent = await getAgent(agent.id);
+      if (updatedAgent) setAgent(updatedAgent);
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao publicar alterações");
+    } finally {
+      setIsSaving(false);
     }
-    setIsSavingInstance(false);
   };
 
-  const connectedInstances = instances.filter(i => i.status === "connected");
-
-  const widgetOrigin = typeof window !== "undefined" ? window.location.origin : "https://bloom-design-foundry.lovable.app";
-  const embedCode = `<!-- Kinjani AI Chat Widget -->
-<script src="${widgetOrigin}/widget.js" async data-agent-id="${id}" data-position="bottom-right" data-primary-color="#00DF81"></script>`;
-
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(embedCode);
-    setCopied(true);
-    toast.success("Código embed copiado para a área de transferência");
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleSendMessage = (content: string, attachments?: { type: string; name: string; dataUrl: string; size?: number }[]) => {
-    sendMessage(content, attachments);
+  const handleSendMessage = () => {
+    if (!chatInput.trim()) return;
+    sendMessage(chatInput);
+    setChatInput("");
   };
 
   const handleClearChat = () => {
@@ -173,10 +163,22 @@ export default function AgentDetailsPage() {
     toast.success("Conversa reiniciada");
   };
 
+  const handleCopyText = (text: string, type: 'key' | 'webhook') => {
+    navigator.clipboard.writeText(text);
+    if (type === 'key') {
+      setCopiedKey(true);
+      setTimeout(() => setCopiedKey(false), 2000);
+    } else {
+      setCopiedWebhook(true);
+      setTimeout(() => setCopiedWebhook(false), 2000);
+    }
+    toast.success("Copiado com sucesso!");
+  };
+
   if (isLoading) {
     return (
       <AppLayout pageTitle="Carregando..." credits={profile?.credits_balance ?? 0}>
-        <div className="flex items-center justify-center h-64">
+        <div className="flex items-center justify-center py-20">
           <LoadingSpinner size="lg" />
         </div>
       </AppLayout>
@@ -186,220 +188,321 @@ export default function AgentDetailsPage() {
   if (!agent) {
     return (
       <AppLayout pageTitle="Agente Não Encontrado" credits={profile?.credits_balance ?? 0}>
-        <div className="flex flex-col items-center justify-center py-12">
-          <p className="text-muted-foreground mb-4">Agente não encontrado</p>
+        <div className="flex flex-col items-center justify-center py-20">
+          <p className="text-pistachio mb-4">Agente não encontrado</p>
           <Button onClick={() => navigate("/agents")}>Voltar aos Agentes</Button>
         </div>
       </AppLayout>
     );
   }
 
+  const connectedInstances = instances.filter(i => i.status === "connected");
+  const widgetOrigin = typeof window !== "undefined" ? window.location.origin : "https://bloom-design-foundry.lovable.app";
+  const webhookUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/whatsapp-agent?agent_id=${id}`;
+
   return (
     <AppLayout pageTitle={agent.name} credits={profile?.credits_balance ?? 0}>
-      <div className="space-y-6">
-        {/* Cabeçalho */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/agents")}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+      <div className="space-y-8 pb-12">
+        {/* Header Area */}
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/agents")} className="text-pistachio hover:text-white hover:bg-forest/20">
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                <Bot className="h-6 w-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-extrabold tracking-tight text-white font-display">
+                    {agent.name}
+                  </h1>
+                  <div className="flex items-center gap-2 bg-card/50 px-3 py-1 rounded-full border border-forest/30">
+                    <span className="relative flex h-2 w-2">
+                      {isActive && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>}
+                      <span className={`relative inline-flex rounded-full h-2 w-2 ${isActive ? 'bg-primary' : 'bg-pistachio/30'}`}></span>
+                    </span>
+                    <span className="text-[10px] font-bold text-pistachio tracking-widest uppercase">
+                      {isActive ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-sm text-pistachio">{agent.type}</p>
+              </div>
+            </div>
+          </div>
+          
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Bot className="h-5 w-5 text-primary" />
+            <div className="flex items-center gap-2 mr-2 bg-card/30 border border-forest/35 px-3 py-1.5 rounded-lg">
+              <Label htmlFor="status" className="text-xs text-pistachio cursor-pointer">Estado Ativo</Label>
+              <Switch id="status" checked={isActive} onCheckedChange={handleStatusChange} />
             </div>
-            <div>
-              <h1 className="text-xl font-semibold">{agent.name}</h1>
-              <p className="text-sm text-muted-foreground">{agent.type}</p>
-            </div>
+            <Button
+              onClick={handleDeployChanges}
+              disabled={isSaving}
+              className="bg-primary hover:bg-primary-container text-background font-bold px-6 py-2.5 rounded-lg flex items-center gap-2 transition-all shadow-[0_0_15px_-2px_rgba(69,253,148,0.3)] hover:shadow-[0_0_20px_0px_rgba(69,253,148,0.5)] border border-primary/20"
+            >
+              {isSaving ? <LoadingSpinner size="sm" /> : <Play className="h-4 w-4 fill-current" />}
+              <span>Publicar Alterações</span>
+            </Button>
           </div>
-          <div className="ml-auto flex items-center gap-4">
-            <StatusBadge status={isActive ? "active" : "inactive"} />
-            <div className="flex items-center gap-2">
-              <Label htmlFor="status" className="text-sm">Ativo</Label>
-              <Switch
-                id="status"
-                checked={isActive}
-                onCheckedChange={handleStatusChange}
-              />
+        </header>
+
+        {/* Three Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* Left Column: Personality & Prompt */}
+          <section className="lg:col-span-3 flex flex-col gap-6">
+            
+            {/* Personality Settings */}
+            <div className="bg-card/40 backdrop-blur-md border border-forest/20 rounded-2xl p-5 space-y-4">
+              <div className="flex items-center gap-2 text-primary">
+                <Bot className="h-5 w-5" />
+                <h3 className="font-bold text-sm text-white">Personalidade</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold tracking-wider text-pistachio/70 uppercase">Perfil de Tom</label>
+                  <Select value={toneProfile} onValueChange={setToneProfile}>
+                    <SelectTrigger className="w-full bg-background/40 border-forest/30 text-white text-xs">
+                      <SelectValue placeholder="Selecione um tom" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-surface border-forest/30 text-white">
+                      <SelectItem value="Architectural / Precise">Arquitetônico / Preciso</SelectItem>
+                      <SelectItem value="Casual / Collaborative">Casual / Colaborativo</SelectItem>
+                      <SelectItem value="Formal / Corporate">Formal / Corporativo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="block text-[10px] font-bold tracking-wider text-pistachio/70 uppercase">Nível de Criatividade</label>
+                  <input 
+                    type="range" 
+                    value={creativityLevel}
+                    onChange={(e) => setCreativityLevel(Number(e.target.value))}
+                    className="w-full accent-primary h-1.5 bg-forest/30 rounded-full appearance-none cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[9px] font-bold text-pistachio/50">
+                    <span>DETERMINÍSTICO</span>
+                    <span>FLUIDO</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Tabs de Conteúdo */}
-        <Tabs defaultValue={defaultTab} className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="settings">Definições</TabsTrigger>
-            {["disparo-email", "disparo-whatsapp", "scrapper-leads"].includes(agent.type_id || "") && (
-              <TabsTrigger value="automation">Executar</TabsTrigger>
-            )}
-            <TabsTrigger value="flow">Fluxo</TabsTrigger>
-            <TabsTrigger value="embed">Código Embed</TabsTrigger>
-            <TabsTrigger value="test">Testar Agente</TabsTrigger>
-          </TabsList>
+            {/* Prompt Config */}
+            <div className="bg-card/40 backdrop-blur-md border border-forest/20 rounded-2xl p-5 space-y-4 flex-1">
+              <div className="flex items-center justify-between text-primary">
+                <div className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  <h3 className="font-bold text-sm text-white">System Prompt</h3>
+                </div>
+              </div>
+              <div className="relative group">
+                <Textarea 
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  className="w-full h-80 bg-background/50 border border-forest/20 rounded-xl p-4 font-mono text-xs text-primary/80 focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all resize-none custom-scrollbar" 
+                  placeholder="Defina o prompt do agente..."
+                  spellCheck="false"
+                />
+              </div>
+              <p className="text-xs text-pistachio/50 italic leading-snug">
+                Influencia diretamente a lógica de tomada de decisão do agente e nuances de linguagem.
+              </p>
+            </div>
+          </section>
 
-          <TabsContent value="automation" className="space-y-4">
-            <AutomationPanel agentTypeId={agent.type_id || ""} agentName={agent.name} />
-          </TabsContent>
+          {/* Center Column: Sandbox Chat Interface */}
+          <section className="lg:col-span-6 bg-card/30 backdrop-blur-md border border-forest/20 rounded-2xl flex flex-col h-[700px] relative overflow-hidden">
+            {/* Sandbox Header */}
+            <div className="px-6 py-4 border-b border-forest/20 flex items-center justify-between bg-surface-container-high/40 backdrop-blur-md">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                <h3 className="text-xs font-bold tracking-widest text-white uppercase">Sandbox em Tempo Real</h3>
+              </div>
+              <div className="flex gap-4 items-center">
+                <div className="flex items-center gap-1 text-pistachio/60 text-xs">
+                  <Zap className="h-3.5 w-3.5 text-primary" />
+                  <span className="font-semibold">Modelo Ativo</span>
+                </div>
+                <button onClick={handleClearChat} className="text-pistachio hover:text-red-400 transition-colors" title="Limpar conversa">
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
 
-          <TabsContent value="settings" className="space-y-4">
-            {/* Instância WhatsApp */}
-            {agent.channel === "whatsapp" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MessageSquare className="h-5 w-5" />
-                    Instância WhatsApp
-                  </CardTitle>
-                  <CardDescription>
-                    Selecione qual instância WhatsApp este agente deve usar para responder mensagens
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {connectedInstances.length === 0 ? (
-                    <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50 border border-dashed">
-                      <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Nenhuma instância conectada</p>
-                        <p className="text-xs text-muted-foreground">
-                          Primeiro crie e conecte uma instância WhatsApp em Integrações
-                        </p>
+            {/* Sandbox Messages */}
+            <div ref={chatScrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+              {messages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center text-pistachio/40 space-y-2">
+                  <Bot className="h-12 w-12 opacity-30" />
+                  <p className="text-sm">Envie uma mensagem no chat para testar a resposta do seu agente com IA real.</p>
+                </div>
+              ) : (
+                messages.map((m, index) => {
+                  const isUser = m.role === 'user';
+                  return (
+                    <div key={index} className={`flex flex-col ${isUser ? 'items-start' : 'items-end'} gap-1`}>
+                      <div className={`p-4 rounded-xl text-xs max-w-[85%] border leading-relaxed ${
+                        isUser 
+                          ? 'bg-forest/20 border-forest/30 text-white rounded-tr-2xl rounded-br-2xl rounded-bl-sm' 
+                          : 'bg-card/70 border-primary/20 text-[#cfe8e1] rounded-tl-2xl rounded-bl-2xl rounded-br-sm text-right'
+                      }`}>
+                        <p>{m.content}</p>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => navigate("/integrations")}>
-                        Ir para Integrações
-                      </Button>
+                      <span className="text-[9px] font-bold text-pistachio/40 uppercase px-1">
+                        {isUser ? 'UTILIZADOR' : agent.name}
+                      </span>
                     </div>
-                  ) : (
-                    <>
-                      <div className="space-y-2">
-                        <Label>Instância WhatsApp</Label>
-                        <Select
-                          value={selectedInstanceId || "none"}
-                          onValueChange={(value) => setSelectedInstanceId(value === "none" ? null : value)}
+                  );
+                })
+              )}
+            </div>
+
+            {/* Input Sandbox Area */}
+            <div className="p-6 pt-2 border-t border-forest/10">
+              <div className="relative bg-background/50 border border-forest/20 focus-within:border-primary/50 transition-all rounded-xl p-1.5 flex flex-col">
+                <Textarea 
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }}
+                  className="w-full bg-transparent border-none text-white text-xs placeholder:text-pistachio/30 focus:ring-0 resize-none p-3 h-16" 
+                  placeholder="Escreva algo para o agente..." 
+                />
+                <div className="flex items-center justify-between px-3 pb-2">
+                  <div className="flex gap-2">
+                    <button className="text-pistachio hover:text-primary transition-colors"><Paperclip className="h-4 w-4" /></button>
+                    <button className="text-pistachio hover:text-primary transition-colors"><Mic className="h-4 w-4" /></button>
+                  </div>
+                  <Button 
+                    onClick={handleSendMessage}
+                    className="bg-primary hover:bg-primary/90 text-background w-8 h-8 rounded-lg flex items-center justify-center p-0 transition-transform active:scale-95 shadow-lg"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Right Column: Integrations, Logs & Usage */}
+          <section className="lg:col-span-3 flex flex-col gap-6">
+            
+            {/* Endpoints & Keys */}
+            <div className="bg-card/40 backdrop-blur-md border border-forest/20 rounded-2xl p-5 space-y-4">
+              <div className="flex items-center gap-2 text-primary">
+                <Key className="h-5 w-5" />
+                <h3 className="font-bold text-sm text-white">Integração</h3>
+              </div>
+              
+              <div className="space-y-4">
+                {agent.channel === 'whatsapp' ? (
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold tracking-wider text-pistachio/70 uppercase">Instância WhatsApp</Label>
+                    {connectedInstances.length === 0 ? (
+                      <div className="text-xs text-pistachio/50 p-3 bg-forest/5 border border-dashed border-forest/35 rounded-lg flex flex-col gap-2">
+                        <span>Nenhuma instância WhatsApp conectada.</span>
+                        <Button size="sm" variant="outline" className="text-[10px] h-7 border-forest/30" onClick={() => navigate("/integrations")}>
+                          Configurar Integração
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <Select 
+                          value={selectedInstanceId || "none"} 
+                          onValueChange={(val) => setSelectedInstanceId(val === 'none' ? null : val)}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma instância" />
+                          <SelectTrigger className="w-full bg-background/40 border-forest/30 text-white text-xs">
+                            <SelectValue placeholder="Escolha uma instância" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-surface border-forest/30 text-white">
                             <SelectItem value="none">Nenhuma instância</SelectItem>
-                            {connectedInstances.map((instance) => (
-                              <SelectItem key={instance.id} value={instance.id}>
-                                <div className="flex items-center gap-2">
-                                  <span className="h-2 w-2 rounded-full bg-green-500" />
-                                  {instance.instance_name}
-                                  {instance.phone_number && (
-                                    <span className="text-muted-foreground">
-                                      ({instance.phone_number})
-                                    </span>
-                                  )}
-                                </div>
+                            {connectedInstances.map((inst) => (
+                              <SelectItem key={inst.id} value={inst.id}>
+                                {inst.instance_name}
                               </SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
-                      <Button 
-                        onClick={handleSaveInstance} 
-                        disabled={isSavingInstance || selectedInstanceId === agent.instance_id}
-                      >
-                        {isSavingInstance ? "A guardar..." : "Guardar Instância"}
-                      </Button>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Prompt do Agente */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Prompt do Agente</CardTitle>
-                <CardDescription>
-                  Defina como o seu agente deve comportar-se e responder
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Textarea
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  placeholder="Você é um assistente útil..."
-                  className="min-h-[200px]"
-                />
-                <Button onClick={handleSavePrompt} disabled={isSaving}>
-                  {isSaving ? "A guardar..." : "Guardar Alterações"}
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="flow" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Fluxo do Agente</CardTitle>
-                <CardDescription>
-                  Visualização do fluxo de processamento do agente ({agent.type})
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <AgentFlowVisual className="py-4" agentType={agent.type_id || undefined} />
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="embed" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Código Embed</CardTitle>
-                <CardDescription>
-                  Adicione este código ao seu site para ativar o widget de chat
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <CodeBlock code={embedCode} language="html" />
-                <Button onClick={handleCopyCode} variant="outline">
-                  {copied ? (
-                    <>
-                      <Check className="mr-2 h-4 w-4" />
-                      Copiado!
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="mr-2 h-4 w-4" />
-                      Copiar Código
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="test" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Testar o Seu Agente</CardTitle>
-                    <CardDescription>
-                      Envie mensagens de teste para ver como o seu agente responde com IA real
-                    </CardDescription>
+                    )}
                   </div>
-                  <Button variant="outline" size="sm" onClick={handleClearChat}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Reiniciar
-                  </Button>
+                ) : (
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold tracking-wider text-pistachio/70 uppercase">Código Embed</Label>
+                    <div className="flex items-center gap-2 bg-background/50 border border-forest/30 rounded-lg px-3 py-2">
+                      <code className="text-xs text-primary/70 flex-1 truncate">data-agent-id="{id}"</code>
+                      <button 
+                        onClick={() => handleCopyText(embedCode, 'key')} 
+                        className="text-pistachio hover:text-primary transition-colors"
+                      >
+                        {copiedKey ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold tracking-wider text-pistachio/70 uppercase">URL de Webhook</Label>
+                  <div className="flex items-center gap-2 bg-background/50 border border-forest/30 rounded-lg px-3 py-2">
+                    <code className="text-xs text-primary/70 flex-1 truncate">{webhookUrl}</code>
+                    <button 
+                      onClick={() => handleCopyText(webhookUrl, 'webhook')}
+                      className="text-pistachio hover:text-primary transition-colors"
+                    >
+                      {copiedWebhook ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
-              </CardHeader>
-              <CardContent>
-                <div className="border rounded-lg h-[400px]">
-                  <ChatContainer
-                    messages={messages}
-                    onSendMessage={handleSendMessage}
-                    isLoading={isChatLoading}
-                    placeholder="Escreva uma mensagem de teste..."
-                  />
+              </div>
+            </div>
+
+            {/* Execution logs */}
+            <div className="bg-card/40 backdrop-blur-md border border-forest/20 rounded-2xl p-5 flex flex-col h-[300px]">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 text-primary">
+                  <Settings className="h-5 w-5" />
+                  <h3 className="font-bold text-sm text-white">Atividades Recentes</h3>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                <div className="bg-success/20 text-success text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  LIVE
+                </div>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto custom-scrollbar font-mono text-[10px] space-y-2 text-pistachio/65">
+                <div className="flex gap-2 border-l border-forest/20 pl-2">
+                  <span className="text-primary/40">Agora</span>
+                  <span>Sandbox ativa e aguardando comandos...</span>
+                </div>
+                <div className="flex gap-2 border-l border-forest/20 pl-2">
+                  <span className="text-primary/40">10:43</span>
+                  <span>Agente instanciado com sucesso.</span>
+                </div>
+                <div className="flex gap-2 border-l border-forest/20 pl-2">
+                  <span className="text-primary/40">10:40</span>
+                  <span>Ambiente sandbox carregado.</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Monthly Limit */}
+            <div className="bg-card/40 backdrop-blur-md border border-forest/20 rounded-2xl p-5 space-y-3">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-pistachio/70 font-semibold uppercase tracking-wider text-[10px]">Quota de Uso Mensal</span>
+                <span className="text-xs font-bold text-primary">82%</span>
+              </div>
+              <div className="w-full h-1.5 bg-background rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-success to-primary shadow-[0_0_10px_rgba(69,253,148,0.5)]" style={{ width: '82%' }}></div>
+              </div>
+              <p className="text-[10px] text-pistachio/50 text-right">3,284,102 / 4,000,000 Tokens</p>
+            </div>
+
+          </section>
+
+        </div>
       </div>
     </AppLayout>
   );

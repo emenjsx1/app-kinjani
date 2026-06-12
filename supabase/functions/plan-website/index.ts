@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { callAI } from "../_shared/ai.ts";
+import { callAI, getUserApiKey } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -127,7 +127,8 @@ serve(async (req) => {
     const { prompt, websiteName } = await req.json() as { prompt: string; websiteName?: string };
     if (!prompt || prompt.trim().length < 8) throw new Error("Prompt demasiado curto");
 
-    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    const userKey = await getUserApiKey(req, "gemini");
+    const geminiKey = userKey || Deno.env.get("GEMINI_API_KEY");
     if (!geminiKey) throw new Error("GEMINI_API_KEY não configurada.");
 
     const userMessage = `PEDIDO DO UTILIZADOR:
@@ -145,8 +146,8 @@ Devolve EXCLUSIVAMENTE um objecto JSON puro (NÃO wrappes em "plan" ou outra cha
         { role: "user", content: userMessage },
       ],
       temperature: 0.55,
-      geminiModel: "gemini-2.5-flash",
-    });
+      geminiModel: "gemini-1.5-pro",
+    }, userKey);
 
     const raw = ai.content;
     if (!raw) throw new Error("Resposta vazia do modelo ao planear o website");

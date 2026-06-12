@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { callAI } from "../_shared/ai.ts";
+import { callAI, getUserApiKey } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,7 +56,8 @@ serve(async (req) => {
     const { websiteType, niche, templateName, prompt, websiteName, sections } = 
       await req.json() as WebsiteGenerationRequest;
 
-    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    const userKey = await getUserApiKey(req, "gemini");
+    const geminiKey = userKey || Deno.env.get("GEMINI_API_KEY");
     if (!geminiKey) {
       throw new Error("GEMINI_API_KEY não configurada.");
     }
@@ -186,8 +187,8 @@ Gera APENAS as secções solicitadas: ${sections.join(", ")}
         { role: "user", content: userPrompt },
       ],
       temperature: 0.8,
-      geminiModel: "gemini-2.5-flash",
-    });
+      geminiModel: "gemini-1.5-pro",
+    }, userKey);
     const content = ai.content;
 
     if (!content) {

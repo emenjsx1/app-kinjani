@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bot, MessageSquare, Users, Sparkles, Calendar, ArrowRight, CheckCircle2, FileText, Wand2, Coins, Loader2 } from "lucide-react";
+import { Bot, MessageSquare, Users, Sparkles, Calendar, ArrowRight, CheckCircle2, FileText, Wand2, Coins, Loader2, Webhook, Link2, Server, ExternalLink, Globe, ToggleLeft, ToggleRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -40,7 +40,7 @@ interface CreateAgentWizardProps {
   onAgentCreated: (agent: Agent) => void;
 }
 
-const STEPS = ["Método", "Tipo", "Template", "Prompt", "Nome", "Canal", "Concluído"];
+const STEPS = ["Método", "Tipo", "Template", "Prompt", "Nome", "Conexões", "Canal", "Concluído"];
 const AI_STEPS = ["Método", "IA", "A Gerar...", "Nome", "Canal", "Concluído"];
 
 type AgentTypeDef = {
@@ -170,7 +170,14 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
   const [agentName, setAgentName] = useState("");
   const [channel, setChannel] = useState<string | null>("embed");
   const [selectedInstanceId, setSelectedInstanceId] = useState<string | null>(null);
-  
+
+  // Connection settings
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [mcpServerUrl, setMcpServerUrl] = useState("");
+  const [enableGoogleCalendar, setEnableGoogleCalendar] = useState(false);
+  const [enableGoogleSheets, setEnableGoogleSheets] = useState(false);
+  const [enableGmail, setEnableGmail] = useState(false);
+
   // AI creation state
   const [aiDescription, setAiDescription] = useState("");
   const [businessName, setBusinessName] = useState("");
@@ -202,6 +209,11 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
     setBusinessName("");
     setNiche("");
     setGeneratedAgent(null);
+    setWebhookUrl("");
+    setMcpServerUrl("");
+    setEnableGoogleCalendar(false);
+    setEnableGoogleSheets(false);
+    setEnableGmail(false);
   };
 
   const handleClose = () => {
@@ -310,6 +322,8 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
         case 4:
           return agentName.trim().length > 2;
         case 5:
+          return true; // Connections are optional
+        case 6:
           return channel !== null && (channel !== "whatsapp" || selectedInstanceId !== null);
         default:
           return true;
@@ -318,11 +332,11 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
   };
 
   const getFinalStepIndex = () => {
-    return creationMethod === "ai" ? 5 : 6;
+    return creationMethod === "ai" ? 5 : 7;
   };
 
   const getCreateStepIndex = () => {
-    return creationMethod === "ai" ? 4 : 5;
+    return creationMethod === "ai" ? 4 : 6;
   };
 
   const renderStep = () => {
@@ -741,7 +755,88 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
           </div>
         );
 
-      case 5:
+      case 5: {
+        // Connections step for manual path
+        const ToggleBtn = ({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) => (
+          <button onClick={onToggle} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+            enabled
+              ? "bg-primary/20 border-primary/40 text-primary"
+              : "bg-forest/10 border-forest/30 text-pistachio/60 hover:border-forest/50"
+          }`}>
+            {enabled ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
+            {enabled ? "ATIVO" : "INATIVO"}
+          </button>
+        );
+        return (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-white">Conexões do Agente</h3>
+              <p className="text-sm text-pistachio/70">
+                Ative integrações externas para expandir as capacidades deste agente
+              </p>
+            </div>
+
+            {/* Google integrations */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold text-pistachio/50 uppercase tracking-widest">Google Workspace</p>
+              {[
+                { label: "Google Calendar", desc: "Marcar e consultar eventos via chat", icon: <Calendar className="h-4 w-4 text-blue-400" />, enabled: enableGoogleCalendar, toggle: () => setEnableGoogleCalendar(p => !p), soon: false },
+                { label: "Google Sheets", desc: "Ler/escrever dados em spreadsheets", icon: <Globe className="h-4 w-4 text-emerald-400" />, enabled: enableGoogleSheets, toggle: () => setEnableGoogleSheets(p => !p), soon: false },
+                { label: "Gmail", desc: "Enviar emails e ler inbox via agente", icon: <MessageSquare className="h-4 w-4 text-red-400" />, enabled: enableGmail, toggle: () => setEnableGmail(p => !p), soon: false },
+              ].map(item => (
+                <div key={item.label} className="flex items-center justify-between p-3 rounded-lg bg-forest/10 border border-forest/20">
+                  <div className="flex items-center gap-3">
+                    {item.icon}
+                    <div>
+                      <p className="text-sm font-medium text-white">{item.label}</p>
+                      <p className="text-xs text-pistachio/60">{item.desc}</p>
+                    </div>
+                  </div>
+                  <ToggleBtn enabled={item.enabled} onToggle={item.toggle} />
+                </div>
+              ))}
+            </div>
+
+            {/* Webhook */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold text-pistachio/50 uppercase tracking-widest">Webhook de Saída</p>
+              <div className="space-y-2 p-3 rounded-lg bg-forest/10 border border-forest/20">
+                <div className="flex items-center gap-2">
+                  <Webhook className="h-4 w-4 text-secondary" />
+                  <Label className="text-sm text-white">URL do Webhook (opcional)</Label>
+                </div>
+                <Input
+                  value={webhookUrl}
+                  onChange={e => setWebhookUrl(e.target.value)}
+                  placeholder="https://n8n.empresa.com/webhook/..."
+                  className="bg-background/40 border-forest/30 text-white text-xs focus:border-primary/50"
+                />
+                <p className="text-[10px] text-pistachio/50">O agente enviará eventos POST para este endpoint</p>
+              </div>
+            </div>
+
+            {/* MCP */}
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold text-pistachio/50 uppercase tracking-widest">MCP Server (Model Context Protocol)</p>
+              <div className="space-y-2 p-3 rounded-lg bg-forest/10 border border-forest/20">
+                <div className="flex items-center gap-2">
+                  <Server className="h-4 w-4 text-violet-400" />
+                  <Label className="text-sm text-white">URL do Servidor MCP (opcional)</Label>
+                </div>
+                <Input
+                  value={mcpServerUrl}
+                  onChange={e => setMcpServerUrl(e.target.value)}
+                  placeholder="http://localhost:3000/mcp"
+                  className="bg-background/40 border-forest/30 text-white text-xs focus:border-primary/50"
+                />
+                <p className="text-[10px] text-pistachio/50">Permite ao agente usar ferramentas externas via protocolo MCP</p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      case 6:
         return (
           <div className="space-y-4">
             <div>
@@ -788,21 +883,31 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
           </div>
         );
 
-      case 6:
+      case 7:
         return (
           <div className="flex flex-col items-center justify-center py-8 space-y-4">
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center border border-primary/30">
               <CheckCircle2 className="h-8 w-8 text-primary" />
             </div>
             <div className="text-center space-y-2">
-              <h3 className="text-xl font-semibold">Agente Criado!</h3>
-              <p className="text-muted-foreground">
-                O seu agente <span className="font-medium text-foreground">{agentName}</span> está pronto a usar.
+              <h3 className="text-xl font-semibold text-white">Agente Criado!</h3>
+              <p className="text-pistachio/70">
+                O seu agente <span className="font-medium text-white">{agentName}</span> está pronto a usar.
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-pistachio/60">
                 Teste o agente com IA real na aba "Testar Agente".
               </p>
             </div>
+            {(enableGoogleCalendar || enableGoogleSheets || enableGmail || webhookUrl || mcpServerUrl) && (
+              <div className="w-full p-3 rounded-lg bg-forest/10 border border-forest/20 space-y-1.5">
+                <p className="text-[10px] font-bold text-pistachio/50 uppercase tracking-widest mb-2">Conexões Ativas</p>
+                {enableGoogleCalendar && <p className="text-xs text-emerald-400 flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5" />Google Calendar</p>}
+                {enableGoogleSheets && <p className="text-xs text-emerald-400 flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5" />Google Sheets</p>}
+                {enableGmail && <p className="text-xs text-emerald-400 flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5" />Gmail</p>}
+                {webhookUrl && <p className="text-xs text-secondary flex items-center gap-2"><Webhook className="h-3.5 w-3.5" />Webhook: {webhookUrl.substring(0, 40)}...</p>}
+                {mcpServerUrl && <p className="text-xs text-violet-400 flex items-center gap-2"><Server className="h-3.5 w-3.5" />MCP: {mcpServerUrl.substring(0, 40)}...</p>}
+              </div>
+            )}
           </div>
         );
 
@@ -813,36 +918,51 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden bg-[#021f1b]/95 backdrop-blur-xl border border-forest/30 text-white shadow-[0_0_50px_rgba(69,253,148,0.15)]">
         <DialogHeader>
-          <DialogTitle>Criar Novo Agente</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-white font-display font-bold text-xl">Criar Novo Agente</DialogTitle>
+          <DialogDescription className="text-pistachio/70">
             Configure o seu agente IA em apenas alguns passos
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
-          <Stepper steps={getSteps()} currentStep={currentStep} className="mb-8" />
-          {renderStep()}
+          <Stepper steps={getSteps()} currentStep={currentStep} className="mb-8 text-primary" />
+          <div className="text-white">
+            {renderStep()}
+          </div>
         </div>
 
-        <div className="flex justify-between pt-4 border-t">
+        <div className="flex justify-between pt-4 border-t border-forest/20">
           {currentStep < getFinalStepIndex() ? (
             <>
-              <Button variant="outline" onClick={handleBack} disabled={currentStep === 0 || isAICreating}>
+              <Button 
+                variant="outline" 
+                onClick={handleBack} 
+                disabled={currentStep === 0 || isAICreating}
+                className="border-forest/40 text-pistachio hover:bg-forest/20 hover:text-white"
+              >
                 Voltar
               </Button>
               {currentStep === getCreateStepIndex() ? (
-                <Button onClick={handleCreate} disabled={!canProceed()}>
+                <Button 
+                  onClick={handleCreate} 
+                  disabled={!canProceed()}
+                  className="bg-primary hover:bg-primary/95 text-background font-bold"
+                >
                   Criar Agente
                 </Button>
               ) : currentStep === 2 && creationMethod === "ai" ? (
-                <Button disabled>
+                <Button disabled className="bg-primary/50 text-background font-bold">
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   A gerar...
                 </Button>
               ) : (
-                <Button onClick={handleNext} disabled={!canProceed() || isAICreating}>
+                <Button 
+                  onClick={handleNext} 
+                  disabled={!canProceed() || isAICreating}
+                  className="bg-primary hover:bg-primary/95 text-background font-bold"
+                >
                   {creationMethod === "ai" && currentStep === 1 ? (
                     <>
                       <Wand2 className="h-4 w-4 mr-2" />
@@ -857,7 +977,7 @@ export function CreateAgentWizard({ open, onOpenChange, onAgentCreated }: Create
           ) : (
             <>
               <div />
-              <Button onClick={handleClose}>
+              <Button onClick={handleClose} className="bg-primary hover:bg-primary/95 text-background font-bold">
                 Ver Agente
               </Button>
             </>

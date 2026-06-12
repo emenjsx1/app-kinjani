@@ -1,5 +1,6 @@
-// Multimodal agent chat — text + image + audio + PDF via Gemini native API
+// Multimodal agent chat — text + image + audio + PDF via Gemini native API or OpenAI API
 // Streams SSE back to the client. Cobra créditos antes de chamar o modelo.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { chargeCredits, classifyChatMessage, insufficientCreditsResponse } from "../_shared/credits.ts";
 
 const corsHeaders = {
@@ -80,31 +81,380 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const body = (await req.json()) as AgentChatRequest;
-    const { messages, agentType, agentPrompt, attachments } = body;
+    const body = (await req.json()) as (AgentChatRequest & { agentId?: string });
+    const { messages, agentType, agentPrompt, agentId, attachments } = body;
 
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
-    if (!GEMINI_API_KEY) {
-      return new Response(JSON.stringify({ error: "GEMINI_API_KEY missing" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const supabaseClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    // Resolve owner's user_id for notifications / credentials
+    let userId = "";
+    if (agentId) {
+      const { data: agentData } = await supabaseClient
+        .from("agents")
+        .select("user_id")
+        .eq("id", agentId)
+        .maybeSingle();
+      if (agentData?.user_id) {
+        userId = agentData.user_id;
+      }
+    }
+
+    if (!userId) {
+      const authHeader = req.headers.get("Authorization");
+      if (authHeader) {
+        const token = authHeader.split(" ")[1];
+        const { data: userData } = await supabaseClient.auth.getUser(token);
+        if (userData?.user?.id) {
+          userId = userData.user.id;
+        }
+      }
     }
 
     // Charge credits up-front based on attachment type (text vs image/audio/pdf).
     const chargeAction = classifyChatMessage(attachments, 0);
-    const charge = await chargeCredits(req, chargeAction, `Mensagem agente (${agentType || "geral"})`);
+    const charge = await chargeCredits(req, chargeAction, `Mensagem agente (${agentType || "geral"})`, 1, userId || null);
     if (!charge.ok) return insufficientCreditsResponse(corsHeaders, charge);
+
+    const insertNotification = async (title: string, message: string, type: string) => {
+      if (!userId) return;
+      await supabaseClient.from("notifications").insert({
+        user_id: userId,
+        title,
+        message,
+        type,
+        is_read: false
+      });
+    };
+
+    // Load user's custom API keys
+    let openaiKey: string | null = null;
+    let geminiKey: string | null = null;
+
+    if (userId) {
+      try {
+        const { data: keysData, error: keysError } = await supabaseClient
+          .from("user_api_keys")
+          .select("provider, api_key_encrypted, is_valid")
+          .eq("user_id", userId);
+        
+        if (!keysError && keysData) {
+          const oaKey = keysData.find(k => k.provider === "openai" && k.is_valid);
+          if (oaKey?.api_key_encrypted) {
+            openaiKey = atob(oaKey.api_key_encrypted);
+          }
+          const gemKey = keysData.find(k => k.provider === "gemini" && k.is_valid);
+          if (gemKey?.api_key_encrypted) {
+            geminiKey = atob(gemKey.api_key_encrypted);
+          }
+        }
+      } catch (e) {
+        console.error("Error fetching user api keys:", e);
+      }
+    }
+
+    // Determine active provider & key
+    let activeProvider: "gemini" | "openai" = "gemini";
+    let activeApiKey = "";
+
+    if (openaiKey) {
+      activeProvider = "openai";
+      activeApiKey = openaiKey;
+    } else if (geminiKey) {
+      activeProvider = "gemini";
+      activeApiKey = geminiKey;
+    } else {
+      const globalGemini = Deno.env.get("GEMINI_API_KEY");
+      const globalOpenai = Deno.env.get("OPENAI_API_KEY");
+      if (globalGemini) {
+        activeProvider = "gemini";
+        activeApiKey = globalGemini;
+      } else if (globalOpenai) {
+        activeProvider = "openai";
+        activeApiKey = globalOpenai;
+      } else {
+        return new Response(JSON.stringify({ error: "Nenhuma API Key (Gemini ou OpenAI) configurada para este agente ou sistema." }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     const baseSystem = AGENT_SYSTEM_PROMPTS[agentType || ""] || AGENT_SYSTEM_PROMPTS["atendimento-faq"];
     const systemText = (agentPrompt ? `${baseSystem}\n\nInstruções específicas:\n${agentPrompt}` : baseSystem) + BASE_RULES;
 
-    // Build contents in Gemini native format.
-    // History messages become text-only `parts`. The LAST user turn carries attachments.
     const lastUserIdx = (() => {
       for (let i = messages.length - 1; i >= 0; i--) if (messages[i].role === "user") return i;
       return -1;
     })();
+
+    // ────────────────────────────────────────────────────────
+    // PROVEDOR: OPENAI
+    // ────────────────────────────────────────────────────────
+    if (activeProvider === "openai") {
+      const openaiMessages: any[] = [
+        { role: "system", content: systemText }
+      ];
+
+      messages.forEach((m, i) => {
+        const role = m.role === "assistant" ? "assistant" : "user";
+        if (role === "user" && i === lastUserIdx && Array.isArray(attachments) && attachments.length) {
+          const contentParts: any[] = [];
+          const attachmentGuidance = buildAttachmentGuidance(attachments);
+          if (attachmentGuidance) {
+            contentParts.push({ type: "text", text: `${attachmentGuidance}\n\nMensagem do utilizador: ${m.content || "(ver anexos)"}` });
+          } else if (m.content) {
+            contentParts.push({ type: "text", text: m.content });
+          }
+          for (const att of attachments) {
+            const inline = dataUrlToInlineData(att.dataUrl);
+            if (!inline) continue;
+            const normalizedMime = normalizeMime(inline.mime_type);
+            if (normalizedMime.startsWith("image/")) {
+              contentParts.push({
+                type: "image_url",
+                image_url: {
+                  url: att.dataUrl
+                }
+              });
+            }
+          }
+          openaiMessages.push({ role, content: contentParts });
+        } else {
+          openaiMessages.push({ role, content: m.content || "" });
+        }
+      });
+
+      let isFunctionCall = false;
+      let functionResult: any = null;
+      let functionName = "";
+      let functionArgs: any = null;
+      let toolCallId = "";
+
+      let openaiTools: any[] | undefined = undefined;
+      if (agentType === "agendamento") {
+        openaiTools = [
+          {
+            type: "function",
+            function: {
+              name: "check_availability",
+              description: "Verifica os horários disponíveis para agendamento em determinada data.",
+              parameters: {
+                type: "object",
+                properties: {
+                  date: { type: "string", description: "A data a verificar (formato YYYY-MM-DD)" }
+                },
+                required: ["date"]
+              }
+            }
+          },
+          {
+            type: "function",
+            function: {
+              name: "book_appointment",
+              description: "Cria e confirma um agendamento para o cliente.",
+              parameters: {
+                type: "object",
+                properties: {
+                  name: { type: "string", description: "Nome completo do cliente" },
+                  date: { type: "string", description: "Data do agendamento (YYYY-MM-DD)" },
+                  time: { type: "string", description: "Hora do agendamento (HH:MM)" },
+                  service: { type: "string", description: "Serviço ou tipo de consulta pretendida" }
+                },
+                required: ["name", "date", "time"]
+              }
+            }
+          }
+        ];
+      } else if (agentType === "controlo-gastos") {
+        openaiTools = [
+          {
+            type: "function",
+            function: {
+              name: "record_expense",
+              description: "Regista uma nova despesa no controlo de gastos.",
+              parameters: {
+                type: "object",
+                properties: {
+                  description: { type: "string", description: "Descrição ou item da despesa" },
+                  amount: { type: "number", description: "Valor monetário da despesa" },
+                  category: { type: "string", description: "Categoria (ex: Alimentação, Transporte, Lazer, Contas)" }
+                },
+                required: ["description", "amount", "category"]
+              }
+            }
+          }
+        ];
+      }
+
+      if (openaiTools) {
+        try {
+          const checkResp = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${activeApiKey}`,
+            },
+            body: JSON.stringify({
+              model: "gpt-4o-mini",
+              temperature: 0.2,
+              messages: openaiMessages,
+              tools: openaiTools,
+            }),
+          });
+
+          if (checkResp.ok) {
+            const json = await checkResp.json();
+            const choice = json?.choices?.[0];
+            const toolCall = choice?.message?.tool_calls?.[0];
+            if (toolCall) {
+              isFunctionCall = true;
+              functionName = toolCall.function.name;
+              functionArgs = JSON.parse(toolCall.function.arguments);
+              toolCallId = toolCall.id;
+
+              if (functionName === "check_availability") {
+                functionResult = {
+                  available_slots: ["09:00", "10:30", "14:00", "16:30"],
+                  message: "Disponíveis para " + functionArgs.date + ": 09:00, 10:30, 14:00 e 16:30"
+                };
+              } else if (functionName === "book_appointment") {
+                const { name, date, time, service } = functionArgs;
+                await insertNotification(
+                  "Novo Agendamento Marcado",
+                  `${name} agendou ${service || "Marcação"} para ${date} às ${time}.`,
+                  "appointment"
+                );
+                functionResult = {
+                  status: "success",
+                  message: `Agendamento agendado e confirmado para ${name} no dia ${date} às ${time}.`
+                };
+              } else if (functionName === "record_expense") {
+                const { description, amount, category } = functionArgs;
+                await insertNotification(
+                  "Nova Despesa Registada",
+                  `Despesa de ${amount} MZN registada para "${description}" (${category}).`,
+                  "expense"
+                );
+                functionResult = {
+                  status: "success",
+                  message: `Despesa de ${amount} MZN registada com sucesso!`
+                };
+              }
+
+              openaiMessages.push({
+                role: "assistant",
+                content: null,
+                tool_calls: [toolCall]
+              });
+
+              openaiMessages.push({
+                role: "tool",
+                tool_call_id: toolCallId,
+                name: functionName,
+                content: JSON.stringify(functionResult)
+              });
+            }
+          }
+        } catch (err) {
+          console.error("OpenAI tool call check failed", err);
+        }
+      }
+
+      const requestBody: any = {
+        model: "gpt-4o-mini",
+        temperature: 0.7,
+        max_tokens: 1024,
+        messages: openaiMessages,
+        stream: true,
+      };
+
+      const upstream = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${activeApiKey}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!upstream.ok) {
+        const txt = await upstream.text();
+        console.error("OpenAI error", upstream.status, txt);
+        return new Response(JSON.stringify({ error: `Erro do modelo OpenAI: ${upstream.status}`, detail: txt }), {
+          status: upstream.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      return new Response(upstream.body, {
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache, no-transform",
+          "X-Accel-Buffering": "no",
+        },
+      });
+    }
+
+    // ────────────────────────────────────────────────────────
+    // PROVEDOR: GEMINI
+    // ────────────────────────────────────────────────────────
+    let tools: any[] | undefined = undefined;
+    if (agentType === "agendamento") {
+      tools = [{
+        function_declarations: [
+          {
+            name: "check_availability",
+            description: "Verifica os horários disponíveis para agendamento em determinada data.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                date: {
+                  type: "STRING",
+                  description: "A data a verificar (formato YYYY-MM-DD)"
+                }
+              },
+              required: ["date"]
+            }
+          },
+          {
+            name: "book_appointment",
+            description: "Cria e confirma um agendamento para o cliente.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                name: { type: "STRING", description: "Nome completo do cliente" },
+                date: { type: "STRING", description: "Data do agendamento (YYYY-MM-DD)" },
+                time: { type: "STRING", description: "Hora do agendamento (HH:MM)" },
+                service: { type: "STRING", description: "Serviço ou tipo de consulta pretendida" }
+              },
+              required: ["name", "date", "time"]
+            }
+          }
+        ]
+      }];
+    } else if (agentType === "controlo-gastos") {
+      tools = [{
+        function_declarations: [
+          {
+            name: "record_expense",
+            description: "Regista uma nova despesa no controlo de gastos.",
+            parameters: {
+              type: "OBJECT",
+              properties: {
+                description: { type: "STRING", description: "Descrição ou item da despesa" },
+                amount: { type: "NUMBER", description: "Valor monetário da despesa" },
+                category: { type: "STRING", description: "Categoria (ex: Alimentação, Transporte, Lazer, Contas)" }
+              },
+              required: ["description", "amount", "category"]
+            }
+          }
+        ]
+      }];
+    }
 
     const contents = messages.map((m, i) => {
       const role = m.role === "assistant" ? "model" : "user";
@@ -128,19 +478,97 @@ Deno.serve(async (req) => {
       return { role, parts };
     });
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
+    let isFunctionCall = false;
+    let functionResult: any = null;
+    let functionName = "";
+    let functionArgs: any = null;
+
+    if (tools) {
+      const checkUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${activeApiKey}`;
+      const checkResp = await fetch(checkUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemText }] },
+          contents,
+          tools,
+          generationConfig: { temperature: 0.2 },
+        }),
+      });
+
+      if (checkResp.ok) {
+        const json = await checkResp.json();
+        const part = json?.candidates?.[0]?.content?.parts?.[0];
+        if (part?.functionCall) {
+          isFunctionCall = true;
+          functionName = part.functionCall.name;
+          functionArgs = part.functionCall.args;
+
+          if (functionName === "check_availability") {
+            functionResult = {
+              available_slots: ["09:00", "10:30", "14:00", "16:30"],
+              message: "Disponíveis para " + functionArgs.date + ": 09:00, 10:30, 14:00 e 16:30"
+            };
+          } else if (functionName === "book_appointment") {
+            const { name, date, time, service } = functionArgs;
+            await insertNotification(
+              "Novo Agendamento Marcado",
+              `${name} agendou ${service || "Marcação"} para ${date} às ${time}.`,
+              "appointment"
+            );
+            functionResult = {
+              status: "success",
+              message: `Agendamento agendado e confirmado para ${name} no dia ${date} às ${time}.`
+            };
+          } else if (functionName === "record_expense") {
+            const { description, amount, category } = functionArgs;
+            await insertNotification(
+              "Nova Despesa Registada",
+              `Despesa de ${amount} MZN registada para "${description}" (${category}).`,
+              "expense"
+            );
+            functionResult = {
+              status: "success",
+              message: `Despesa de ${amount} MZN registada com sucesso!`
+            };
+          }
+
+          contents.push({
+            role: "model",
+            parts: [{ functionCall: { name: functionName, args: functionArgs } }]
+          });
+
+          contents.push({
+            role: "function",
+            parts: [{
+              functionResponse: {
+                name: functionName,
+                response: functionResult
+              }
+            }]
+          });
+        }
+      }
+    }
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${activeApiKey}`;
+    const requestBody: any = {
+      system_instruction: { parts: [{ text: systemText }] },
+      contents,
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 1024,
+      },
+    };
+
+    if (tools && !isFunctionCall) {
+      requestBody.tools = tools;
+    }
 
     const upstream = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        system_instruction: { parts: [{ text: systemText }] },
-        contents,
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1024,
-        },
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!upstream.ok) {
@@ -159,7 +587,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Transform Gemini SSE -> OpenAI-style SSE deltas so the existing client parser keeps working.
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
     let buffer = "";
@@ -191,7 +618,7 @@ Deno.serve(async (req) => {
                   if (typeof p?.text === "string" && p.text.length) emit(p.text);
                 }
               } catch {
-                // skip malformed
+                // skip
               }
             }
           }
@@ -213,7 +640,6 @@ Deno.serve(async (req) => {
         "X-Accel-Buffering": "no",
       },
     });
-
 
   } catch (e) {
     console.error("agent-chat fatal", e);

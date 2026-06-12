@@ -79,6 +79,13 @@ export function useWhatsAppInstances() {
 
       const data = await res.json();
 
+      // Auto-configure the webhook so incoming messages reach our agent
+      if (data.instanceKey || data.instance_key) {
+        const key = data.instanceKey || data.instance_key;
+        // Fire-and-forget — don't block instance creation
+        setTimeout(() => setWebhook(key), 2000);
+      }
+
       // Refresh instances list
       await fetchInstances();
 
@@ -175,6 +182,48 @@ export function useWhatsAppInstances() {
     }
   };
 
+  /**
+   * Configures the Evolution API webhook so that incoming WhatsApp messages
+   * are forwarded to our Supabase wa-webhook edge function.
+   */
+  const setWebhook = async (instanceKey: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const supabaseUrl = 'https://mpxsivfiltwvnvqtixuo.supabase.co';
+      const webhookTarget = `${supabaseUrl}/functions/v1/wa-webhook`;
+
+      const res = await fetch(
+        `${supabaseUrl}/functions/v1/whatsapp-instance?action=set-webhook&instance=${instanceKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ webhookUrl: webhookTarget }),
+        }
+      );
+
+      if (!res.ok) {
+        console.warn('Could not auto-configure webhook — configure manually in Evolution API dashboard');
+        return false;
+      }
+
+      // Persist webhook URL in Supabase record
+      await supabase
+        .from('whatsapp_instances')
+        .update({ webhook_url: webhookTarget })
+        .eq('instance_key', instanceKey);
+
+      return true;
+    } catch (err) {
+      console.warn('setWebhook error:', err);
+      return false;
+    }
+  };
+
   const getClientConnectUrl = (clientToken: string) => {
     return `${window.location.origin}/connect/${clientToken}`;
   };
@@ -213,6 +262,7 @@ export function useWhatsAppInstances() {
     getQRCode,
     getStatus,
     deleteInstance,
+    setWebhook,
     getClientConnectUrl,
     startPolling,
     refetch: fetchInstances,

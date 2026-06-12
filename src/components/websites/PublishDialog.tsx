@@ -75,19 +75,47 @@ export function PublishDialog({ open, onOpenChange, websiteId, currentSlug, onPu
         url = `https://${selectedDomain}`;
       }
 
-      const update: any = { status: "active", published_url: url, slug: finalSlug };
+      console.log("[PublishDialog] Publishing website:", websiteId, "slug:", finalSlug, "url:", url);
+
+      // Build update payload — only include slug if it's non-null (avoids unique constraint on empty)
+      const updatePayload: Record<string, unknown> = {
+        status: "active",
+        published_url: url,
+      };
+      if (finalSlug !== null) {
+        updatePayload.slug = finalSlug;
+      }
+
       const { data, error } = await supabase
         .from("websites")
-        .update(update)
+        .update(updatePayload)
         .eq("id", websiteId)
         .select()
         .single();
 
+      console.log("[PublishDialog] Result:", { data, error });
+
       if (error) {
+        console.error("[PublishDialog] Supabase error:", error);
         if (error.message.includes("websites_slug_unique") || error.message.includes("duplicate")) {
           toast.error("Esse slug já está a ser usado. Escolhe outro.");
+        } else if (error.message.includes("column") && error.message.includes("slug")) {
+          // Slug column may not exist — publish without slug
+          console.warn("[PublishDialog] Slug column issue, retrying without slug");
+          const fallbackUrl = `${window.location.origin}/site/${websiteId}`;
+          const { error: fallbackError } = await supabase
+            .from("websites")
+            .update({ status: "active", published_url: fallbackUrl })
+            .eq("id", websiteId);
+          if (!fallbackError) {
+            toast.success("Site publicado! (URL por ID)");
+            onPublished({ slug: null, published_url: fallbackUrl });
+            onOpenChange(false);
+            return;
+          }
+          toast.error(fallbackError.message || "Erro ao publicar. Tenta de novo.");
         } else {
-          toast.error(error.message);
+          toast.error(error.message || "Erro ao publicar. Verifica a tua ligação.");
         }
         setPublishing(false);
         return;
@@ -100,9 +128,12 @@ export function PublishDialog({ open, onOpenChange, websiteId, currentSlug, onPu
           .eq("domain", selectedDomain);
       }
 
-      toast.success("Site publicado!");
+      toast.success("Site publicado com sucesso! 🎉");
       onPublished({ slug: finalSlug, published_url: url });
       onOpenChange(false);
+    } catch (err: any) {
+      console.error("[PublishDialog] Unexpected error:", err);
+      toast.error(err?.message || "Erro inesperado ao publicar. Tenta de novo.");
     } finally {
       setPublishing(false);
     }

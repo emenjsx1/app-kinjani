@@ -4,6 +4,7 @@
 // Cobrança proporcional: pré-cobra 5 créd; após geração ajusta para o nível real (micro/small/medium/large/massive).
 import { chargeCredits, classifyEditByTokens, CREDIT_COSTS, insufficientCreditsResponse, resolveUserId } from "../_shared/credits.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getUserApiKey } from "../_shared/ai.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -95,20 +96,39 @@ Deno.serve(async (req) => {
       });
     }
 
-    const openaiKey = Deno.env.get("OPENAI_API_KEY");
-    const geminiKey = Deno.env.get("GEMINI_API_KEY");
-    const apiKey = openaiKey || geminiKey;
+    // Try to get user key first
+    let apiKey = await getUserApiKey(req, "gemini");
+    let useOpenAI = false;
+    let aiModel = "gemini-1.5-pro";
+    let aiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+
+    if (!apiKey) {
+      apiKey = await getUserApiKey(req, "openai");
+      if (apiKey) {
+        useOpenAI = true;
+        aiModel = "gpt-4o";
+        aiUrl = "https://api.openai.com/v1/chat/completions";
+      }
+    }
+
+    // Fallback to system env keys
+    if (!apiKey) {
+      const openaiKey = Deno.env.get("OPENAI_API_KEY");
+      const geminiKey = Deno.env.get("GEMINI_API_KEY");
+      apiKey = openaiKey || geminiKey;
+      useOpenAI = !!openaiKey;
+      aiModel = useOpenAI ? "gpt-4o" : "gemini-1.5-pro";
+      aiUrl = useOpenAI
+        ? "https://api.openai.com/v1/chat/completions"
+        : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+    }
+
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "Nenhuma API key de IA configurada (OPENAI_API_KEY ou GEMINI_API_KEY)" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const useOpenAI = !!openaiKey;
-    const aiUrl = useOpenAI
-      ? "https://api.openai.com/v1/chat/completions"
-      : "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-    const aiModel = useOpenAI ? "gpt-4o" : "gemini-2.5-flash";
 
 
     // Pré-cobra "small" (5 créd). Após geração, ajustamos para o nível real com base nos tokens de output.

@@ -11,9 +11,11 @@ import {
   ChevronRight,
   Users,
   BarChart3,
+  Crown,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { cn } from "@/lib/utils";
+import { useAdminGuard } from "@/hooks/useAdmin";
 import {
   Sidebar,
   SidebarContent,
@@ -53,6 +55,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const navigate = useNavigate();
+  const { isAdmin } = useAdminGuard();
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -156,6 +159,20 @@ export function AppSidebar() {
 
       <SidebarFooter className="p-2">
         <Separator className="bg-sidebar-border mb-2" />
+        {/* Admin link — only visible to admins */}
+        {isAdmin && (
+          <NavLink
+            to="/admin"
+            className={cn(
+              "flex items-center gap-3 rounded-lg px-3 py-2 mb-2 transition-colors",
+              "border border-[#45fd94]/20 bg-[#45fd94]/5 hover:bg-[#45fd94]/10 text-[#45fd94]",
+              isActive("/admin") && "bg-[#45fd94]/20"
+            )}
+          >
+            <Crown className="h-4 w-4 shrink-0" />
+            {!collapsed && <span className="text-sm font-bold">Admin</span>}
+          </NavLink>
+        )}
         <div className="flex items-center justify-between">
           <Button
             variant="ghost"

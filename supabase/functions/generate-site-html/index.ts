@@ -2,7 +2,7 @@
 // Generates premium websites using creative reasoning + Gemini 2.5 Flash
 // Returns: { html: string }. Cobra créditos (site_create = 50) antes de chamar o modelo.
 import { chargeCredits, insufficientCreditsResponse } from "../_shared/credits.ts";
-import { callAI } from "../_shared/ai.ts";
+import { callAI, getUserApiKey } from "../_shared/ai.ts";
 import { EXPERT_SYSTEM_PROMPT, SECTOR_SPECIFIC_INSTRUCTIONS } from "./expert-prompts.ts";
 import { MODERN_DESIGN_PATTERNS } from "./modern-components.ts";
 import { validateHTMLQuality, formatQualityReport } from "./quality-validator.ts";
@@ -17,17 +17,66 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Detecta o setor baseado no prompt
+// Detecta o setor baseado no prompt — 25+ setores + fallback semântico
 function detectSector(prompt: string): string {
   const lower = prompt.toLowerCase();
   if (lower.match(/dent[aá]ri[ao]|cl[ií]nica dental|ortodon|implante|branqueamento|sorriso/)) return 'dental';
-  if (lower.match(/restaurante|comida|menu|chef|prato|gastronomia|cozinha/)) return 'restaurant';
-  if (lower.match(/saas|software|app|dashboard|plataforma|tech|startup/)) return 'saas';
-  if (lower.match(/portf[oó]lio|designer|fot[oó]grafo|criativo|artista/)) return 'portfolio';
-  if (lower.match(/cl[ií]nica|sa[uú]de|m[eé]dic|hospital|terapeuta|fisio/)) return 'health';
-  if (lower.match(/luxo|premium|exclusiv|high-end|elite/)) return 'luxury';
-  return 'general';
+  if (lower.match(/restaurante|gastronomia|chef|culin[aá]ria|menu|cardápio|caf[eé]|bistr/)) return 'restaurant';
+  if (lower.match(/padaria|confeitaria|bolo|doce|p[aã]o artesanal|pastel|torta|brigadeiro|pastelaria/)) return 'bakery';
+  if (lower.match(/saas|software|dashboard|plataforma|api\b|automação|ia\b|inteligência artificial/)) return 'saas';
+  if (lower.match(/portf[oó]lio|designer|fot[oó]grafo|videograf|galeria de trabalhos/)) return 'portfolio';
+  if (lower.match(/cl[ií]nica|m[eé]dic|hospital|sa[uú]de|terapeuta|fisio|psicolog|nutri[çc]|dermatolog/)) return 'health';
+  if (lower.match(/luxo|premium|exclusiv|high-end|elite|requintad/)) return 'luxury';
+  if (lower.match(/advocacia|advogad|jur[ií]dic|direito|tribunal/)) return 'law';
+  if (lower.match(/barbearia|barbeiro|barber|salão de bel|cabeleireiro/)) return 'barbershop';
+  if (lower.match(/spa|bem-estar|wellness|massagem|relaxamento|est[eé]tica\b|manicure|pilates|yoga/)) return 'wellness';
+  if (lower.match(/academia|gym\b|fitness|muscula[çc][ãa]o|personal trainer|crossfit/)) return 'fitness';
+  if (lower.match(/escola\b|educa[çc][ãa]o|curso\b|universidade|faculdade|ensino|aulas?\b|mentor/)) return 'education';
+  if (lower.match(/pet\b|animal\b|c[aã]o\b|cachorro|gato\b|veterin[aá]rio|\bvet\b|pet shop/)) return 'pet';
+  if (lower.match(/m[uú]sic[ao]\b|banda\b|artista musical|\bdj\b|álbum|concerto/)) return 'music';
+  if (lower.match(/agência|marketing\b|publicidade|branding\b|comunica[çc][ãa]o/)) return 'agency';
+  if (lower.match(/constru[çc][ãa]o|engenharia\b|arquitetur|obra\b|edif[ií]cio/)) return 'construction';
+  if (lower.match(/imobili[aá]|im[oó]vel|propriedade\b|casa [aà] vend|apartamento [aà]/)) return 'realestate';
+  if (lower.match(/turismo|viag|hotel\b|resort\b|destino|f[ée]rias|pousada/)) return 'tourism';
+  if (lower.match(/moda\b|fashion\b|roupa\b|vestu[aá]rio|boutique|streetwear/)) return 'fashion';
+  if (lower.match(/contabilidade|contador|financ|consultoria|audit|investimento/)) return 'finance';
+  if (lower.match(/evento\b|casamento\b|cerimônia|festa\b|cerimonial|wedding|noiva/)) return 'events';
+  if (lower.match(/dança\b|ballet|teatro|arte[s]?\s+cênica|escola de arte|escola de música/)) return 'arts-school';
+  if (lower.match(/carro\b|autom[oó]vel|stand\b|oficina mecânica|garagem|concession/)) return 'automotive';
+  if (lower.match(/ong\b|organiza[çc][ãa]o sem fins|voluntari|causa social|comunidade\b/)) return 'nonprofit';
+  if (lower.match(/loja online|e-commerce|ecommerce|catálogo de produtos/)) return 'ecommerce';
+  if (lower.match(/farmácia|farmacia|botica|medicamento|remédio/)) return 'pharmacy';
+  if (lower.match(/tech|startup\b|app\b|digital\b|inovação/)) return 'saas';
+  // Para qualquer coisa não reconhecida — análise semântica dinâmica
+  return 'dynamic';
 }
+
+// Para setores 'dynamic', gera instruções a partir da análise criativa
+function buildDynamicSectorInstructions(analysis: { niche: string; emotionalDirection: string; brandPositioning: string; visualLanguage: string; audience: string; colorPsychology: string; typographyDirection: string }): string {
+  return `
+INSTRUÇÕES SETORIAIS DERIVADAS DINAMICAMENTE:
+(Este é um negócio/projeto fora dos setores padrão — foi analisado semanticamente)
+
+NICHO DETETADO: ${analysis.niche}
+POSICIONAMENTO: ${analysis.brandPositioning}
+
+PALETA E MOOD: ${analysis.colorPsychology}
+MOOD VISUAL: ${analysis.visualLanguage}
+AUDIÊNCIA: ${analysis.audience}
+
+DIREÇÃO EMOCIONAL: ${analysis.emotionalDirection}
+TIPOGRAFIA RECOMENDADA: ${analysis.typographyDirection}
+
+INSTRUÇÕES CRÍTICAS PARA ESTE PROJETO:
+1. Cria secções que fazem sentido ESPECÍFICO para este tipo de negócio
+2. Usa copy real e relevante (nomes de serviços, preços aproximados, equipa)
+3. Escolhe imagens de fundo do Unsplash que sejam RELEVANTES ao negócio
+4. O design deve transmitir: ${analysis.emotionalDirection}
+5. O utilizador deve imediatamente perceber o que o negócio faz
+6. Não uses secções que não façam sentido para este nicho
+`;
+}
+
 
 const SYSTEM_PROMPT = `${EXPERT_SYSTEM_PROMPT}
 
@@ -84,13 +133,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    const geminiKey = Deno.env.get("GEMINI_API_KEY");
+    const userKey = await getUserApiKey(req, "gemini");
+    const geminiKey = userKey || Deno.env.get("GEMINI_API_KEY");
     if (!geminiKey) {
       return new Response(JSON.stringify({ error: "GEMINI_API_KEY não configurada." }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Detect sector — must come AFTER we have the analysis, so we resolve dynamic sectors
+    const detectedSector = detectSector(prompt);
+    // Note: for 'dynamic', we build instructions AFTER creative analysis below
+    const staticSectorInstructions = detectedSector !== 'dynamic'
+      ? (SECTOR_SPECIFIC_INSTRUCTIONS[detectedSector as keyof typeof SECTOR_SPECIFIC_INSTRUCTIONS] || '')
+      : '';
+
 
     // Charge 50 credits before generating.
     const charge = await chargeCredits(req, "site_create", `Geração de site${websiteName ? `: ${websiteName}` : ""}`);
@@ -136,9 +194,18 @@ Deno.serve(async (req) => {
       websiteName || "Website Premium"
     );
 
-    const userMsg = `${creativePrompt}
+    let userMsg = `${creativePrompt}`;
 
-INSTRUÇÕES TÉCNICAS CRÍTICAS:
+    // Resolve sector instructions — static for known sectors, dynamic for unknown
+    const sectorInstructions = detectedSector === 'dynamic'
+      ? buildDynamicSectorInstructions(creativeAnalysis)
+      : staticSectorInstructions;
+
+    if (sectorInstructions) {
+      userMsg += `\n\n═══════════════════════════════════════════════════════════════════════════════\n🎯 INSTRUÇÕES SETORIAIS (SETOR: ${detectedSector.toUpperCase()})\n═══════════════════════════════════════════════════════════════════════════════\n${sectorInstructions}`;
+    }
+
+    userMsg += `\n\nINSTRUÇÕES TÉCNICAS CRÍTICAS:
 
 🎯 OBJETIVO: Criar um website que pareça feito por uma agência premium de €10k+, NÃO por IA genérica.
 
@@ -198,9 +265,9 @@ Lembra-te: O utilizador deve dizer "WOW, isto parece caro!" quando vir o resulta
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: userMsg },
         ],
-        temperature: 1.0, // Máxima criatividade
-        geminiModel: "gemini-2.5-flash", // Modelo mais recente e capaz
-      });
+        temperature: 0.75, // Criatividade controlada e layout estável
+        geminiModel: "gemini-1.5-pro", // Modelo mais inteligente
+      }, userKey);
 
       html = ai.content || "";
 

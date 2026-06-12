@@ -1,5 +1,4 @@
-// Shared AI helper. Usa apenas Gemini (Google) — OpenAI removido.
-// All endpoints used here are OpenAI-compatible Chat Completions.
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
@@ -16,7 +15,7 @@ export interface CallAIResult {
   model: string;
 }
 
-const GEMINI_DEFAULT = "gemini-2.5-flash";
+const GEMINI_DEFAULT = "gemini-1.5-pro";
 
 async function callGemini(opts: CallAIOptions, apiKey: string): Promise<CallAIResult> {
   const model = opts.geminiModel || GEMINI_DEFAULT;
@@ -49,9 +48,37 @@ async function callGemini(opts: CallAIOptions, apiKey: string): Promise<CallAIRe
   };
 }
 
+export async function getUserApiKey(req: Request, provider: "openai" | "gemini"): Promise<string | null> {
+  const auth = req.headers.get("Authorization");
+  if (!auth?.startsWith("Bearer ")) return null;
+  const token = auth.slice(7);
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) return null;
+
+    const { data, error } = await supabase
+      .from("user_api_keys")
+      .select("api_key_encrypted")
+      .eq("user_id", user.id)
+      .eq("provider", provider)
+      .single();
+
+    if (error || !data?.api_key_encrypted) return null;
+
+    return atob(data.api_key_encrypted);
+  } catch (e) {
+    console.error("Failed to retrieve user API key:", e);
+    return null;
+  }
+}
+
 /** Call Gemini AI provider only. */
-export async function callAI(opts: CallAIOptions): Promise<CallAIResult> {
-  const geminiKey = Deno.env.get("GEMINI_API_KEY");
+export async function callAI(opts: CallAIOptions, userKey?: string | null): Promise<CallAIResult> {
+  const geminiKey = userKey || Deno.env.get("GEMINI_API_KEY");
 
   if (!geminiKey) {
     throw new Error("GEMINI_API_KEY não configurada.");
@@ -59,3 +86,4 @@ export async function callAI(opts: CallAIOptions): Promise<CallAIResult> {
 
   return await callGemini(opts, geminiKey);
 }
+

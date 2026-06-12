@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getSystemConfig } from "../_shared/config.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -50,8 +51,11 @@ serve(async (req) => {
   try {
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
-    const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
-    const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
+    
+    // Fetch system configuration dynamically from DB (fallback to env)
+    const sysConfig = await getSystemConfig();
+    const evolutionApiUrl = sysConfig.evolution_api_url;
+    const evolutionApiKey = sysConfig.evolution_api_key;
 
     if (!evolutionApiUrl || !evolutionApiKey) {
       return new Response(JSON.stringify({ 
