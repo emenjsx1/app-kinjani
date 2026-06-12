@@ -61,13 +61,39 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Call Vercel API to attach the domain to the project
+    const vercelToken = Deno.env.get("VERCEL_API_TOKEN");
+    const vercelProjectId = Deno.env.get("VERCEL_PROJECT_ID");
+    
+    if (vercelToken && vercelProjectId) {
+      try {
+        const vercelRes = await fetch(`https://api.vercel.com/v10/projects/${vercelProjectId}/domains`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${vercelToken}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ name: domain.domain })
+        });
+        
+        const vercelData = await vercelRes.json();
+        if (!vercelRes.ok && vercelData.error?.code !== "domain_already_in_use" && vercelData.error?.code !== "forbidden") {
+           console.error("Vercel API error adding domain:", vercelData);
+        } else {
+           console.log(`Successfully added ${domain.domain} to Vercel.`);
+        }
+      } catch(e) {
+        console.error("Failed to call Vercel API", e);
+      }
+    }
+
     await supabase
       .from("custom_domains")
       .update({ status: "active", verified_at: new Date().toISOString() })
       .eq("id", domainId);
 
     return new Response(
-      JSON.stringify({ verified: true, message: "Domínio verificado com sucesso!" }),
+      JSON.stringify({ verified: true, message: "Domínio verificado com sucesso e adicionado à Vercel!" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e) {
